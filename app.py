@@ -4,10 +4,8 @@ import pandas as pd
 # CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
 
-# ID DA PLANILHA (FIXO)
-ID_PLANILHA = "1-j0vduIJNpbKthmabUA7Ud8ZnMLazq4RBkhLodf190M"
-# URL PARA EXPORTAÇÃO CSV (O G-Sheets precisa estar "Publicado na Web")
-URL_CSV = f"https://docs.google.com/spreadsheets/d/{ID_PLANILHA}/export?format=csv"
+# URL DO CSV PUBLICADO NO GOOGLE SHEETS
+URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTjiiw8OFiPFZswRmxO3IDIqNT2jVi6q_fWQn37P0OLRfA-Dt5zWl2kzo5HifDGYSCHlUIbXXVp_H6Z/pub?output=csv"
 
 # --- ESTADO DE SESSÃO ---
 if "autenticado" not in st.session_state:
@@ -15,12 +13,13 @@ if "autenticado" not in st.session_state:
     st.session_state["username"] = ""
 
 # --- FUNÇÃO PARA CARREGAR DADOS ---
-@st.cache_data(ttl=600) # Atualiza o cache a cada 10 minutos
+@st.cache_data(ttl=60) # Atualiza o cache a cada 60 segundos
 def carregar_dados():
     try:
         df = pd.read_csv(URL_CSV)
         return df
     except Exception as e:
+        st.error(f"Erro ao conectar com a planilha: {e}")
         return None
 
 # --- LÓGICA DE LOGIN ---
@@ -29,7 +28,7 @@ if not st.session_state["autenticado"]:
     usuario = st.text_input("Username")
     senha = st.text_input("Password", type="password")
     
-    if st.button("Entrar"):
+    if st.button("Entrar", use_container_width=True):
         if usuario == "admin" and senha == "admin123":
             st.session_state["autenticado"] = True
             st.session_state["username"] = "admin"
@@ -46,7 +45,7 @@ if not st.session_state["autenticado"]:
 st.title("🔏 Sistema de Controle de Acesso")
 st.sidebar.write(f"Logado como: **{st.session_state['username']}**")
 
-if st.sidebar.button("Sair"):
+if st.sidebar.button("Sair do Sistema"):
     st.session_state["autenticado"] = False
     st.rerun()
 
@@ -57,4 +56,4 @@ df = carregar_dados()
 if df is not None:
     st.dataframe(df, use_container_width=True)
 else:
-    st.error("Erro ao carregar a planilha. Verifique se ela está publicada na web.")
+    st.warning("A planilha não retornou dados. Verifique se o arquivo está publicado na web.")
