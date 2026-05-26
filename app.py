@@ -16,7 +16,7 @@ with st.expander("➕ Adicionar Novo Colaborador"):
     col_a, col_b, col_c = st.columns(3)
     novo_cpf = col_a.text_input("CPF do Novo:", key="novo_cpf")
     novo_nome = col_b.text_input("Nome do Novo:", key="novo_nome")
-    novo_vinculo = col_c.selectbox("Setor/Vínculo:", ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", Brasanitas", "GRSA", "epidemiologia", "CDU"], key="novo_vinculo")
+    novo_vinculo = col_c.selectbox("Setor/Vínculo:", ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"], key="novo_vinculo")
     
     if st.button("Salvar Novo Cadastro"):
         if novo_cpf and novo_nome:
