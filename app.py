@@ -61,3 +61,11 @@ if hist:
     if st.button("Apagar este registro"):
         supabase.table("movimentacao").delete().eq("id", int(del_id)).execute()
         st.rerun()
+if st.button("Entrar"):
+
+    if usuario == "admin" and senha == "1234":
+        st.session_state.logado = True
+        st.success("Login realizado com sucesso!")
+        st.rerun()
+    else:
+        st.error("Usuário ou senha incorretos.")
