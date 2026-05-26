@@ -37,7 +37,8 @@ with st.expander("⚙️ Gestão de Cadastros"):
     c_vinculo = st.text_input("Setor de Destino/Vínculo:")
     if st.button("Salvar Novo Cadastro"):
         try:
-            supabase.table("pessoas").insert({"cpf": c_cpf, "nome": c_nome, "vinculo": c_vinculo}).execute()
+            # Nota: Usando "Pessoas" com P maiúsculo como o banco pediu
+            supabase.table("Pessoas").insert({"cpf": c_cpf, "nome": c_nome, "vinculo": c_vinculo}).execute()
             st.success("Funcionário cadastrado com sucesso!")
         except Exception as e:
             st.error(f"Erro ao cadastrar: {e}")
@@ -45,11 +46,13 @@ with st.expander("⚙️ Gestão de Cadastros"):
 with st.expander("🔵 Registrar Movimentação"):
     busca_cpf = st.text_input("Digite o CPF para movimentar:")
     if st.button("Buscar"):
-        p = supabase.table("pessoas").select("*").eq("cpf", busca_cpf).execute().data
+        # Nota: Usando "Pessoas" com P maiúsculo como o banco pediu
+        p = supabase.table("Pessoas").select("*").eq("cpf", busca_cpf).execute().data
         if p:
             st.write(f"Funcionário encontrado: {p[0]['nome']}")
             if st.button("Confirmar Entrada"):
                 try:
+                    # Nota: Usando "movimentacao" com tudo minúsculo
                     supabase.table("movimentacao").insert({
                         "cpf": busca_cpf,
                         "nome": p[0]['nome'],
@@ -64,6 +67,7 @@ with st.expander("🔵 Registrar Movimentação"):
 
 st.subheader("📋 Histórico de Acessos")
 try:
+    # Nota: Usando "movimentacao" com tudo minúsculo
     dados = supabase.table("movimentacao").select("*").execute().data
     if dados:
         df = pd.DataFrame(dados)
