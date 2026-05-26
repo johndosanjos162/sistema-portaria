@@ -68,8 +68,7 @@ if st.button("Entrar"):
 # Inicializa o estado do login
 if "logado" not in st.session_state:
     st.session_state.logado = False
-
-# Verifica se o usuário NÃO está logado
+    
 if not st.session_state.logado:
     st.title("Acesso ao Sistema")
     usuario = st.text_input("Usuário")
