@@ -87,4 +87,4 @@ if cpf_digitado:
             st.info("Para gravar dados de volta diretamente no Google Sheets na nuvem pública, configure o st.connection('gsheets') nas propriedades do Streamlit Cloud.")
             st.success(f"Entrada processada na tela para {nome_pessoa} com destino a {destino_selecionado}!")
     else:
-        st.error("❌ CPF não localizado no banco de dados.
+        st.error("❌ CPF não localizado no banco de dados.")
