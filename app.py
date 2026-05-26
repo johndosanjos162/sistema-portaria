@@ -3,8 +3,8 @@ from supabase import create_client
 from datetime import datetime
 import pandas as pd
 
-url = st.secrets "SUPABASE_URL" = "https://xcynavoumdgwaeiwnqfi.supabase.co"
-key = st.secrets "SUPABASE_KEY" = "sb_publishable_tUmKLhJxtg3Cj9RLL0YEMw_etoLcPF9"
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
 
 supabase = create_client(url, key)
 
