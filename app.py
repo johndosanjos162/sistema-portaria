@@ -79,7 +79,7 @@ if not st.session_state.logado:
        
         if usuario == "admin" and senha == "1234":
             st.session_state.logado = True
-            st.rerun() # Atualiza a página para mostrar o sistema
+            st.rerun()
         else:
             st.error("Usuário ou senha incorretos.")
     
