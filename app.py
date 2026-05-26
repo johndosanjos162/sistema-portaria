@@ -61,8 +61,8 @@ dados = supabase.table("movimentacao").select("*").execute().data
 if dados:
     df = pd.DataFrame(dados)
     st.dataframe(df)
-
-id_del = st.number_input("ID para remover do histórico:", step=1)
+    
+    id_del = st.number_input("ID para remover do histórico:", step=1)
     if st.button("Apagar registro selecionado"):
         supabase.table("movimentacao").delete().eq("id", id_del).execute()
         st.rerun()
