@@ -1,57 +1,62 @@
 import streamlit as st
-from supabase import create_client, Client
+from supabase import create_client
 from datetime import datetime
+import pandas as pd
 
-# 1. CONFIGURAÇÃO
 url = st.secrets["https://xcynavoumdgwaeiwnqfi.supabase.co"]
-key = st.secrets["postgresql://postgres:[YOUR-PASSWORD]@db.xcynavoumdgwaeiwnqfi.supabase.co:5432/postgres"]
-supabase: Client = create_client(url, key)
+key = st.secrets["sb_publishable_tUmKLhJxtg3Cj9RLL0YEMw_etoLcPF9"]
+supabase = create_client(url, key)
 
-st.set_page_config(page_title="Sistema de Portaria", layout="wide")
-st.title("🏢 Sistema de Portaria")
+st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
 
-# 2. ABAS DO SISTEMA
-tab1, tab2 = st.tabs(["Cadastro/Movimentação", "Histórico de Acessos"])
+# Lógica de Login simplificada
+if "auth" not in st.session_state: st.session_state.auth = False
 
-with tab1:
-    col1, col2 = st.columns(2)
+if not st.session_state.auth:
+    u = st.text_input("Usuário"); p = st.text_input("Senha", type="password")
+    if st.button("Entrar"):
+        if u == "admin" and p == "admin": st.session_state.auth = True; st.rerun()
+    st.stop()
+
+st.title("🏥 Controle de Acesso")
+
+# --- CADASTRO E GESTÃO (ADMIN) ---
+with st.expander("⚙️ Gestão de Pessoas (Admin)"):
+    tab1, tab2 = st.tabs(["Novo Cadastro", "Excluir Cadastro"])
+    with tab1:
+        c_cpf = st.text_input("CPF:"); c_nome = st.text_input("Nome:"); c_vin = st.text_input("Setor/Vínculo")
+        if st.button("Salvar Pessoa"):
+            supabase.table("pessoas").insert({"cpf": c_cpf, "nome": c_nome, "vinculo": c_vin}).execute()
+            st.success("Cadastrado!")
+    with tab2:
+        d_cpf = st.text_input("Digite o CPF para excluir:")
+        if st.button("Confirmar Exclusão"):
+            supabase.table("pessoas").delete().eq("cpf", d_cpf).execute()
+            st.warning("Cadastro removido!")
+
+# --- REGISTRO DE MOVIMENTAÇÃO ---
+with st.expander("🔵 Registrar Movimentação"):
+    busca = st.text_input("Buscar CPF:")
+    if busca:
+        p = supabase.table("pessoas").select("*").eq("cpf", busca).execute().data
+        if p:
+            st.write(f"Usuário: {p[0]['nome']}")
+            destino = st.selectbox("Destino", ["UTI", "C.C", "CME"])
+            if st.button("Registrar Entrada"):
+                supabase.table("movimentacao").insert({
+                    "cpf": busca, "nome": p[0]['nome'], "setor_destino": destino, 
+                    "entrada": datetime.now().strftime("%d/%m/%Y %H:%M")
+                }).execute()
+                st.success("Entrada salva!")
+
+# --- HISTÓRICO ---
+st.subheader("📋 Histórico de Movimentações")
+hist = supabase.table("movimentacao").select("*").execute().data
+if hist:
+    df = pd.DataFrame(hist)
+    st.dataframe(df)
     
-    with col1:
-        with st.form("cadastro_mov", clear_on_submit=True):
-            st.subheader("Registrar Acesso")
-            n_cpf = st.text_input("CPF:")
-            n_nome = st.text_input("Nome Completo:")
-            n_setor = st.selectbox("Setor de Destino:", ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Onco"])
-            n_tipo = st.radio("Tipo de Movimentação:", ["Entrada", "Saída"])
-            
-            if st.form_submit_button("Confirmar Registro"):
-                try:
-                    data = {
-                        "cpf": n_cpf,
-                        "nome": n_nome,
-                        "setor_destino": n_setor,
-                        "tipo": n_tipo,
-                        "horario": datetime.now().isoformat()
-                    }
-                    supabase.table("Movimentacoes").insert(data).execute()
-                    st.success(f"{n_tipo} registrada com sucesso!")
-                except Exception as e:
-                    st.error(f"Erro ao salvar: {e}")
-
-with tab2:
-    st.subheader("📋 Histórico Recente")
-    if st.button("Atualizar Histórico"):
-        try:
-            # Busca os registros ordenados pelo mais recente
-            response = supabase.table("Movimentacoes").select("*").order("horario", desc=True).execute()
-            registros = response.data
-            
-            if registros:
-                st.table(registros)
-            else:
-                st.info("Nenhum registro encontrado.")
-        except Exception as e:
-            st.error(f"Erro ao buscar histórico: {e}")
-
-# 3. LIMPEZA E ORGANIZAÇÃO
-st.sidebar.info("Use o menu acima para navegar entre o registro e o histórico.")
+    del_id = st.text_input("ID do registro para deletar do histórico:")
+    if st.button("Apagar este registro"):
+        supabase.table("movimentacao").delete().eq("id", int(del_id)).execute()
+        st.rerun()
