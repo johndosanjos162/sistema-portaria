@@ -38,7 +38,7 @@ if st.button("Sair do Sistema"):
 
 setores_lista = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
 
-# --- 0. NOVO CADASTRO (Incluindo Empresa) ---
+# --- 0. NOVO CADASTRO ---
 with st.expander("➕ Adicionar Novo Colaborador"):
     col_a, col_b, col_c, col_d = st.columns(4)
     novo_cpf = col_a.text_input("CPF:", key="novo_cpf")
@@ -49,10 +49,7 @@ with st.expander("➕ Adicionar Novo Colaborador"):
     if st.button("Salvar Novo Cadastro"):
         if novo_cpf and novo_nome:
             supabase.table("Pessoas").insert({
-                "cpf": novo_cpf, 
-                "nome": novo_nome, 
-                "vinculo": novo_vinculo, 
-                "empresa": novo_empresa
+                "cpf": novo_cpf, "nome": novo_nome, "vinculo": novo_vinculo, "empresa": novo_empresa
             }).execute()
             st.success("Cadastro salvo com sucesso!")
             st.rerun()
@@ -65,17 +62,26 @@ with st.expander("🔵 Registrar Nova Entrada"):
         p = supabase.table("Pessoas").select("*").eq("cpf", cpf_input).execute().data
         if p:
             supabase.table("movimentacao").insert({
-                "cpf": p[0]['cpf'], 
-                "nome": p[0]['nome'], 
-                "empresa": p[0].get('empresa', ''), # Salva empresa no registro
-                "setor_destino": p[0]['vinculo'],
-                "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), 
-                "data_saida": ""
+                "cpf": p[0]['cpf'], "nome": p[0]['nome'], "empresa": p[0].get('empresa', ''),
+                "setor_destino": p[0]['vinculo'], "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), "data_saida": ""
             }).execute()
-            st.success(f"{p[0]['nome']} ({p[0].get('empresa', 'N/A')}) entrou em {p[0]['vinculo']}!")
+            st.success(f"{p[0]['nome']} ({p[0].get('empresa', 'N/A')}) entrou!")
             st.rerun()
         else:
             st.error("CPF não cadastrado.")
+
+# --- 1.1 REGISTRO DE SAÍDA MANUAL ---
+with st.expander("🔴 Registrar Saída (Busca por CPF)"):
+    c1, c2 = st.columns([3, 1])
+    cpf_saida = c1.text_input("Digite o CPF para registrar saída:", key="cpf_saida_manual")
+    if c2.button("Confirmar Saída"):
+        registro = supabase.table("movimentacao").select("*").eq("cpf", cpf_saida).eq("data_saida", "").execute().data
+        if registro:
+            supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", registro[0]['id']).execute()
+            st.success(f"Saída de {registro[0]['nome']} registrada!")
+            st.rerun()
+        else:
+            st.error("Nenhum registro aberto encontrado para este CPF.")
 
 # --- 2. PAINEL DE STATUS ---
 st.subheader("📋 Pessoas Presentes")
@@ -85,16 +91,14 @@ if dados:
     for i, nome_setor in enumerate(setores_lista):
         with abas[i]:
             presentes = [r for r in dados if r['setor_destino'] == nome_setor]
-            if presentes:
-                for pessoa in presentes:
-                    col1, col2, col3 = st.columns([3, 2, 2])
-                    col1.write(f"**{pessoa['nome']}** - *{pessoa.get('empresa', '')}*")
-                    col2.write(f"Entrada: {pessoa['data_entrada']}")
-                    if col3.button("Registrar SAÍDA", key=f"saida_{pessoa['id']}"):
-                        supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", pessoa['id']).execute()
-                        st.rerun()
-            else:
-                st.info("Setor vazio.")
+            for pessoa in presentes:
+                col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
+                col1.write(f"**{pessoa['nome']}**")
+                col2.write(f"Empresa: {pessoa.get('empresa', 'N/A')}")
+                col3.write(f"Entrada: {pessoa['data_entrada']}")
+                if col4.button("Registrar SAÍDA", key=f"saida_{pessoa['id']}"):
+                    supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", pessoa['id']).execute()
+                    st.rerun()
 else:
     st.info("Ninguém presente no momento.")
 
@@ -106,7 +110,7 @@ with st.expander("🕒 Histórico Geral"):
         supabase.table("movimentacao").delete().neq("id", 0).execute()
         st.rerun()
 
-# --- 4. GESTÃO (APENAS ADMIN) ---
+# --- 4. GESTÃO ---
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros (Exclusivo Admin)"):
         todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
