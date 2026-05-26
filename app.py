@@ -63,9 +63,27 @@ if hist:
         st.rerun()
 if st.button("Entrar"):
 
-    if usuario == "admin" and senha == "1234":
-        st.session_state.logado = True
-        st.success("Login realizado com sucesso!")
-        st.rerun()
-    else:
-        st.error("Usuário ou senha incorretos.")
+   import streamlit as st
+
+# Inicializa o estado do login
+if "logado" not in st.session_state:
+    st.session_state.logado = False
+
+# Verifica se o usuário NÃO está logado
+if not st.session_state.logado:
+    st.title("Acesso ao Sistema")
+    usuario = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
+    
+    if st.button("Entrar"):
+       
+        if usuario == "admin" and senha == "1234":
+            st.session_state.logado = True
+            st.rerun() # Atualiza a página para mostrar o sistema
+        else:
+            st.error("Usuário ou senha incorretos.")
+    
+    st.stop()
+
+st.title("Bem-vindo ao Sistema de Portaria")
+st.write("Aqui você pode realizar seus cadastros e movimentações.")
