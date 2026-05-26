@@ -4,7 +4,7 @@ from datetime import datetime
 
 # 1. CONFIGURAÇÃO
 url = st.secrets["https://xcynavoumdgwaeiwnqfi.supabase.co"]
-key = st.secrets["sb_publishable_tUmKLhJxtg3Cj9RLL0YEMw_etoLcPF9"]
+key = st.secrets["postgresql://postgres:[YOUR-PASSWORD]@db.xcynavoumdgwaeiwnqfi.supabase.co:5432/postgres"]
 supabase: Client = create_client(url, key)
 
 st.set_page_config(page_title="Sistema de Portaria", layout="wide")
