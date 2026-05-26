@@ -1,24 +1,17 @@
 import streamlit as st
-import pandas as pd
-import sqlite3
+from supabase import create_client
 from datetime import datetime
+import pandas as pd
 
-# --- CONFIGURAÇÃO DO BANCO DE DADOS (SQLite) ---
-conn = sqlite3.connect('portaria.db', check_same_thread=False)
-c = conn.cursor()
-# Criação das tabelas se não existirem
-c.execute('''CREATE TABLE IF NOT EXISTS cadastro (cpf TEXT PRIMARY KEY, nome TEXT, vinculo TEXT)''')
-c.execute('''CREATE TABLE IF NOT EXISTS movimentacao (id INTEGER PRIMARY KEY AUTOINCREMENT, cpf TEXT, nome TEXT, empresa TEXT, destino TEXT, entrada TEXT, saida TEXT)''')
-conn.commit()
+# Conexão (Configurado nos Secrets do Streamlit Cloud)
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase = create_client(url, key)
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Portaria Hospitalar", layout="centered")
+st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
 
-# --- LOGIN ---
-if "autenticado" not in st.session_state:
-    st.session_state["autenticado"] = False
-    st.session_state["username"] = ""
-
+# --- LOGIN SIMPLIFICADO ---
+if "autenticado" not in st.session_state: st.session_state["autenticado"] = False
 if not st.session_state["autenticado"]:
     st.subheader("🔐 Acesso ao Sistema")
     u = st.text_input("Username")
@@ -26,56 +19,36 @@ if not st.session_state["autenticado"]:
     if st.button("Entrar"):
         if u == "admin" and p == "admin123":
             st.session_state["autenticado"] = True
-            st.session_state["username"] = "admin"
-            st.rerun()
-        elif u == "porteiro1" and p == "hospital123":
-            st.session_state["autenticado"] = True
-            st.session_state["username"] = "porteiro1"
             st.rerun()
     st.stop()
 
-# --- INTERFACE ---
-st.title("🔏 Controle de Acesso")
+st.title("🔏 Sistema de Controle de Acesso")
+
+# --- REGISTRO DE ENTRADA ---
+with st.expander("🔵 Registrar Nova Entrada"):
+    cpf = st.text_input("CPF (somente números):")
+    if cpf:
+        res = supabase.table("pessoas").select("*").eq("cpf", cpf).execute()
+        if res.data:
+            p = res.data[0]
+            st.write(f"Nome: {p['nome']} | Vínculo: {p['vinculo']}")
+            destino = st.selectbox("Destino:", ["C.C", "UTI", "Pronto Socorro"])
+            if st.button("Confirmar Entrada"):
+                supabase.table("movimentacao").insert({
+                    "cpf": cpf, "nome": p['nome'], "empresa": p['vinculo'], 
+                    "destino": destino, "entrada": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                }).execute()
+                st.success("Entrada registrada!")
+                st.rerun()
+        else:
+            st.error("CPF não cadastrado.")
+
+# --- PAINEL ---
+st.subheader("📋 Movimentações Atuais")
+dados = supabase.table("movimentacao").select("*").execute()
+if dados.data:
+    st.dataframe(pd.DataFrame(dados.data))
+
 if st.sidebar.button("Sair"):
     st.session_state["autenticado"] = False
     st.rerun()
-
-# A. REGISTRO DE ENTRADA
-st.subheader("📥 Nova Entrada")
-cpf_busca = st.text_input("CPF (somente números):", max_chars=11)
-if cpf_busca:
-    usuario = c.execute("SELECT * FROM cadastro WHERE cpf=?", (cpf_busca,)).fetchone()
-    if usuario:
-        st.write(f"**Nome:** {usuario[1]} | **Vínculo:** {usuario[2]}")
-        destino = st.selectbox("Destino:", ["C.C", "UTI", "Pronto Socorro", "CME"])
-        if st.button("Confirmar Entrada"):
-            c.execute("INSERT INTO movimentacao (cpf, nome, empresa, destino, entrada) VALUES (?,?,?,?,?)", 
-                      (usuario[0], usuario[1], usuario[2], destino, datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
-            conn.commit()
-            st.rerun()
-    else:
-        st.error("CPF não encontrado.")
-
-# B. REGISTRO DE SAÍDA
-st.subheader("📤 Registrar Saída")
-abertos = pd.read_sql("SELECT * FROM movimentacao WHERE saida IS NULL", conn)
-if not abertos.empty:
-    selecionado = st.selectbox("Quem está saindo?", abertos['nome'].tolist())
-    if st.button("Confirmar Saída"):
-        c.execute("UPDATE movimentacao SET saida=? WHERE nome=? AND saida IS NULL", (datetime.now().strftime("%d/%m/%Y %H:%M:%S"), selecionado))
-        conn.commit()
-        st.rerun()
-
-# C. CADASTRO (ADMIN)
-if st.session_state["username"] == "admin":
-    with st.expander("📝 Gerenciar Cadastros"):
-        n_cpf = st.text_input("CPF:")
-        n_nome = st.text_input("Nome:")
-        n_vinc = st.text_input("Vínculo:")
-        if st.button("Salvar Pessoa"):
-            c.execute("INSERT INTO cadastro VALUES (?,?,?)", (n_cpf, n_nome, n_vinc))
-            conn.commit()
-            st.success("Salvo!")
-
-st.subheader("📋 Painel de Movimentação")
-st.dataframe(pd.read_sql("SELECT * FROM movimentacao ORDER BY id DESC", conn))
