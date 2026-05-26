@@ -11,10 +11,29 @@ supabase = create_client(url, key)
 st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
 st.title("🏥 Painel de Monitoramento - Portaria")
 
+# --- 0. NOVO CADASTRO DE PESSOAS ---
+with st.expander("➕ Adicionar Novo Colaborador"):
+    col_a, col_b, col_c = st.columns(3)
+    novo_cpf = col_a.text_input("CPF do Novo:", key="novo_cpf")
+    novo_nome = col_b.text_input("Nome do Novo:", key="novo_nome")
+    novo_vinculo = col_c.selectbox("Setor/Vínculo:", ["Centro Cirúrgico", "Engenharia Clínica", "Manutenção", "Prestador de Serviço"], key="novo_vinculo")
+    
+    if st.button("Salvar Novo Cadastro"):
+        if novo_cpf and novo_nome:
+            supabase.table("Pessoas").insert({
+                "cpf": novo_cpf, 
+                "nome": novo_nome, 
+                "vinculo": novo_vinculo
+            }).execute()
+            st.success("Cadastro salvo com sucesso!")
+            st.rerun()
+        else:
+            st.error("Preencha CPF e Nome!")
+
 # --- 1. REGISTRO DE NOVA ENTRADA ---
 with st.expander("🔵 Registrar Nova Entrada"):
     c1, c2 = st.columns([3, 1])
-    cpf_input = c1.text_input("Digite o CPF do colaborador:")
+    cpf_input = c1.text_input("Digite o CPF do colaborador para entrada:")
     if c2.button("Adicionar Entrada"):
         p = supabase.table("Pessoas").select("*").eq("cpf", cpf_input).execute().data
         if p:
