@@ -66,4 +66,5 @@ id_del = st.number_input("ID para remover do histórico:", step=1)
     if st.button("Apagar registro selecionado"):
         supabase.table("movimentacao").delete().eq("id", id_del).execute()
         st.rerun()
+        
 st.write("Bem-vindo ao sistema principal!")
