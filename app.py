@@ -5,6 +5,7 @@ import pandas as pd
 import os
 
 # --- CONFIGURAÇÃO ---
+# Certifique-se de que ADMIN_PASSWORD e VIGILANTE_PASSWORD estejam no seu secrets.toml
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 senha_admin = st.secrets["ADMIN_PASSWORD"]
@@ -40,7 +41,7 @@ with st.sidebar:
             st.session_state.perfil = None
             st.rerun()
         
-        # Funções de Sistema (Apenas Admin)
+        # Apenas Admin tem acesso a funções de sistema
         if st.session_state.perfil == 'admin':
             st.divider()
             st.subheader("⚙️ Funções Administrativas")
@@ -57,5 +58,4 @@ if st.session_state.logado:
     with st.expander("➕ Adicionar Novo Colaborador"):
         col_a, col_b, col_c = st.columns(3)
         novo_cpf = col_a.text_input("CPF do Novo:", key="novo_cpf")
-        novo_nome = col_b.text_input("Nome do Novo:", key="novo_nome")
-        novo_vinculo = col_c.selectbox("Setor:", ["C.C", "Hemodinâmica", "OPME",
+        novo_nome = col_
