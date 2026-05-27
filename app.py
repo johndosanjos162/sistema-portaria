@@ -7,7 +7,7 @@ import os
 # --- CONFIGURAÇÃO E CONEXÃO ---
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
-senha_admin = st.secrets["ADMIN_PASSWORD"]
+senha_admin = st.secrets.get("ADMIN_PASSWORD", "senha_padrao_caso_nao_exista")
 supabase = create_client(url, key)
 
 st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
