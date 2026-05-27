@@ -8,125 +8,89 @@ url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-st.set_page_config(page_title="ACCESS GATE", layout="wide", page_icon="🔐")
+st.set_page_config(page_title="ACCESS GATE", layout="wide", page_icon="🔐", initial_sidebar_state="expanded")
 
-# ====================== DESIGN DB-SECURE STYLE ======================
+# ====================== DESIGN PRÓXIMO DA IMAGEM ======================
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     
     .stApp {
-        background: #0f172a;
-        color: #e2e8f0;
-        font-family: 'Inter', sans-serif;
+        background: #0a1428;
+        color: #e0f2fe;
+    }
+    
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #1e2937;
+        border-right: 1px solid #334155;
+    }
+    
+    .sidebar-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: #67e8f9;
+        padding: 20px 0 10px 0;
+        text-align: center;
+        border-bottom: 1px solid #334155;
     }
     
     /* Header */
-    .main-header {
-        background: linear-gradient(90deg, #1e2937, #0f172a);
-        padding: 1rem 2rem;
-        border-bottom: 1px solid #334155;
-        margin-bottom: 20px;
-    }
-    
     h1 {
-        color: #22d3ee !important;
-        font-size: 28px !important;
+        color: #67e8f9 !important;
+        font-size: 32px !important;
         font-weight: 700;
-        margin: 0;
+        margin-bottom: 5px;
     }
     
-    /* Sidebar Simulation */
-    .sidebar-style {
-        background-color: #1e2937;
-        padding: 1rem;
-        border-right: 1px solid #334155;
-        height: 100vh;
-        position: fixed;
-        width: 240px;
-        z-index: 100;
-    }
-    
-    /* Cards */
+    /* Expansores estilo lista */
     .st-expander {
-        background-color: #1e2937 !important;
-        border: 1px solid #334155 !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-        margin-bottom: 20px;
+        background-color: rgba(30, 41, 59, 0.6) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        margin-bottom: 8px;
     }
     
     .st-expander header {
-        background-color: #1e2937 !important;
-        border-bottom: 1px solid #334155;
-        padding: 16px 20px !important;
-    }
-    
-    /* Botões */
-    div.stButton > button {
-        background-color: #1e40af;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        padding: 10px 20px;
-        transition: 0.3s;
-    }
-    
-    div.stButton > button:hover {
-        background-color: #3b82f6;
-        transform: translateY(-2px);
+        background-color: transparent !important;
+        padding: 14px 20px !important;
+        font-size: 17px;
+        font-weight: 500;
     }
     
     /* Botão Desconectar */
     div.stButton > button[key="sair_final"] {
-        background-color: #b91c1c !important;
+        background-color: #2563eb !important;
         color: white !important;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 10px 24px;
+        border: none;
     }
     
-    /* Inputs e Selects */
+    /* Inputs */
     .stTextInput > div > div > input,
-    .stSelectbox > div > div > div,
-    .stNumberInput input {
-        background-color: #1e2937 !important;
-        border: 1px solid #475569 !important;
-        color: #e2e8f0 !important;
+    .stSelectbox > div > div > div {
+        background-color: #1e2937;
+        border: 1px solid #475569;
+        color: white;
         border-radius: 8px;
     }
     
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: #1e2937;
-    }
-    
     .stTabs [data-baseweb="tab"] {
-        background-color: #334155;
+        background-color: #1e2937;
         color: #94a3b8;
-        border-radius: 8px 8px 0 0;
     }
     
     .stTabs [aria-selected="true"] {
-        background-color: #22d3ee !important;
-        color: #0f172a !important;
-    }
-    
-    /* Dataframe */
-    .stDataFrame {
-        background-color: #1e2937;
-        border: 1px solid #334155;
-        border-radius: 10px;
+        background-color: #67e8f9;
+        color: #0a1428;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# ====================== LAYOUT PRINCIPAL ======================
-# Simulação de Sidebar
-st.sidebar.markdown("""
-    <div style='text-align:center; padding:20px 0; border-bottom:1px solid #334155;'>
-        <h2 style='color:#22d3ee; margin:0;'>🔐 ACCESS GATE</h2>
-    </div>
-""", unsafe_allow_html=True)
-
+# ====================== SIDEBAR ======================
+st.sidebar.markdown("<div class='sidebar-title'>🔐 ACCESS GATE</div>", unsafe_allow_html=True)
 st.sidebar.markdown("**MENU PRINCIPAL**")
 st.sidebar.markdown("🏠 Dashboard")
 st.sidebar.markdown("👥 Colaboradores")
@@ -134,40 +98,33 @@ st.sidebar.markdown("📍 Controle de Acesso")
 st.sidebar.markdown("🕒 Histórico")
 st.sidebar.markdown("⚙️ Configurações")
 
-# Header Principal
-col1, col2, col3 = st.columns([6, 3, 2])
-with col1:
+# ====================== HEADER ======================
+col_title, col_perfil, col_btn = st.columns([5, 2, 2])
+
+with col_title:
     st.markdown("<h1>ACCESS GATE - PAINEL DE CONTROLE</h1>", unsafe_allow_html=True)
 
-with col2:
-    st.markdown(f"**PERFIL:** <span style='color:#67e8f9; font-weight:600;'>{st.session_state.get('perfil', 'VIGILANTE')}</span>", unsafe_allow_html=True)
+with col_perfil:
+    st.markdown(f"**PERFIL:** <span style='color:#67e8f9; font-size:18px;'>{st.session_state.get('perfil', 'ADMIN')}</span>", unsafe_allow_html=True)
 
-with col3:
+with col_btn:
     if st.button("🚪 DESCONECTAR", key="sair_final"):
         st.session_state.logado = False
         st.rerun()
 
+# ====================== CONTEÚDO ======================
 setores_lista = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
 
-# --- CONTROLE DE ACESSO (Login) ---
+# --- Login ---
 if "logado" not in st.session_state: st.session_state.logado = False
 if "perfil" not in st.session_state: st.session_state.perfil = ""
 
 if not st.session_state.logado:
-    st.markdown("<h1 style='text-align:center; margin-top:80px;'>🔐 ACCESS GATE</h1>", unsafe_allow_html=True)
-    col_login = st.columns([1,3,1])[1]
-    with col_login:
-        st.markdown("""
-            <div style='background:#1e2937; padding:40px; border-radius:16px; text-align:center; border:2px solid #22d3ee;'>
-                <span style='font-size:80px;'>🔐</span>
-                <h2 style='color:#22d3ee;'>BIOMETRIC LOGIN</h2>
-                <p style='color:#67e8f9;'>Sistema de Segurança Hospitalar</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        senha = st.text_input("Digite a senha:", type="password", key="senha_login")
-        
-        if st.button("🔓 ACESSAR SISTEMA", key="login_btn", use_container_width=True):
+    st.title("🔐 ACCESS GATE")
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        senha = st.text_input("Digite a senha de acesso:", type="password", key="senha_login")
+        if st.button("🔓 ENTRAR", key="login_btn", use_container_width=True):
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
                 st.session_state.perfil = "ADMIN"
@@ -180,9 +137,7 @@ if not st.session_state.logado:
                 st.error("Senha incorreta!")
     st.stop()
 
-# ====================== CONTEÚDO PRINCIPAL ======================
-
-# 0. Adicionar Colaborador
+# --- Expansores (estilo da imagem) ---
 with st.expander("➕ ADICIONAR NOVO COLABORADOR"):
     col_a, col_b, col_c, col_d = st.columns(4)
     novo_cpf = col_a.text_input("CPF:", key="novo_cpf")
@@ -193,10 +148,9 @@ with st.expander("➕ ADICIONAR NOVO COLABORADOR"):
     if st.button("💾 SALVAR CADASTRO", key="salvar_cadastro"):
         if novo_cpf and novo_nome:
             supabase.table("Pessoas").insert({"cpf": novo_cpf, "nome": novo_nome, "vinculo": novo_vinculo, "empresa": novo_empresa}).execute()
-            st.success("✅ Cadastro salvo com sucesso!")
+            st.success("✅ Cadastro salvo!")
             st.rerun()
 
-# 1. Registrar Entrada
 with st.expander("🔵 REGISTRAR NOVA ENTRADA"):
     c1, c2, c3 = st.columns([2, 2, 1])
     cpf_input = c1.text_input("CPF do colaborador:")
@@ -215,7 +169,6 @@ with st.expander("🔵 REGISTRAR NOVA ENTRADA"):
         else:
             st.error("CPF não cadastrado.")
 
-# 2. Registrar Saída
 with st.expander("🔴 REGISTRAR SAÍDA"):
     c1, c2 = st.columns([3, 1])
     cpf_saida = c1.text_input("CPF para saída:", key="out_cpf")
@@ -226,7 +179,7 @@ with st.expander("🔴 REGISTRAR SAÍDA"):
             st.success("✅ Saída registrada!")
             st.rerun()
 
-# 3. Pessoas Presentes
+# Pessoas Presentes
 st.subheader("📍 PESSOAS PRESENTES NO HOSPITAL")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
@@ -242,7 +195,7 @@ if dados:
                     supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", p['id']).execute()
                     st.rerun()
 
-# 4. Histórico
+# Histórico e Gestão
 with st.expander("🕒 HISTÓRICO COMPLETO"):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     if todos_dados:
@@ -252,7 +205,6 @@ with st.expander("🕒 HISTÓRICO COMPLETO"):
             supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
             st.rerun()
 
-# 5. Gestão Admin
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ GESTÃO DE CADASTROS"):
         todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
