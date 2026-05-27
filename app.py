@@ -9,18 +9,6 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
 
-# --- DESIGN "TOP" - CSS AVANÇADO ---
-st.markdown("""
-    <style>
-    :root { --primary-color: #004a99; --bg-color: #f8f9fa; }
-    .stApp { background-color: var(--bg-color); }
-    h1 { color: var(--primary-color); text-align: center; font-weight: 800; padding-bottom: 20px; }
-    .st-expander { background-color: white !important; border-radius: 12px !important; border: none !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    div.stButton > button { background-color: var(--primary-color); color: white; border-radius: 8px; border: none; width: 100%; padding: 10px; font-weight: 600; }
-    div.stButton > button:hover { background-color: #003366; }
-    </style>
-    """, unsafe_allow_html=True)
-
 # --- CONTROLE DE ACESSO (LOGIN) ---
 if "logado" not in st.session_state: st.session_state.logado = False
 if "perfil" not in st.session_state: st.session_state.perfil = ""
@@ -52,29 +40,32 @@ setores_lista = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenç
 
 # --- 0. NOVO CADASTRO ---
 with st.expander("➕ Adicionar Novo Colaborador"):
-    col_a, col_b, col_c = st.columns(3)
+    col_a, col_b, col_c, col_d = st.columns(4)
     novo_cpf = col_a.text_input("CPF:", key="novo_cpf")
     novo_nome = col_b.text_input("Nome:", key="novo_nome")
     novo_empresa = col_c.text_input("Empresa:", key="novo_empresa")
+    novo_vinculo = col_d.selectbox("Setor/Vínculo:", setores_lista, key="novo_vinculo")
+    
     if st.button("Salvar Novo Cadastro"):
         if novo_cpf and novo_nome:
-            supabase.table("Pessoas").insert({"cpf": novo_cpf, "nome": novo_nome, "empresa": novo_empresa}).execute()
-            st.success("Cadastro salvo!")
+            supabase.table("Pessoas").insert({
+                "cpf": novo_cpf, "nome": novo_nome, "vinculo": novo_vinculo, "empresa": novo_empresa
+            }).execute()
+            st.success("Cadastro salvo com sucesso!")
             st.rerun()
 
 # --- 1. REGISTRO DE ENTRADA ---
 with st.expander("🔵 Registrar Nova Entrada"):
-    c1, c2, c3 = st.columns([2, 2, 1])
-    cpf_input = c1.text_input("CPF do colaborador:")
-    setor_destino = c2.selectbox("Setor de destino:", setores_lista)
-    if c3.button("Adicionar Entrada"):
+    c1, c2 = st.columns([3, 1])
+    cpf_input = c1.text_input("Digite o CPF para entrada:")
+    if c2.button("Adicionar Entrada"):
         p = supabase.table("Pessoas").select("*").eq("cpf", cpf_input).execute().data
         if p:
             supabase.table("movimentacao").insert({
                 "cpf": p[0]['cpf'], "nome": p[0]['nome'], "empresa": p[0].get('empresa', ''),
-                "setor_destino": setor_destino, "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), "data_saida": ""
+                "setor_destino": p[0]['vinculo'], "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), "data_saida": ""
             }).execute()
-            st.success(f"{p[0]['nome']} entrou!")
+            st.success(f"{p[0]['nome']} ({p[0].get('empresa', 'N/A')}) entrou!")
             st.rerun()
         else:
             st.error("CPF não cadastrado.")
@@ -82,7 +73,7 @@ with st.expander("🔵 Registrar Nova Entrada"):
 # --- 1.1 REGISTRO DE SAÍDA MANUAL ---
 with st.expander("🔴 Registrar Saída (Busca por CPF)"):
     c1, c2 = st.columns([3, 1])
-    cpf_saida = c1.text_input("Digite o CPF para saída:", key="cpf_saida_manual")
+    cpf_saida = c1.text_input("Digite o CPF para registrar saída:", key="cpf_saida_manual")
     if c2.button("Confirmar Saída"):
         registro = supabase.table("movimentacao").select("*").eq("cpf", cpf_saida).eq("data_saida", "").execute().data
         if registro:
@@ -90,7 +81,7 @@ with st.expander("🔴 Registrar Saída (Busca por CPF)"):
             st.success(f"Saída de {registro[0]['nome']} registrada!")
             st.rerun()
         else:
-            st.error("Nenhum registro aberto encontrado.")
+            st.error("Nenhum registro aberto encontrado para este CPF.")
 
 # --- 2. PAINEL DE STATUS ---
 st.subheader("📋 Pessoas Presentes")
@@ -115,10 +106,19 @@ else:
 with st.expander("🕒 Histórico Geral"):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     if todos_dados: st.dataframe(pd.DataFrame(todos_dados))
+    if st.button("🚨 APAGAR TODO O HISTÓRICO"):
+        supabase.table("movimentacao").delete().neq("id", 0).execute()
+        st.rerun()
 
 # --- 4. GESTÃO ---
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros (Exclusivo Admin)"):
-        if st.button("🚨 APAGAR TODO O HISTÓRICO"):
-            supabase.table("movimentacao").delete().neq("id", 0).execute()
-            st.rerun()
+        todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
+        if todos_colaboradores:
+            lista_nomes = [f"{p['nome']} (CPF: {p['cpf']})" for p in todos_colaboradores]
+            selecionado = st.selectbox("Selecione para excluir:", lista_nomes)
+            if st.button("Confirmar Exclusão"):
+                cpf_excluir = selecionado.split("(CPF: ")[1].replace(")", "")
+                supabase.table("Pessoas").delete().eq("cpf", cpf_excluir).execute()
+                st.success("Cadastro removido!")
+                st.rerun()
