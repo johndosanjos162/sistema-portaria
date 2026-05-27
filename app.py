@@ -55,8 +55,6 @@ if not st.session_state.logado:
 
 # --- INTERFACE PRINCIPAL ---
 st.title("🏥 Painel de Monitoramento")
-
-# BOTÃO CORRIGIDO COM KEY ÚNICA
 if st.button("Sair do Sistema", key="sair_final"):
     st.session_state.logado = False; st.rerun()
 
@@ -68,25 +66,33 @@ with st.expander("➕ Adicionar Novo Colaborador"):
     novo_cpf = col_a.text_input("CPF:", key="novo_cpf")
     novo_nome = col_b.text_input("Nome:", key="novo_nome")
     novo_empresa = col_c.text_input("Empresa:", key="novo_empresa")
-    novo_vinculo = col_d.selectbox("Setor/Vínculo:", setores_lista, key="novo_vinculo")
+    novo_vinculo = col_d.selectbox("Vínculo Original:", setores_lista, key="novo_vinculo")
     
     if st.button("Salvar Novo Cadastro", key="salvar_cadastro"):
         if novo_cpf and novo_nome:
             supabase.table("Pessoas").insert({"cpf": novo_cpf, "nome": novo_nome, "vinculo": novo_vinculo, "empresa": novo_empresa}).execute()
             st.success("Salvo!"); st.rerun()
 
-# --- 1. REGISTRO DE ENTRADA ---
+# --- 1. REGISTRO DE ENTRADA (DESTINO MANUAL) ---
 with st.expander("🔵 Registrar Nova Entrada"):
-    c1, c2 = st.columns([3, 1])
+    c1, c2, c3 = st.columns([2, 2, 1])
     cpf_input = c1.text_input("CPF do colaborador:")
-    if c2.button("Adicionar Entrada", key="btn_entrada"):
+    setor_escolhido = c2.selectbox("Selecione o destino agora:", setores_lista, key="sel_destino")
+    
+    if c3.button("Adicionar Entrada", key="btn_entrada"):
         p = supabase.table("Pessoas").select("*").eq("cpf", cpf_input).execute().data
         if p:
             supabase.table("movimentacao").insert({
-                "cpf": p[0]['cpf'], "nome": p[0]['nome'], "empresa": p[0].get('empresa', ''),
-                "setor_destino": p[0]['vinculo'], "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), "data_saida": ""
+                "cpf": p[0]['cpf'], 
+                "nome": p[0]['nome'], 
+                "empresa": p[0].get('empresa', ''),
+                "setor_destino": setor_escolhido, 
+                "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), 
+                "data_saida": ""
             }).execute()
             st.rerun()
+        else:
+            st.error("CPF não cadastrado.")
 
 # --- 1.1 REGISTRO DE SAÍDA MANUAL ---
 with st.expander("🔴 Registrar Saída (Busca por CPF)"):
@@ -104,31 +110,3 @@ dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute(
 if dados:
     aba_lista = st.tabs(setores_lista)
     for i, nome_setor in enumerate(setores_lista):
-        with aba_lista[i]:
-            for p in [r for r in dados if r['setor_destino'] == nome_setor]:
-                c1, c2, c3 = st.columns([3, 3, 2])
-                c1.write(f"**{p['nome']}**"); c2.write(f"Empresa: {p.get('empresa', 'N/A')}")
-                if c3.button("SAÍDA", key=f"s_{p['id']}"):
-                    supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", p['id']).execute(); st.rerun()
-
-# --- 3. HISTÓRICO ---
-with st.expander("🕒 Histórico Geral"):
-    todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
-    if todos_dados:
-        st.dataframe(pd.DataFrame(todos_dados))
-        id_excluir = st.number_input("Digite o ID para excluir erro:", min_value=1, step=1)
-        if st.button("Confirmar Exclusão de Registro", key="del_reg"):
-            supabase.table("movimentacao").delete().eq("id", id_excluir).execute(); st.rerun()
-    if st.button("🚨 APAGAR TODO O HISTÓRICO", key="del_all"):
-        supabase.table("movimentacao").delete().neq("id", 0).execute(); st.rerun()
-
-# --- 4. GESTÃO ---
-if st.session_state.perfil == "ADMIN":
-    with st.expander("⚙️ Gestão de Cadastros"):
-        todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
-        if todos_colaboradores:
-            lista_nomes = [f"{p['nome']} (CPF: {p['cpf']})" for p in todos_colaboradores]
-            selecionado = st.selectbox("Selecione para excluir:", lista_nomes)
-            if st.button("Confirmar Exclusão do Cadastro", key="del_cad"):
-                cpf_excluir = selecionado.split("(CPF: ")[1].replace(")", "")
-                supabase.table("Pessoas").delete().eq("cpf", cpf_excluir).execute(); st.rerun()
