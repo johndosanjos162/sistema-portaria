@@ -10,13 +10,13 @@ supabase = create_client(url, key)
 
 st.set_page_config(page_title="ACCESS GATE", layout="wide", page_icon="🔐", initial_sidebar_state="expanded")
 
-# ====================== DESIGN FINAL ======================
+# ====================== DESIGN + LOGIN MELHORADO ======================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     .stApp {
-        background: linear-gradient(rgba(10, 20, 40, 0.85), rgba(15, 23, 42, 0.92)),
+        background: linear-gradient(rgba(10, 20, 40, 0.88), rgba(15, 23, 42, 0.95)),
                     url('https://i.ibb.co/DRMpX/tech-shield-background.jpg') !important;
         background-size: cover;
         background-position: center;
@@ -28,7 +28,6 @@ st.markdown("""
     /* Sidebar */
     section[data-testid="stSidebar"] {
         background-color: rgba(30, 41, 59, 0.95);
-        border-right: 1px solid #334155;
     }
     
     .sidebar-title {
@@ -37,7 +36,6 @@ st.markdown("""
         color: #67e8f9;
         text-align: center;
         padding: 25px 0 15px 0;
-        border-bottom: 1px solid #334155;
     }
     
     h1 {
@@ -58,19 +56,16 @@ st.markdown("""
         background: linear-gradient(90deg, #10b981, #34d399);
         color: #0f172a;
         border: 2px solid #34d399;
-        box-shadow: 0 0 15px rgba(52, 211, 153, 0.5);
     }
     
     div.stButton > button:not([key="sair_final"]):hover {
         background: linear-gradient(90deg, #34d399, #6ee7b7);
         transform: translateY(-3px);
-        box-shadow: 0 0 25px rgba(52, 211, 153, 0.8);
     }
     
     div.stButton > button[key="sair_final"] {
         background: linear-gradient(90deg, #ef4444, #f87171);
         color: white;
-        border: 2px solid #f87171;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -84,30 +79,33 @@ st.sidebar.markdown("📍 Controle de Acesso")
 st.sidebar.markdown("🕒 Histórico")
 st.sidebar.markdown("⚙️ Configurações")
 
-# ====================== TELA DE LOGIN (Estilo da 3ª Foto) ======================
+# ====================== TELA DE LOGIN MELHORADA ======================
 if "logado" not in st.session_state: st.session_state.logado = False
 if "perfil" not in st.session_state: st.session_state.perfil = ""
 
 if not st.session_state.logado:
-    st.markdown("<h1 style='text-align:center; margin-top:30px;'>🔐 ACCESS GATE</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center; margin:40px 0 20px 0;'>🔐 ACCESS GATE</h1>", unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1,2,1])
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
+        # Círculo Biométrico Bonito
         st.markdown("""
-            <div style='text-align:center; margin:40px 0;'>
-                <div style='border:5px solid #00f5ff; border-radius:50%; width:280px; height:280px; margin:0 auto;
-                            display:flex; align-items:center; justify-content:center; box-shadow: 0 0 60px #00f5ff;'>
+            <div style='text-align:center; margin:30px 0;'>
+                <div style='width: 300px; height: 300px; margin: 0 auto; border: 6px solid #00f5ff; 
+                            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                            box-shadow: 0 0 80px #00f5ff, inset 0 0 40px rgba(0, 245, 255, 0.6);
+                            background: rgba(0, 15, 40, 0.6);'>
                     <div style='text-align:center;'>
-                        <span style='font-size:90px;'>🔑</span><br>
-                        <span style='font-size:26px; font-weight:900; color:#00f5ff;'>BIOMETRIC</span><br>
-                        <span style='font-size:26px; font-weight:900; color:#00f5ff;'>LOGIN</span><br>
-                        <span style='color:#00ff9d; font-size:20px;'>READY</span>
+                        <span style='font-size: 110px;'>🔑</span><br>
+                        <span style='font-size: 28px; font-weight: 900; color:#00f5ff; letter-spacing: 2px;'>BIOMETRIC</span><br>
+                        <span style='font-size: 28px; font-weight: 900; color:#00f5ff; letter-spacing: 2px;'>LOGIN</span><br>
+                        <span style='color:#00ff9d; font-size: 22px; font-weight: bold;'>READY</span>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("<h3 style='text-align:center; color:#00f5ff;'>OU USE CREDENCIAIS</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center; color:#00f5ff; margin:20px 0;'>OU USE CREDENCIAIS</h3>", unsafe_allow_html=True)
         
         senha = st.text_input("Digite a senha de acesso:", type="password", key="senha_login")
         
@@ -121,7 +119,7 @@ if not st.session_state.logado:
                 st.session_state.perfil = "VIGILANTE"
                 st.rerun()
             else:
-                st.error("Senha incorreta!")
+                st.error("❌ Senha incorreta!")
     st.stop()
 
 # ====================== PAINEL PRINCIPAL ======================
@@ -130,7 +128,7 @@ with col_titulo:
     st.markdown("<h1>ACCESS GATE - PAINEL DE CONTROLE</h1>", unsafe_allow_html=True)
 
 with col_perfil:
-    st.markdown(f"**PERFIL:** <span style='color:#67e8f9; font-size:18px;'>{st.session_state.perfil}</span>", unsafe_allow_html=True)
+    st.markdown(f"**PERFIL:** <span style='color:#67e8f9; font-size:18px;'>{st.session_state.get('perfil', 'ADMIN')}</span>", unsafe_allow_html=True)
 
 with col_btn:
     if st.button("🚪 DESCONECTAR", key="sair_final"):
@@ -141,7 +139,7 @@ st.markdown("### 📊 Painel de Controle")
 
 setores_lista = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
 
-# ... (o restante do código de funcionalidades continua igual)
+# ... (O resto do código permanece o mesmo - Gerenciamento, Entrada, Saída, etc.)
 
 col_esq, col_dir = st.columns(2)
 
@@ -157,24 +155,25 @@ with col_esq:
         if st.button("💾 Salvar Novo Cadastro", key="salvar_cadastro"):
             if novo_cpf and novo_nome:
                 supabase.table("Pessoas").insert({"cpf": novo_cpf, "nome": novo_nome, "vinculo": novo_vinculo, "empresa": novo_empresa}).execute()
-                st.success("✅ Cadastro salvo!")
+                st.success("✅ Cadastro salvo com sucesso!")
                 st.rerun()
 
     with st.expander("🔵 Registrar Nova Entrada"):
-        c1, c2, c3 = st.columns([2,2,1])
-        cpf_input = c1.text_input("CPF:", key="cpf_entrada")
+        c1, c2, c3 = st.columns([2, 2, 1])
+        cpf_input = c1.text_input("CPF do colaborador:", key="cpf_entrada")
         setor_escolhido = c2.selectbox("Destino:", setores_lista, key="sel_destino")
         if c3.button("✅ Registrar Entrada", key="btn_entrada"):
             p = supabase.table("Pessoas").select("*").eq("cpf", cpf_input).execute().data
             if p:
                 supabase.table("movimentacao").insert({
-                    "cpf": p[0]['cpf'], "nome": p[0]['nome'], "empresa": p[0].get('empresa',''),
-                    "setor_destino": setor_escolhido, "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), "data_saida": ""
+                    "cpf": p[0]['cpf'], "nome": p[0]['nome'], "empresa": p[0].get('empresa', ''),
+                    "setor_destino": setor_escolhido,
+                    "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), "data_saida": ""
                 }).execute()
                 st.success("✅ Entrada registrada!")
                 st.rerun()
             else:
-                st.error("CPF não encontrado.")
+                st.error("CPF não cadastrado.")
 
 with col_dir:
     st.markdown("**● Registrar Saída**")
@@ -186,8 +185,7 @@ with col_dir:
             st.success("✅ Saída registrada!")
             st.rerun()
 
-# (Continue com o resto das seções: Pessoas Presentes, Histórico e Gestão Admin como no código anterior)
-
+# Continuação do código (Pessoas Presentes, Histórico, etc.)...
 st.markdown("---")
 col_inf1, col_inf2 = st.columns(2)
 
@@ -199,7 +197,7 @@ with col_inf1:
         for i, nome_setor in enumerate(setores_lista):
             with aba_lista[i]:
                 for p in [r for r in dados if r.get('setor_destino') == nome_setor]:
-                    c1, c2, c3 = st.columns([3,3,2])
+                    c1, c2, c3 = st.columns([3, 3, 2])
                     c1.write(f"**{p['nome']}**")
                     c2.write(f"Empresa: {p.get('empresa', 'N/A')}")
                     if c3.button("🚪 Registrar Saída", key=f"s_{p['id']}"):
