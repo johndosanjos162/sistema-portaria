@@ -16,8 +16,8 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     .stApp {
-        background: linear-gradient(rgba(10, 20, 40, 0.85), rgba(15, 23, 42, 0.92)),
-                    url('https://files.oaiusercontent.com/file-Vl2vX8zK9pL3mN7qR8tYvXwZ?se=2026-05-28T00%3A00%3A00Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D31536000%2C%20immutable&rscd=attachment%3B%20filename%3DGenerated%20Image.jpg') !important;
+        background: linear-gradient(rgba(10, 20, 40, 0.82), rgba(15, 23, 42, 0.90)),
+                    url('https://i.ibb.co/0BUXP/Generated-Image.jpg') !important;
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -46,7 +46,7 @@ st.markdown("""
         font-weight: 700;
     }
     
-    /* Botões Atrativos */
+    /* Botões */
     div.stButton > button {
         border-radius: 10px;
         font-weight: 600;
@@ -90,7 +90,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR ======================
+# ====================== RESTO DO CÓDIGO (igual ao anterior) ======================
 st.sidebar.markdown("<div class='sidebar-title'>🔐 ACCESS GATE</div>", unsafe_allow_html=True)
 st.sidebar.markdown("**MENU PRINCIPAL**")
 st.sidebar.markdown("🏠 Dashboard")
@@ -99,15 +99,11 @@ st.sidebar.markdown("📍 Controle de Acesso")
 st.sidebar.markdown("🕒 Histórico")
 st.sidebar.markdown("⚙️ Configurações")
 
-# ====================== HEADER ======================
 col_titulo, col_perfil, col_btn = st.columns([6, 2, 2])
-
 with col_titulo:
     st.markdown("<h1>ACCESS GATE - PAINEL DE CONTROLE</h1>", unsafe_allow_html=True)
-
 with col_perfil:
     st.markdown(f"**PERFIL:** <span style='color:#67e8f9; font-size:18px;'>{st.session_state.get('perfil', 'ADMIN')}</span>", unsafe_allow_html=True)
-
 with col_btn:
     if st.button("🚪 DESCONECTAR", key="sair_final"):
         st.session_state.logado = False
@@ -117,7 +113,6 @@ st.markdown("### 📊 Painel de Controle")
 
 setores_lista = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
 
-# ====================== LOGIN ======================
 if "logado" not in st.session_state: st.session_state.logado = False
 if "perfil" not in st.session_state: st.session_state.perfil = ""
 
@@ -139,7 +134,7 @@ if not st.session_state.logado:
                 st.error("Senha incorreta!")
     st.stop()
 
-# ====================== CONTEÚDO ======================
+# Restante do conteúdo (Gerenciamento, Entrada, Saída, etc.)
 col_esq, col_dir = st.columns(2)
 
 with col_esq:
@@ -156,7 +151,7 @@ with col_esq:
                 supabase.table("Pessoas").insert({"cpf": novo_cpf, "nome": novo_nome, "vinculo": novo_vinculo, "empresa": novo_empresa}).execute()
                 st.success("✅ Cadastro salvo com sucesso!")
                 st.rerun()
-    
+
     with st.expander("🔵 Registrar Nova Entrada"):
         c1, c2, c3 = st.columns([2, 2, 1])
         cpf_input = c1.text_input("CPF do colaborador:", key="cpf_entrada")
@@ -184,7 +179,6 @@ with col_dir:
             st.success("✅ Saída registrada!")
             st.rerun()
 
-# ====================== SEÇÕES INFERIORES ======================
 st.markdown("---")
 col_inf1, col_inf2 = st.columns(2)
 
