@@ -9,13 +9,15 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
 
-# --- DESIGN CSS PERSONALIZADO ---
+# --- DESIGN "TOP" - CSS AVANÇADO ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f4f7f9; }
-    .st-expander { background-color: white; border-radius: 10px; border: 1px solid #e0e0e0; }
-    div.stButton > button { width: 100%; border-radius: 5px; font-weight: bold; }
-    div.stButton > button:hover { background-color: #0083B8; color: white; }
+    :root { --primary-color: #004a99; --bg-color: #f8f9fa; }
+    .stApp { background-color: var(--bg-color); }
+    h1 { color: var(--primary-color); text-align: center; font-weight: 800; padding-bottom: 20px; }
+    .st-expander { background-color: white !important; border-radius: 12px !important; border: none !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    div.stButton > button { background-color: var(--primary-color); color: white; border-radius: 8px; border: none; width: 100%; padding: 10px; font-weight: 600; }
+    div.stButton > button:hover { background-color: #003366; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -54,12 +56,9 @@ with st.expander("➕ Adicionar Novo Colaborador"):
     novo_cpf = col_a.text_input("CPF:", key="novo_cpf")
     novo_nome = col_b.text_input("Nome:", key="novo_nome")
     novo_empresa = col_c.text_input("Empresa:", key="novo_empresa")
-    
     if st.button("Salvar Novo Cadastro"):
         if novo_cpf and novo_nome:
-            supabase.table("Pessoas").insert({
-                "cpf": novo_cpf, "nome": novo_nome, "empresa": novo_empresa
-            }).execute()
+            supabase.table("Pessoas").insert({"cpf": novo_cpf, "nome": novo_nome, "empresa": novo_empresa}).execute()
             st.success("Cadastro salvo!")
             st.rerun()
 
@@ -75,7 +74,7 @@ with st.expander("🔵 Registrar Nova Entrada"):
                 "cpf": p[0]['cpf'], "nome": p[0]['nome'], "empresa": p[0].get('empresa', ''),
                 "setor_destino": setor_destino, "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), "data_saida": ""
             }).execute()
-            st.success(f"{p[0]['nome']} entrou no setor {setor_destino}!")
+            st.success(f"{p[0]['nome']} entrou!")
             st.rerun()
         else:
             st.error("CPF não cadastrado.")
