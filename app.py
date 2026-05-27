@@ -40,7 +40,7 @@ with st.sidebar:
             st.session_state.perfil = None
             st.rerun()
         
-        # Funções do Sistema (Apenas Admin pode desligar/reiniciar)
+        # Apenas Admin tem poder de sistema (Reiniciar/Desligar)
         if st.session_state.perfil == 'admin':
             st.divider()
             st.subheader("⚙️ Funções Administrativas")
@@ -53,7 +53,7 @@ with st.sidebar:
 if st.session_state.logado:
     st.title("🏥 Painel de Monitoramento - Portaria")
 
-    # 1. NOVO CADASTRO (Todos logados podem)
+    # 1. CADASTRO (Todos)
     with st.expander("➕ Adicionar Novo Colaborador"):
         col_a, col_b, col_c = st.columns(3)
         novo_cpf = col_a.text_input("CPF do Novo:", key="novo_cpf")
@@ -65,7 +65,7 @@ if st.session_state.logado:
                 st.success("Cadastro salvo!")
                 st.rerun()
 
-    # 2. REGISTRO DE ENTRADA (Todos logados podem)
+    # 2. ENTRADA (Todos)
     with st.expander("🔵 Registrar Nova Entrada"):
         c1, c2 = st.columns([3, 1])
         cpf_input = c1.text_input("CPF para entrada:")
@@ -80,25 +80,31 @@ if st.session_state.logado:
             else:
                 st.error("CPF não cadastrado.")
 
-    # 3. PAINEL DE STATUS (Todos logados podem)
-    st.subheader("📋 Pessoas Presentes")
+    # 3. PAINEL DE STATUS E SAÍDA (Todos logados)
+    st.subheader("📋 Pessoas Presentes (Registrar Saída)")
     dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
+    
     if dados:
         setores = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
         abas = st.tabs(setores)
         for i, nome_setor in enumerate(setores):
             with abas[i]:
                 presentes = [r for r in dados if r['setor_destino'] == nome_setor]
+                if not presentes:
+                    st.info("Setor vazio.")
                 for pessoa in presentes:
                     col1, col2, col3 = st.columns([3, 2, 2])
                     col1.write(f"**{pessoa['nome']}**")
                     col2.write(f"Entrada: {pessoa['data_entrada']}")
+                    # BOTÃO DE SAÍDA DISPONÍVEL PARA TODOS
                     if col3.button("Registrar SAÍDA", key=f"saida_{pessoa['id']}"):
                         supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", pessoa['id']).execute()
                         st.rerun()
+    else:
+        st.write("Ninguém presente no momento.")
 
-    # 4. HISTÓRICO GERAL (Todos logados podem)
-    with st.expander("🕒 Histórico Geral (Entradas e Saídas Concluídas)"):
+    # 4. HISTÓRICO GERAL (Todos)
+    with st.expander("🕒 Histórico Geral"):
         todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
         if todos_dados:
             st.dataframe(pd.DataFrame(todos_dados))
@@ -107,12 +113,11 @@ if st.session_state.logado:
                 supabase.table("movimentacao").delete().neq("id", 0).execute()
                 st.rerun()
             else:
-                st.error("Apenas o Administrador pode apagar o histórico.")
+                st.error("Apenas Admin pode apagar o histórico.")
 
-    # 5. GESTÃO DE EXCLUSÃO (APENAS ADMINISTRADOR)
+    # 5. GESTÃO DE CADASTROS (APENAS ADMINISTRADOR)
     if st.session_state.perfil == 'admin':
-        with st.expander("⚙️ Gestão de Cadastros (Excluir Pessoa)"):
-            st.warning("⚠️ Esta área é restrita para administradores.")
+        with st.expander("⚙️ Gestão de Cadastros (Restrito Admin)"):
             todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
             if todos_colaboradores:
                 lista_nomes = [f"{p['nome']} (CPF: {p['cpf']})" for p in todos_colaboradores]
