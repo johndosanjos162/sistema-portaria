@@ -5,7 +5,6 @@ import pandas as pd
 import os
 
 # --- CONFIGURAÇÃO ---
-# Certifique-se de que ADMIN_PASSWORD e VIGILANTE_PASSWORD estejam no seu secrets.toml
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 senha_admin = st.secrets["ADMIN_PASSWORD"]
@@ -41,7 +40,6 @@ with st.sidebar:
             st.session_state.perfil = None
             st.rerun()
         
-        # Apenas Admin tem acesso a funções de sistema
         if st.session_state.perfil == 'admin':
             st.divider()
             st.subheader("⚙️ Funções Administrativas")
@@ -88,6 +86,7 @@ if st.session_state.logado:
     if dados:
         setores = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
         abas = st.tabs(setores)
+        
         for i, nome_setor in enumerate(setores):
             with abas[i]:
                 presentes = [r for r in dados if r['setor_destino'] == nome_setor]
@@ -99,13 +98,11 @@ if st.session_state.logado:
                         col1.write(f"**{pessoa['nome']}**")
                         col2.write(f"Entrada: {pessoa['data_entrada']}")
                         
-                        # CORREÇÃO DA LINHA 61: Formulário isola o botão e resolve o conflito de IDs
-                        with col3.form(key=f"form_saida_{pessoa['id']}", clear_on_submit=True):
-                            if st.form_submit_button("Registrar SAÍDA"):
-                                supabase.table("movimentacao").update(
-                                    {"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}
-                                ).eq("id", pessoa['id']).execute()
-                                st.rerun()
+                        if col3.button("Registrar SAÍDA", key=f"saida_btn_{pessoa['id']}"):
+                            supabase.table("movimentacao").update(
+                                {"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}
+                            ).eq("id", pessoa['id']).execute()
+                            st.rerun()
     else:
         st.write("Ninguém presente no momento.")
 
@@ -114,25 +111,4 @@ if st.session_state.logado:
         todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
         if todos_dados:
             st.dataframe(pd.DataFrame(todos_dados))
-        if st.button("🚨 APAGAR TODO O HISTÓRICO"):
-            if st.session_state.perfil == 'admin':
-                supabase.table("movimentacao").delete().neq("id", 0).execute()
-                st.rerun()
-            else:
-                st.error("Apenas o Administrador pode apagar o histórico.")
-
-    # 5. GESTÃO DE EXCLUSÃO (APENAS ADMINISTRADOR)
-    if st.session_state.perfil == 'admin':
-        with st.expander("⚙️ Gestão de Cadastros (Restrito Admin)"):
-            st.warning("⚠️ Esta área é restrita para administradores.")
-            todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
-            if todos_colaboradores:
-                lista_nomes = [f"{p['nome']} (CPF: {p['cpf']})" for p in todos_colaboradores]
-                selecionado = st.selectbox("Selecione para excluir:", lista_nomes)
-                cpf_selecionado = selecionado.split("(CPF: ")[1].replace(")", "")
-                if st.button("Confirmar Exclusão"):
-                    supabase.table("Pessoas").delete().eq("cpf", cpf_selecionado).execute()
-                    st.success("Cadastro removido!")
-                    st.rerun()
-else:
-    st.info("🔒 Por favor, faça login na barra lateral para acessar o sistema.")
+        if st.
