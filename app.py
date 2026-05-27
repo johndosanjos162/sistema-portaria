@@ -10,7 +10,7 @@ supabase = create_client(url, key)
 
 st.set_page_config(page_title="ACCESS GATE", layout="wide", page_icon="🔐", initial_sidebar_state="expanded")
 
-# ====================== DESIGN + LOGIN MELHORADO ======================
+# ====================== DESIGN + LOGIN ======================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -23,11 +23,6 @@ st.markdown("""
         background-attachment: fixed;
         color: #e0f2fe;
         font-family: 'Inter', sans-serif;
-    }
-    
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background-color: rgba(30, 41, 59, 0.95);
     }
     
     .sidebar-title {
@@ -79,33 +74,37 @@ st.sidebar.markdown("📍 Controle de Acesso")
 st.sidebar.markdown("🕒 Histórico")
 st.sidebar.markdown("⚙️ Configurações")
 
-# ====================== TELA DE LOGIN MELHORADA ======================
+# ====================== TELA DE LOGIN (Estilo da Última Imagem) ======================
 if "logado" not in st.session_state: st.session_state.logado = False
 if "perfil" not in st.session_state: st.session_state.perfil = ""
 
 if not st.session_state.logado:
-    st.markdown("<h1 style='text-align:center; margin:40px 0 20px 0;'>🔐 ACCESS GATE</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center; margin:40px 0 30px 0;'>🔐 ACCESS GATE</h1>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        # Círculo Biométrico Bonito
         st.markdown("""
             <div style='text-align:center; margin:30px 0;'>
-                <div style='width: 300px; height: 300px; margin: 0 auto; border: 6px solid #00f5ff; 
-                            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-                            box-shadow: 0 0 80px #00f5ff, inset 0 0 40px rgba(0, 245, 255, 0.6);
-                            background: rgba(0, 15, 40, 0.6);'>
+                <div style='width: 320px; height: 320px; margin: 0 auto; 
+                            border: 8px solid #00f5ff; 
+                            border-radius: 50%; 
+                            display: flex; 
+                            align-items: center; 
+                            justify-content: center;
+                            box-shadow: 0 0 90px #00f5ff, 
+                                        inset 0 0 60px rgba(0, 245, 255, 0.7);
+                            background: radial-gradient(circle, rgba(0, 245, 255, 0.1), transparent);'>
                     <div style='text-align:center;'>
-                        <span style='font-size: 110px;'>🔑</span><br>
-                        <span style='font-size: 28px; font-weight: 900; color:#00f5ff; letter-spacing: 2px;'>BIOMETRIC</span><br>
-                        <span style='font-size: 28px; font-weight: 900; color:#00f5ff; letter-spacing: 2px;'>LOGIN</span><br>
-                        <span style='color:#00ff9d; font-size: 22px; font-weight: bold;'>READY</span>
+                        <div style='font-size: 110px; margin-bottom: 10px;'>🔑</div>
+                        <span style='font-size: 32px; font-weight: 900; color:#00f5ff; letter-spacing: 3px;'>BIOMETRIC</span><br>
+                        <span style='font-size: 32px; font-weight: 900; color:#00f5ff; letter-spacing: 3px;'>LOGIN</span><br>
+                        <span style='color:#00ff9d; font-size: 24px; font-weight: bold; letter-spacing: 2px;'>READY</span>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
         
-        st.markdown("<h3 style='text-align:center; color:#00f5ff; margin:20px 0;'>OU USE CREDENCIAIS</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center; color:#00f5ff; margin:25px 0;'>OU USE CREDENCIAIS</h3>", unsafe_allow_html=True)
         
         senha = st.text_input("Digite a senha de acesso:", type="password", key="senha_login")
         
@@ -139,8 +138,7 @@ st.markdown("### 📊 Painel de Controle")
 
 setores_lista = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
 
-# ... (O resto do código permanece o mesmo - Gerenciamento, Entrada, Saída, etc.)
-
+# ====================== RESTANTE DO SISTEMA ======================
 col_esq, col_dir = st.columns(2)
 
 with col_esq:
@@ -185,7 +183,7 @@ with col_dir:
             st.success("✅ Saída registrada!")
             st.rerun()
 
-# Continuação do código (Pessoas Presentes, Histórico, etc.)...
+# Pessoas Presentes e Histórico
 st.markdown("---")
 col_inf1, col_inf2 = st.columns(2)
 
