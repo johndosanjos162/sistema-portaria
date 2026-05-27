@@ -2,113 +2,139 @@ import streamlit as st
 from supabase import create_client
 from datetime import datetime
 import pandas as pd
-import os
 
 # --- CONFIGURAÇÃO ---
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
-senha_admin = st.secrets["ADMIN_PASSWORD"]
-senha_vigilante = st.secrets["VIGILANTE_PASSWORD"]
 supabase = create_client(url, key)
-
 st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
 
-# --- CONTROLE DE SESSÃO ---
-if "logado" not in st.session_state:
-    st.session_state.logado = False
-    st.session_state.perfil = None 
+# --- DESIGN "TOP" COM FUNDO TECNOLÓGICO ---
+link_fundo = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/fghy.jpg"
 
-with st.sidebar:
-    st.header("🔑 Acesso ao Sistema")
-    if not st.session_state.logado:
-        senha_input = st.text_input("Digite sua senha:", type="password")
-        if st.button("Entrar"):
-            if senha_input == senha_admin:
-                st.session_state.logado = True
-                st.session_state.perfil = 'admin'
-                st.rerun()
-            elif senha_input == senha_vigilante:
-                st.session_state.logado = True
-                st.session_state.perfil = 'vigilante'
-                st.rerun()
-            else:
-                st.error("Senha incorreta!")
-    else:
-        st.write(f"Logado como: **{st.session_state.perfil.upper()}**")
-        if st.button("Sair"):
-            st.session_state.logado = False
-            st.session_state.perfil = None
-            st.rerun()
-        
-        if st.session_state.perfil == 'admin':
-            st.divider()
-            st.subheader("⚙️ Funções Administrativas")
-            if st.button("🔄 Reiniciar Sistema"):
-                st.rerun()
-            if st.button("🛑 Desligar Servidor"):
-                os._exit(0)
-
-# --- APLICATIVO PRINCIPAL ---
-if st.session_state.logado:
-    st.title("🏥 Painel de Monitoramento - Portaria")
-
-    # 1. ADICIONAR COLABORADOR (Todos)
-    with st.expander("➕ Adicionar Novo Colaborador"):
-        col_a, col_b, col_c = st.columns(3)
-        novo_cpf = col_a.text_input("CPF do Novo:", key="novo_cpf")
-        novo_nome = col_b.text_input("Nome do Novo:", key="novo_nome")
-        novo_vinculo = col_c.selectbox("Setor:", ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"], key="novo_vinculo")
-        if st.button("Salvar Novo Cadastro"):
-            if novo_cpf and novo_nome:
-                supabase.table("Pessoas").insert({"cpf": novo_cpf, "nome": novo_nome, "vinculo": novo_vinculo}).execute()
-                st.success("Cadastro salvo!")
-                st.rerun()
-
-    # 2. REGISTRAR ENTRADA (Todos)
-    with st.expander("🔵 Registrar Nova Entrada"):
-        c1, c2 = st.columns([3, 1])
-        cpf_input = c1.text_input("CPF para entrada:")
-        if c2.button("Adicionar Entrada"):
-            p = supabase.table("Pessoas").select("*").eq("cpf", cpf_input).execute().data
-            if p:
-                supabase.table("movimentacao").insert({
-                    "cpf": p[0]['cpf'], "nome": p[0]['nome'], "setor_destino": p[0]['vinculo'],
-                    "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), "data_saida": ""
-                }).execute()
-                st.rerun()
-            else:
-                st.error("CPF não cadastrado.")
-
-    # 3. PAINEL DE STATUS E SAÍDA (Todos logados)
-    st.subheader("📋 Pessoas Presentes")
-    dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
+st.markdown(f"""
+    <style>
+    .stApp {{ 
+        background-image: url("{link_fundo}"); 
+        background-size: cover; 
+        background-attachment: fixed;
+        background-position: center;
+    }}
+    h1, h2, h3, p, label, .stMarkdown {{ color: #00ff41 !important; text-shadow: 1px 1px 2px #000; }}
     
-    if dados:
-        setores = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
-        abas = st.tabs(setores)
-        
-        for i, nome_setor in enumerate(setores):
-            with abas[i]:
-                presentes = [r for r in dados if r['setor_destino'] == nome_setor]
-                if not presentes:
-                    st.info("Setor vazio.")
-                else:
-                    for pessoa in presentes:
-                        col1, col2, col3 = st.columns([3, 2, 2])
-                        col1.write(f"**{pessoa['nome']}**")
-                        col2.write(f"Entrada: {pessoa['data_entrada']}")
-                        
-                        if col3.button("Registrar SAÍDA", key=f"saida_btn_{pessoa['id']}"):
-                            supabase.table("movimentacao").update(
-                                {"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}
-                            ).eq("id", pessoa['id']).execute()
-                            st.rerun()
-    else:
-        st.write("Ninguém presente no momento.")
+    .st-expander {{ 
+        background-color: rgba(0, 20, 0, 0.8) !important; 
+        border: 1px solid #00ff41 !important; 
+        border-radius: 12px !important; 
+    }}
+    
+    div.stButton > button {{ 
+        background-color: #003300; color: #00ff41; border: 1px solid #00ff41; 
+        border-radius: 8px; font-weight: bold; 
+    }}
+    div.stButton > button:hover {{ background-color: #00ff41; color: black; }}
+    </style>
+    """, unsafe_allow_html=True)
 
-    # 4. HISTÓRICO GERAL (Todos)
-    with st.expander("🕒 Histórico Geral"):
-        todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
-        if todos_dados:
-            st.dataframe(pd.DataFrame(todos_dados))
-        if st.
+# --- CONTROLE DE ACESSO ---
+if "logado" not in st.session_state: st.session_state.logado = False
+if "perfil" not in st.session_state: st.session_state.perfil = ""
+
+if not st.session_state.logado:
+    st.title("🔐 Login de Acesso")
+    senha = st.text_input("Digite a senha:", type="password")
+    if st.button("Entrar", key="login_btn"):
+        if senha == "fgxv4VP0/*":
+            st.session_state.logado = True; st.session_state.perfil = "ADMIN"; st.rerun()
+        elif senha == "JOHN123":
+            st.session_state.logado = True; st.session_state.perfil = "VIGILANTE"; st.rerun()
+        else:
+            st.error("Senha incorreta!")
+    st.stop()
+
+# --- INTERFACE PRINCIPAL ---
+st.title("🏥 Painel de Monitoramento")
+if st.button("Sair do Sistema", key="sair_final"):
+    st.session_state.logado = False; st.rerun()
+
+setores_lista = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
+
+# --- 0. NOVO CADASTRO ---
+with st.expander("➕ Adicionar Novo Colaborador"):
+    col_a, col_b, col_c, col_d = st.columns(4)
+    novo_cpf = col_a.text_input("CPF:", key="novo_cpf")
+    novo_nome = col_b.text_input("Nome:", key="novo_nome")
+    novo_empresa = col_c.text_input("Empresa:", key="novo_empresa")
+    novo_vinculo = col_d.selectbox("Vínculo Original:", setores_lista, key="novo_vinculo")
+    
+    if st.button("Salvar Novo Cadastro", key="salvar_cadastro"):
+        if novo_cpf and novo_nome:
+            supabase.table("Pessoas").insert({"cpf": novo_cpf, "nome": novo_nome, "vinculo": novo_vinculo, "empresa": novo_empresa}).execute()
+            st.success("Salvo!"); st.rerun()
+
+# --- 1. REGISTRO DE ENTRADA ---
+with st.expander("🔵 Registrar Nova Entrada"):
+    c1, c2, c3 = st.columns([2, 2, 1])
+    cpf_input = c1.text_input("CPF do colaborador:")
+    setor_escolhido = c2.selectbox("Selecione o destino agora:", setores_lista, key="sel_destino")
+    
+    if c3.button("Adicionar Entrada", key="btn_entrada"):
+        p = supabase.table("Pessoas").select("*").eq("cpf", cpf_input).execute().data
+        if p:
+            supabase.table("movimentacao").insert({
+                "cpf": p[0]['cpf'], 
+                "nome": p[0]['nome'], 
+                "empresa": p[0].get('empresa', ''),
+                "setor_destino": setor_escolhido, 
+                "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"), 
+                "data_saida": ""
+            }).execute()
+            st.rerun()
+        else:
+            st.error("CPF não cadastrado.")
+
+# --- 1.1 REGISTRO DE SAÍDA MANUAL ---
+with st.expander("🔴 Registrar Saída (Busca por CPF)"):
+    c1, c2 = st.columns([3, 1])
+    cpf_saida = c1.text_input("Digite o CPF para saída:", key="out_cpf")
+    if c2.button("Confirmar Saída", key="btn_saida_manual"):
+        reg = supabase.table("movimentacao").select("*").eq("cpf", cpf_saida).eq("data_saida", "").execute().data
+        if reg:
+            supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", reg[0]['id']).execute()
+            st.rerun()
+
+# --- 2. PAINEL DE STATUS ---
+st.subheader("📋 Pessoas Presentes")
+dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
+if dados:
+    aba_lista = st.tabs(setores_lista)
+    for i, nome_setor in enumerate(setores_lista):
+        with aba_lista[i]:
+            for p in [r for r in dados if r['setor_destino'] == nome_setor]:
+                c1, c2, c3 = st.columns([3, 3, 2])
+                c1.write(f"**{p['nome']}**"); c2.write(f"Empresa: {p.get('empresa', 'N/A')}")
+                if c3.button("SAÍDA", key=f"s_{p['id']}"):
+                    supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", p['id']).execute(); st.rerun()
+
+# --- 3. HISTÓRICO ---
+with st.expander("🕒 Histórico Geral"):
+    todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
+    if todos_dados:
+        st.dataframe(pd.DataFrame(todos_dados))
+        # O vigilante pode ver o histórico e excluir erros de registro
+        id_excluir = st.number_input("Digite o ID para excluir erro:", min_value=1, step=1)
+        if st.button("Confirmar Exclusão de Registro", key="del_reg"):
+            supabase.table("movimentacao").delete().eq("id", id_excluir).execute(); st.rerun()
+    if st.button("🚨 APAGAR TODO O HISTÓRICO", key="del_all"):
+        supabase.table("movimentacao").delete().neq("id", 0).execute(); st.rerun()
+
+# --- 4. GESTÃO (RESTRITO AO ADMIN) ---
+if st.session_state.perfil == "ADMIN":
+    with st.expander("⚙️ Gestão de Cadastros"):
+        todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
+        if todos_colaboradores:
+            lista_nomes = [f"{p['nome']} (CPF: {p['cpf']})" for p in todos_colaboradores]
+            selecionado = st.selectbox("Selecione para excluir:", lista_nomes)
+            if st.button("Confirmar Exclusão do Cadastro", key="del_cad"):
+                cpf_excluir = selecionado.split("(CPF: ")[1].replace(")", "")
+                supabase.table("Pessoas").delete().eq("cpf", cpf_excluir).execute(); st.rerun()
