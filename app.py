@@ -2,25 +2,28 @@ import streamlit as st
 from supabase import create_client
 from datetime import datetime
 import pandas as pd
-import os # Necessário para o comando de desligar
+import os
 
 # --- CONFIGURAÇÃO E CONEXÃO ---
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
+senha_admin = st.secrets["ADMIN_PASSWORD"]
 supabase = create_client(url, key)
 
 st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
 
-# --- FUNÇÕES DE CONTROLE (NOVO) ---
+# --- BARRA LATERAL: LOGIN E REINICIALIZAÇÃO ---
 with st.sidebar:
-    st.header("⚙️ Sistema")
-    if st.button("🔄 Reiniciar Sistema"):
-        st.rerun()
+    st.header("⚙️ Painel de Controle")
+    input_senha = st.text_input("Senha do Administrador:", type="password")
     
-    if st.button("🛑 Desligar Servidor"):
-        st.warning("Encerrando o servidor...")
-        # st.stop() para a interface, os._exit(0) tenta encerrar o processo pai
-        os._exit(0) 
+    # A lógica abaixo garante que o botão de reiniciar só funcione com a senha correta
+    if st.button("🔄 Reiniciar Sistema"):
+        if input_senha == senha_admin:
+            st.warning("Senha correta. Reiniciando...")
+            st.rerun()
+        else:
+            st.error("Senha de administrador necessária!")
 
 st.title("🏥 Painel de Monitoramento - Portaria")
 
@@ -62,7 +65,7 @@ with st.expander("🔵 Registrar Nova Entrada"):
         else:
             st.error("CPF não cadastrado.")
 
-# --- 2. PAINEL DE STATUS (QUEM ESTÁ DENTRO) ---
+# --- 2. PAINEL DE STATUS ---
 st.subheader("📋 Pessoas Presentes (Aguardando Saída)")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
@@ -95,7 +98,7 @@ with st.expander("🕒 Histórico Geral (Entradas e Saídas Concluídas)"):
         supabase.table("movimentacao").delete().neq("id", 0).execute()
         st.rerun()
 
-# --- 4. GESTÃO DE CADASTROS (EXCLUSÃO) ---
+# --- 4. GESTÃO DE CADASTROS ---
 with st.expander("⚙️ Gestão de Cadastros (Excluir Pessoa)"):
     st.warning("⚠️ Cuidado: Esta ação apagará permanentemente o colaborador da base.")
     todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
