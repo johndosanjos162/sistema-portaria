@@ -123,32 +123,35 @@ with col3:
         st.rerun()
 
 # ====================== CADASTRO DE NOVA PESSOA ======================
-with st.expander("➕ Adicionar Novo Colaborador / Prestador"):
+st.subheader("➕ Cadastro de Nova Pessoa")
+
+with st.expander("📋 Adicionar Novo Colaborador / Prestador", expanded=True):
     col_a, col_b, col_c, col_d = st.columns(4)
-    novo_cpf = col_a.text_input("CPF:", key="novo_cpf")
-    novo_nome = col_b.text_input("Nome Completo:", key="novo_nome")
-    novo_empresa = col_c.text_input("Empresa:", key="novo_empresa")
-    novo_vinculo = col_d.selectbox("Vínculo / Setor:", 
-                                   ["C.C", "GRSA", "Brasanitas", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Laboratório", "Farmacia"], 
+    novo_cpf = col_a.text_input("CPF *", key="novo_cpf", placeholder="000.000.000-00")
+    novo_nome = col_b.text_input("Nome Completo *", key="novo_nome")
+    novo_empresa = col_c.text_input("Empresa", key="novo_empresa")
+    novo_vinculo = col_d.selectbox("Vínculo / Setor *", 
+                                   ["C.C", "GRSA", "Brasanitas", "Hemodinâmica", "OPME", "CME", 
+                                    "Endoscopia", "Manutenção", "Laboratório", "Farmacia", "SSGA", "Outros"], 
                                    key="novo_vinculo")
     
-    if st.button("💾 Salvar Novo Cadastro", key="salvar_cadastro"):
-        if novo_cpf and novo_nome:
+    if st.button("💾 Salvar Cadastro", key="salvar_cadastro", type="primary"):
+        if novo_cpf and novo_nome and novo_vinculo:
             supabase.table("Pessoas").insert({
-                "cpf": novo_cpf, 
-                "nome": novo_nome, 
-                "vinculo": novo_vinculo, 
-                "empresa": novo_empresa
+                "cpf": novo_cpf.strip(),
+                "nome": novo_nome.strip(),
+                "empresa": novo_empresa.strip(),
+                "vinculo": novo_vinculo
             }).execute()
-            st.success("✅ Cadastro salvo com sucesso!")
+            st.success("✅ Cadastro realizado com sucesso!")
             st.rerun()
         else:
-            st.error("CPF e Nome são obrigatórios.")
+            st.error("❌ CPF, Nome e Vínculo são obrigatórios.")
 
 # ====================== REGISTRO DE ENTRADA ======================
 st.subheader("📋 Registrar Nova Entrada")
 
-tipo = st.radio("Tipo:", ["Colaborador Interno", "Prestador de Serviço"], horizontal=True)
+tipo = st.radio("Tipo de Pessoa:", ["Colaborador Interno", "Prestador de Serviço"], horizontal=True)
 
 if tipo == "Colaborador Interno":
     destinos = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Laboratório", "Farmacia"]
@@ -171,10 +174,10 @@ if c3.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
                 "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M"),
                 "data_saida": ""
             }).execute()
-            st.success(f"✅ Entrada registrada para {setor_escolhido}!")
+            st.success(f"✅ Entrada registrada para **{setor_escolhido}**!")
             st.rerun()
         else:
-            st.error("CPF não cadastrado.")
+            st.error("❌ CPF não cadastrado.")
     else:
         st.warning("Digite o CPF.")
 
@@ -184,7 +187,6 @@ dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute(
 
 if dados:
     tabs = st.tabs(["Todos", "C.C", "GRSA", "Brasanitas"])
-    
     with tabs[0]:
         for p in dados:
             c1, c2, c3 = st.columns([3, 3, 2])
@@ -193,7 +195,7 @@ if dados:
             if c3.button("🚪 Saída", key=f"saida_{p['id']}"):
                 supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", p['id']).execute()
                 st.rerun()
-    
+
     for i, setor in enumerate(["C.C", "GRSA", "Brasanitas"], 1):
         with tabs[i]:
             for p in [r for r in dados if r.get('setor_destino') == setor]:
@@ -224,5 +226,3 @@ if st.session_state.perfil == "ADMIN":
                 cpf_excluir = selecionado.split("(CPF: ")[1].replace(")", "")
                 supabase.table("Pessoas").delete().eq("cpf", cpf_excluir).execute()
                 st.rerun()
-
-st.success("✅ Sistema atualizado com sucesso!")
