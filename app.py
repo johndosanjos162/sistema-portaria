@@ -122,31 +122,26 @@ with col3:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== CADASTRO DE NOVA PESSOA (Limpo) ======================
+# ====================== CADASTRO SIMPLIFICADO ======================
 st.subheader("➕ Cadastro de Nova Pessoa")
 
 with st.expander("📋 Adicionar Novo Colaborador / Prestador", expanded=True):
-    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a, col_b, col_c = st.columns(3)
     novo_cpf = col_a.text_input("CPF *", key="novo_cpf", placeholder="000.000.000-00")
     novo_nome = col_b.text_input("Nome Completo *", key="novo_nome")
     novo_empresa = col_c.text_input("Empresa", key="novo_empresa")
-    novo_vinculo = col_d.selectbox("Vínculo / Setor *", 
-        ["C.C", "GRSA", "Brasanitas", "Hemodinâmica", "OPME", "CME", "Endoscopia", 
-         "Manutenção", "Laboratório", "Farmacia 6°And", "Farmacia 4°And", "SSGA", "Outros"], 
-        key="novo_vinculo")
     
     if st.button("💾 Salvar Cadastro", key="salvar_cadastro", type="primary"):
-        if novo_cpf and novo_nome and novo_vinculo:
+        if novo_cpf and novo_nome:
             supabase.table("Pessoas").insert({
                 "cpf": novo_cpf.strip(),
                 "nome": novo_nome.strip(),
-                "empresa": novo_empresa.strip() if novo_empresa else "",
-                "vinculo": novo_vinculo
+                "empresa": novo_empresa.strip() if novo_empresa else ""
             }).execute()
             st.success("✅ Cadastro salvo com sucesso!")
             st.rerun()
         else:
-            st.error("❌ Os campos CPF, Nome e Vínculo são obrigatórios.")
+            st.error("❌ CPF e Nome Completo são obrigatórios.")
 
 # ====================== REGISTRO DE ENTRADA ======================
 st.subheader("📋 Registrar Nova Entrada")
