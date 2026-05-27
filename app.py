@@ -16,8 +16,8 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     .stApp {
-        background: linear-gradient(rgba(10, 20, 40, 0.85), rgba(15, 23, 42, 0.95)),
-                    url('https://i.ibb.co/0BUXP/Generated-Image.jpg') !important;  /* Substitua pelo link da imagem */
+        background: linear-gradient(rgba(10, 20, 40, 0.85), rgba(15, 23, 42, 0.92)),
+                    url('https://files.oaiusercontent.com/file-Vl2vX8zK9pL3mN7qR8tYvXwZ?se=2026-05-28T00%3A00%3A00Z&sp=r&sv=2024-08-04&sr=b&rscc=max-age%3D31536000%2C%20immutable&rscd=attachment%3B%20filename%3DGenerated%20Image.jpg') !important;
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -52,8 +52,6 @@ st.markdown("""
         font-weight: 600;
         padding: 12px 24px;
         transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
     
     div.stButton > button:not([key="sair_final"]) {
@@ -80,12 +78,6 @@ st.markdown("""
         border: 1px solid #475569 !important;
         border-radius: 10px !important;
         margin-bottom: 12px;
-    }
-    
-    .st-expander header {
-        background-color: transparent !important;
-        font-size: 18px;
-        font-weight: 600;
     }
     
     .stTextInput > div > div > input,
@@ -192,7 +184,7 @@ with col_dir:
             st.success("✅ Saída registrada!")
             st.rerun()
 
-# Pessoas Presentes e Histórico
+# ====================== SEÇÕES INFERIORES ======================
 st.markdown("---")
 col_inf1, col_inf2 = st.columns(2)
 
