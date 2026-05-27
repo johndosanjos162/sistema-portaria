@@ -10,7 +10,7 @@ supabase = create_client(url, key)
 
 st.set_page_config(page_title="ACCESS GATE", layout="wide", page_icon="🔐", initial_sidebar_state="expanded")
 
-# ====================== DESIGN AVANÇADO ======================
+# ====================== DESIGN COM BOTÕES PREMIUM ======================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -36,14 +36,44 @@ st.markdown("""
         border-bottom: 1px solid #334155;
     }
     
-    /* Header */
     h1 {
         color: #67e8f9 !important;
         font-size: 34px !important;
         font-weight: 700;
-        letter-spacing: 1px;
     }
     
+    /* Botões de Confirmação - Design Atrativo */
+    div.stButton > button {
+        border-radius: 10px;
+        font-weight: 600;
+        padding: 12px 24px;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Botões Principais de Ação (verde neon) */
+    div.stButton > button:not([key="sair_final"]) {
+        background: linear-gradient(90deg, #10b981, #34d399);
+        color: #0f172a;
+        border: 2px solid #34d399;
+        box-shadow: 0 0 15px rgba(52, 211, 153, 0.5);
+    }
+    
+    div.stButton > button:not([key="sair_final"]):hover {
+        background: linear-gradient(90deg, #34d399, #6ee7b7);
+        transform: translateY(-3px);
+        box-shadow: 0 0 25px rgba(52, 211, 153, 0.8);
+    }
+    
+    /* Botão Desconectar (vermelho) */
+    div.stButton > button[key="sair_final"] {
+        background: linear-gradient(90deg, #ef4444, #f87171);
+        color: white;
+        border: 2px solid #f87171;
+    }
+    
+    /* Expansores */
     .st-expander {
         background-color: rgba(30, 41, 59, 0.7) !important;
         border: 1px solid #475569 !important;
@@ -54,14 +84,6 @@ st.markdown("""
     .st-expander header {
         background-color: transparent !important;
         font-size: 18px;
-        font-weight: 600;
-    }
-    
-    /* Botão Desconectar */
-    div.stButton > button[key="sair_final"] {
-        background-color: #2563eb !important;
-        color: white !important;
-        border-radius: 8px;
         font-weight: 600;
     }
     
@@ -125,8 +147,7 @@ if not st.session_state.logado:
                 st.error("Senha incorreta!")
     st.stop()
 
-# ====================== LAYOUT PRINCIPAL ======================
-# Gerenciamento de Cadastros + Registrar Entrada
+# ====================== CONTEÚDO ======================
 col_esq, col_dir = st.columns(2)
 
 with col_esq:
@@ -171,7 +192,7 @@ with col_dir:
             st.success("✅ Saída registrada!")
             st.rerun()
 
-# ====================== SEÇÕES INFERIORES ======================
+# Pessoas Presentes e Histórico
 st.markdown("---")
 col_inf1, col_inf2 = st.columns(2)
 
@@ -186,7 +207,7 @@ with col_inf1:
                     c1, c2, c3 = st.columns([3, 3, 2])
                     c1.write(f"**{p['nome']}**")
                     c2.write(f"Empresa: {p.get('empresa', 'N/A')}")
-                    if c3.button("🚪 Saída", key=f"s_{p['id']}"):
+                    if c3.button("🚪 Registrar Saída", key=f"s_{p['id']}"):
                         supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", p['id']).execute()
                         st.rerun()
 
