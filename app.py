@@ -10,20 +10,24 @@ supabase = create_client(url, key)
 
 st.set_page_config(page_title="ACCESS GATE", layout="wide", page_icon="🔐", initial_sidebar_state="expanded")
 
-# ====================== DESIGN COM BOTÕES PREMIUM ======================
+# ====================== DESIGN COM IMAGEM DE FUNDO ======================
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     .stApp {
-        background: linear-gradient(180deg, #0a1428 0%, #1e2937 100%);
+        background: linear-gradient(rgba(10, 20, 40, 0.85), rgba(15, 23, 42, 0.95)),
+                    url('https://i.ibb.co/0BUXP/Generated-Image.jpg') !important;  /* Substitua pelo link da imagem */
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
         color: #e0f2fe;
         font-family: 'Inter', sans-serif;
     }
     
     /* Sidebar */
     section[data-testid="stSidebar"] {
-        background-color: #1e2937;
+        background-color: rgba(30, 41, 59, 0.95);
         border-right: 1px solid #334155;
     }
     
@@ -42,7 +46,7 @@ st.markdown("""
         font-weight: 700;
     }
     
-    /* Botões de Confirmação - Design Atrativo */
+    /* Botões Atrativos */
     div.stButton > button {
         border-radius: 10px;
         font-weight: 600;
@@ -52,7 +56,6 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
     
-    /* Botões Principais de Ação (verde neon) */
     div.stButton > button:not([key="sair_final"]) {
         background: linear-gradient(90deg, #10b981, #34d399);
         color: #0f172a;
@@ -66,16 +69,14 @@ st.markdown("""
         box-shadow: 0 0 25px rgba(52, 211, 153, 0.8);
     }
     
-    /* Botão Desconectar (vermelho) */
     div.stButton > button[key="sair_final"] {
         background: linear-gradient(90deg, #ef4444, #f87171);
         color: white;
         border: 2px solid #f87171;
     }
     
-    /* Expansores */
     .st-expander {
-        background-color: rgba(30, 41, 59, 0.7) !important;
+        background-color: rgba(30, 41, 59, 0.85) !important;
         border: 1px solid #475569 !important;
         border-radius: 10px !important;
         margin-bottom: 12px;
@@ -87,7 +88,6 @@ st.markdown("""
         font-weight: 600;
     }
     
-    /* Inputs */
     .stTextInput > div > div > input,
     .stSelectbox > div > div > div {
         background-color: #1e2937 !important;
@@ -221,7 +221,6 @@ with col_inf2:
             supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
             st.rerun()
 
-# Gestão Admin
 if st.session_state.perfil == "ADMIN":
     st.subheader("⚙️ Gestão de Cadastros")
     todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
