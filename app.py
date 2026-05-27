@@ -10,125 +10,102 @@ supabase = create_client(url, key)
 
 st.set_page_config(page_title="ACCESS GATE", layout="wide", page_icon="🔐")
 
-# ====================== DESIGN PREMIUM FUTURISTA ======================
+# ====================== DESIGN MODERNO TIPO DB-SECURE ======================
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
     .stApp {
-        background: radial-gradient(circle at center, #0A1F2E 0%, #000814 100%);
-        color: #ffffff;
-        font-family: 'Orbitron', sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        font-family: 'Inter', sans-serif;
     }
     
-    /* Cadeado Grande no Fundo */
-    .stApp::before {
-        content: '🔐';
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 520px;
-        opacity: 0.07;
-        color: #00f5ff;
-        pointer-events: none;
-        z-index: -1;
-        filter: blur(8px);
-    }
-    
-    /* Grid Tecnológico */
-    .stApp::after {
-        content: '';
-        position: fixed;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: linear-gradient(rgba(0, 245, 255, 0.04) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(0, 245, 255, 0.04) 1px, transparent 1px);
-        background-size: 60px 60px;
-        pointer-events: none;
-        z-index: -1;
-    }
-    
+    /* Cabeçalho */
     h1 {
-        color: #00f5ff !important;
-        text-align: center;
-        font-size: 46px !important;
-        font-weight: 900;
-        text-shadow: 0 0 25px #00f5ff;
-        letter-spacing: 5px;
-        margin-bottom: 8px;
+        color: #22d3ee !important;
+        font-size: 32px !important;
+        font-weight: 700;
+        text-shadow: 0 0 15px rgba(34, 211, 238, 0.5);
     }
     
-    /* Botão Desconectar - Bem posicionado */
-    .stButton > button[k="sair_final"] {
-        background: linear-gradient(45deg, #660000, #aa0000);
-        color: white;
-        border: 2px solid #ff3333;
-        border-radius: 50px;
-        padding: 10px 24px;
-        font-weight: bold;
-        position: absolute;
-        top: 25px;
-        right: 30px;
-    }
-    
-    /* Expansores */
+    /* Cards / Expansores */
     .st-expander {
-        background: rgba(10, 25, 50, 0.85) !important;
-        border: 2px solid #00f5ff !important;
-        border-radius: 16px !important;
-        box-shadow: 0 0 20px rgba(0, 245, 255, 0.35);
-        margin-bottom: 14px;
+        background-color: #1e2937 !important;
+        border: 1px solid #334155 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 16px;
     }
     
     .st-expander header {
-        background: linear-gradient(90deg, #001122, #003366) !important;
-        border-radius: 14px !important;
+        background-color: #1e2937 !important;
+        border-bottom: 1px solid #334155;
     }
     
-    /* Botões Internos */
+    /* Botões */
     div.stButton > button {
-        background: linear-gradient(45deg, #001f3f, #003366);
-        color: #00f5ff;
-        border: 2px solid #00f5ff;
-        border-radius: 12px;
-        font-weight: 700;
-        padding: 12px 26px;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        box-shadow: 0 0 18px rgba(0, 245, 255, 0.5);
+        background-color: #1e40af;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        padding: 10px 20px;
         transition: all 0.3s;
     }
     
     div.stButton > button:hover {
-        background: linear-gradient(45deg, #00f5ff, #00ffaa);
-        color: #000;
-        transform: scale(1.04);
-        box-shadow: 0 0 35px #00f5ff;
+        background-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+    }
+    
+    /* Botão Desconectar */
+    div.stButton > button[key="sair_final"] {
+        background-color: #b91c1c !important;
+        color: white !important;
+        border: 1px solid #f87171;
     }
     
     /* Inputs */
     .stTextInput > div > div > input,
-    .stSelectbox > div > div > div {
-        background-color: rgba(5, 20, 45, 0.95) !important;
-        border: 2px solid #00f5ff !important;
-        color: #ffffff !important;
-        border-radius: 10px;
-        font-size: 16px;
+    .stSelectbox > div > div > div,
+    .stNumberInput > div > div > input {
+        background-color: #1e2937 !important;
+        border: 1px solid #475569 !important;
+        color: #e2e8f0 !important;
+        border-radius: 8px;
     }
     
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        background-color: rgba(0, 15, 35, 0.9);
+        background-color: #1e2937;
+        gap: 4px;
     }
     
     .stTabs [data-baseweb="tab"] {
-        color: #00f5ff !important;
+        background-color: #334155;
+        color: #94a3b8;
+        border-radius: 8px;
     }
     
+    .stTabs [aria-selected="true"] {
+        background-color: #22d3ee !important;
+        color: #0f172a !important;
+        font-weight: 600;
+    }
+    
+    /* Dataframe */
     .stDataFrame {
-        border: 2px solid #00f5ff;
-        border-radius: 12px;
+        background-color: #1e2937;
+        border: 1px solid #334155;
+        border-radius: 10px;
+    }
+    
+    /* Sidebar Style Simulation */
+    section[data-testid="stSidebar"] {
+        background-color: #0f172a;
+        border-right: 1px solid #334155;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -138,27 +115,22 @@ if "logado" not in st.session_state: st.session_state.logado = False
 if "perfil" not in st.session_state: st.session_state.perfil = ""
 
 if not st.session_state.logado:
-    st.markdown("<h1>🔐 ACCESS GATE</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; font-size:24px; color:#00ff9d;'>🏥 PORTARIA HOSPITALAR</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;'>🔐 ACCESS GATE</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; font-size:22px; color:#67e8f9;'>🏥 Sistema de Controle de Portaria</p>", unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         st.markdown("""
-            <div style='text-align:center; margin:40px 0;'>
-                <div style='border:5px solid #00f5ff; border-radius:50%; width:280px; height:280px; margin:0 auto;
-                            display:flex; align-items:center; justify-content:center; box-shadow: 0 0 70px #00f5ff;'>
-                    <div style='text-align:center;'>
-                        <span style='font-size:100px;'>🔑</span><br>
-                        <span style='font-size:28px; font-weight:900; color:#00f5ff;'>BIOMETRIC LOGIN</span><br>
-                        <span style='color:#00ff9d; font-size:20px;'>READY</span>
-                    </div>
-                </div>
+            <div style='text-align:center; padding:30px; background:#1e2937; border-radius:16px; border:2px solid #22d3ee;'>
+                <span style='font-size:90px;'>🔐</span><br><br>
+                <h2 style='color:#22d3ee;'>BIOMETRIC LOGIN</h2>
+                <p style='color:#67e8f9;'>SYSTEM READY</p>
             </div>
         """, unsafe_allow_html=True)
         
-        senha = st.text_input("🔑 Digite a senha:", type="password", key="senha_login")
+        senha = st.text_input("Digite a senha de acesso:", type="password", key="senha_login")
         
-        if st.button("🔓 ACESSAR SISTEMA", key="login_btn", use_container_width=True):
+        if st.button("🔓 ENTRAR NO SISTEMA", key="login_btn", use_container_width=True):
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
                 st.session_state.perfil = "ADMIN"
@@ -172,35 +144,34 @@ if not st.session_state.logado:
     st.stop()
 
 # ====================== PAINEL PRINCIPAL ======================
-st.markdown("<h1>🔐 ACCESS GATE - PAINEL DE CONTROLE</h1>", unsafe_allow_html=True)
+col_header1, col_header2 = st.columns([4, 1])
+with col_header1:
+    st.markdown("<h1>ACCESS GATE - PAINEL DE CONTROLE</h1>", unsafe_allow_html=True)
 
-# Botão Desconectar bem posicionado no topo
-col_desconectar, col_perfil = st.columns([6, 1])
-with col_desconectar:
+with col_header2:
     if st.button("🚪 DESCONECTAR", key="sair_final"):
         st.session_state.logado = False
         st.rerun()
-
-with col_perfil:
-    st.markdown(f"<h3 style='color:#00ff9d; text-align:right;'>PERFIL: {st.session_state.perfil}</h3>", unsafe_allow_html=True)
+    st.markdown(f"**PERFIL:** <span style='color:#67e8f9;'>{st.session_state.perfil}</span>", unsafe_allow_html=True)
 
 setores_lista = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Eng.Clínicaa", "Laboratório", "SSGA", "Farmacia 6°And", "Dispensário", "RT","Oncologia","Farmacia 4°And", "Brasanitas", "GRSA", "epidemiologia", "CDU"]
 
-# --- Expansores ---
-with st.expander("➕ ADICIONAR NOVO COLABORADOR"):
+# --- 0. NOVO CADASTRO ---
+with st.expander("➕ ADICIONAR NOVO COLABORADOR", expanded=False):
     col_a, col_b, col_c, col_d = st.columns(4)
     novo_cpf = col_a.text_input("CPF:", key="novo_cpf")
     novo_nome = col_b.text_input("Nome Completo:", key="novo_nome")
     novo_empresa = col_c.text_input("Empresa:", key="novo_empresa")
     novo_vinculo = col_d.selectbox("Vínculo:", setores_lista, key="novo_vinculo")
    
-    if st.button("💾 SALVAR NOVO CADASTRO", key="salvar_cadastro"):
+    if st.button("💾 SALVAR CADASTRO", key="salvar_cadastro"):
         if novo_cpf and novo_nome:
             supabase.table("Pessoas").insert({"cpf": novo_cpf, "nome": novo_nome, "vinculo": novo_vinculo, "empresa": novo_empresa}).execute()
             st.success("✅ Cadastro salvo com sucesso!")
             st.rerun()
 
-with st.expander("🔵 REGISTRAR NOVA ENTRADA"):
+# --- 1. REGISTRO DE ENTRADA ---
+with st.expander("🔵 REGISTRAR NOVA ENTRADA", expanded=False):
     c1, c2, c3 = st.columns([2, 2, 1])
     cpf_input = c1.text_input("CPF do colaborador:")
     setor_escolhido = c2.selectbox("Destino:", setores_lista, key="sel_destino")
@@ -218,7 +189,8 @@ with st.expander("🔵 REGISTRAR NOVA ENTRADA"):
         else:
             st.error("CPF não cadastrado.")
 
-with st.expander("🔴 REGISTRAR SAÍDA"):
+# --- 1.1 REGISTRO DE SAÍDA ---
+with st.expander("🔴 REGISTRAR SAÍDA", expanded=False):
     c1, c2 = st.columns([3, 1])
     cpf_saida = c1.text_input("CPF para saída:", key="out_cpf")
     if c2.button("✅ CONFIRMAR SAÍDA", key="btn_saida_manual"):
@@ -228,7 +200,7 @@ with st.expander("🔴 REGISTRAR SAÍDA"):
             st.success("✅ Saída registrada!")
             st.rerun()
 
-# Painel de Pessoas Presentes
+# --- 2. PESSOAS PRESENTES ---
 st.subheader("📍 PESSOAS PRESENTES NO HOSPITAL")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
@@ -244,18 +216,19 @@ if dados:
                     supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M")}).eq("id", p['id']).execute()
                     st.rerun()
 
-# Histórico e Gestão
-with st.expander("🕒 HISTÓRICO COMPLETO"):
+# --- 3. HISTÓRICO ---
+with st.expander("🕒 HISTÓRICO COMPLETO", expanded=False):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     if todos_dados:
         st.dataframe(pd.DataFrame(todos_dados), use_container_width=True)
-        id_excluir = st.number_input("ID para excluir:", min_value=1, step=1)
+        id_excluir = st.number_input("ID do registro para excluir:", min_value=1, step=1)
         if st.button("🗑️ EXCLUIR REGISTRO", key="del_reg"):
             supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
             st.rerun()
 
+# --- 4. GESTÃO ADMIN ---
 if st.session_state.perfil == "ADMIN":
-    with st.expander("⚙️ GESTÃO DE CADASTROS"):
+    with st.expander("⚙️ GESTÃO DE CADASTROS", expanded=False):
         todos_colaboradores = supabase.table("Pessoas").select("nome, cpf").execute().data
         if todos_colaboradores:
             lista_nomes = [f"{p['nome']} (CPF: {p['cpf']})" for p in todos_colaboradores]
