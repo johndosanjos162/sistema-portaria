@@ -10,27 +10,30 @@ supabase = create_client(url, key)
 st.set_page_config(page_title="Portaria Hospitalar", layout="wide")
 
 # --- DESIGN "TOP" COM FUNDO TECNOLÓGICO ---
-st.markdown("""
+# SUBSTITUA O LINK ABAIXO PELO LINK REAL DA SUA IMAGEM NO GITHUB
+link_fundo = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/fghy.jpg"
+
+st.markdown(f"""
     <style>
-    :root { --primary-color: #00ff41; --bg-color: #000000; }
-    .stApp { 
-        background-image: url("https://raw.githubusercontent.com/sua-conta/seu-repositorio/main/fghy.jpg"); 
+    .stApp {{ 
+        background-image: url("{link_fundo}"); 
         background-size: cover; 
         background-attachment: fixed;
-    }
-    h1, h3, p, label, .stMarkdown { color: #00ff41 !important; text-shadow: 1px 1px 2px black; }
+        background-position: center;
+    }}
+    h1, h2, h3, p, label, .stMarkdown {{ color: #00ff41 !important; text-shadow: 1px 1px 2px #000; }}
     
-    .st-expander { 
+    .st-expander {{ 
         background-color: rgba(0, 20, 0, 0.8) !important; 
         border: 1px solid #00ff41 !important; 
         border-radius: 12px !important; 
-    }
+    }}
     
-    div.stButton > button { 
+    div.stButton > button {{ 
         background-color: #003300; color: #00ff41; border: 1px solid #00ff41; 
         border-radius: 8px; font-weight: bold; 
-    }
-    div.stButton > button:hover { background-color: #00ff41; color: black; }
+    }}
+    div.stButton > button:hover {{ background-color: #00ff41; color: black; }}
     </style>
     """, unsafe_allow_html=True)
 
