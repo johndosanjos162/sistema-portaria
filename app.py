@@ -146,7 +146,7 @@ st.markdown("""
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
 }
 
-/* SIDEBAR */
+/* SIDEBAR - SEM MENU, APENAS INFO */
 [data-testid="stSidebar"] {
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(15px);
@@ -168,20 +168,21 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
     letter-spacing: 2px;
 }
-.nav-link {
-    display: block;
-    padding: 8px 12px;
-    margin: 5px 0;
-    border-radius: 10px;
-    text-decoration: none;
-    color: #00BFFF;
-    font-weight: 600;
-    transition: 0.3s;
+.info-section {
+    padding: 0 15px;
+    margin-top: 20px;
 }
-.nav-link:hover {
-    background: rgba(0, 191, 255, 0.2);
-    transform: translateX(5px);
-    box-shadow: 0 0 5px #00BFFF;
+.info-item {
+    margin-bottom: 12px;
+    color: #00BFFF;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.info-icon {
+    font-size: 14px;
+    min-width: 24px;
 }
 
 /* CABEÇALHO */
@@ -322,13 +323,10 @@ h1, h2, h3, h4, h5, h6 {
 hr {
     border-color: rgba(0,191,255,0.3);
 }
-html {
-    scroll-behavior: smooth;
-}
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR ======================
+# ====================== SIDEBAR (APENAS INFORMAÇÕES) ======================
 if IMAGEM_SIDEBAR:
     st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
 else:
@@ -341,27 +339,19 @@ else:
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ⚡ SISTEMA ONLINE")
-st.sidebar.markdown("• 🟢 **CFTV:** ATIVO")
-st.sidebar.markdown("• 🤖 **IA:** MONITORANDO")
-st.sidebar.markdown("• 🔒 **CRIPTOGRAFIA:** 256-BIT")
-st.sidebar.markdown("• 🗄️ **BANCO DE DADOS:** SEGURO")
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📋 MENU")
-st.sidebar.markdown('<a href="#dashboard" class="nav-link">🏠 Dashboard</a>', unsafe_allow_html=True)
-st.sidebar.markdown('<a href="#cadastro" class="nav-link">👤 Colaboradores</a>', unsafe_allow_html=True)
-st.sidebar.markdown('<a href="#prestadores" class="nav-link">🔧 Prestadores</a>', unsafe_allow_html=True)
-st.sidebar.markdown('<a href="#historico" class="nav-link">📅 Histórico</a>', unsafe_allow_html=True)
-st.sidebar.markdown('<a href="#configuracoes" class="nav-link">⚙️ Configurações</a>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item"><span class="info-icon">🟢</span> CFTV: ATIVO</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item"><span class="info-icon">🤖</span> IA: MONITORANDO</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item"><span class="info-icon">🔒</span> CRIPTOGRAFIA: 256-BIT</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item"><span class="info-icon">🗄️</span> BANCO DE DADOS: SEGURO</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ INFO")
 if "perfil" in st.session_state:
-    st.sidebar.markdown(f"• 👑 **Perfil:** {st.session_state.perfil}")
+    st.sidebar.markdown(f"<div class='info-item'><span class='info-icon'>👑</span> Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
 else:
-    st.sidebar.markdown("• 👑 **Perfil:** ---")
-st.sidebar.markdown("• 🟢 **Status:** Online")
-st.sidebar.markdown("• 📦 **Versão:** 7.0")
+    st.sidebar.markdown("<div class='info-item'><span class='info-icon'>👑</span> Perfil: ---</div>", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item"><span class="info-icon">🟢</span> Status: Online</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item"><span class="info-icon">📦</span> Versão: 7.0</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -522,7 +512,6 @@ with col3:
         st.rerun()
 
 # ====================== DASHBOARD ======================
-st.markdown('<span id="dashboard"></span>', unsafe_allow_html=True)
 st.markdown("---")
 pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 total_presentes = len(pessoas_presentes)
@@ -567,7 +556,6 @@ with col4:
     """, unsafe_allow_html=True)
 
 # ====================== CADASTRO ======================
-st.markdown('<span id="cadastro"></span>', unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("### ✚ Cadastro de Nova Pessoa")
 with st.expander("📋 Formulário de Cadastro", expanded=True):
@@ -592,7 +580,6 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
             st.error("❌ CPF e Nome são obrigatórios.")
 
 # ====================== REGISTRO DE ENTRADA ======================
-st.markdown('<span id="prestadores"></span>', unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
@@ -724,7 +711,6 @@ else:
     st.info("🏢 Nenhuma pessoa presente no momento")
 
 # ====================== HISTÓRICO ======================
-st.markdown('<span id="historico"></span>', unsafe_allow_html=True)
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
@@ -917,7 +903,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.info("📭 Nenhum registro encontrado no histórico.")
 
 # ====================== GESTÃO DE CADASTROS ======================
-st.markdown('<span id="configuracoes"></span>', unsafe_allow_html=True)
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
