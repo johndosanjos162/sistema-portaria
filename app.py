@@ -29,7 +29,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</tr>"
+        linhas_html += "<tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -104,7 +104,7 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
-# ====================== CARREGAR IMAGENS ======================
+# ====================== CARREGAR IMAGENS (OPCIONAL) ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
         return Image.open(nome_arquivo)
@@ -115,7 +115,7 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN FUTURISTA SEGURO ======================
+# ====================== DESIGN FUTURISTA ESTÁVEL ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
@@ -140,16 +140,16 @@ st.markdown("""
     to { transform: rotate(360deg); }
 }
 
-/* BASE */
+/* FUNDO - sem imagens externas, gradiente rápido */
 .stApp {
     background: radial-gradient(ellipse at center, #030b14 0%, #010101 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
 }
 
-/* SIDEBAR - SEM MENU, APENAS INFO */
+/* SIDEBAR */
 [data-testid="stSidebar"] {
     background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(15px);
+    backdrop-filter: blur(12px);
     border-right: 2px solid #00BFFF;
     box-shadow: -5px 0 20px rgba(0, 191, 255, 0.2);
 }
@@ -188,7 +188,7 @@ st.markdown("""
 /* CABEÇALHO */
 .admin-header {
     background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 12px 20px;
     margin-bottom: 25px;
@@ -326,7 +326,7 @@ hr {
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR (APENAS INFORMAÇÕES) ======================
+# ====================== SIDEBAR (APENAS INFO) ======================
 if IMAGEM_SIDEBAR:
     st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
 else:
@@ -367,7 +367,7 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN FUTURISTA ======================
+# ====================== TELA DE LOGIN (SEM FUNDO PRETO EXCESSIVO) ======================
 if not st.session_state.logado:
     st.markdown("""
     <style>
