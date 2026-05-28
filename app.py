@@ -5,6 +5,7 @@ import pandas as pd
 from PIL import Image
 import base64
 import re
+import streamlit.components.v1 as components
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
 MAX_TENTATIVAS_LOGIN = 5
@@ -124,7 +125,30 @@ def sanitizar_texto(texto):
     texto = texto.replace('"', '&quot;').replace("'", '&#39;')
     return texto
 
-# ====================== CARREGAR IMAGENS (OPCIONAL) ======================
+# ====================== DETECÇÃO DE AMBIENTE REMOTO/MONITORADO ======================
+def detectar_monitoramento():
+    """Usa JavaScript para detectar indícios de máquina virtual ou ambiente remoto"""
+    monitorado = False
+    razao = ""
+    
+    # Verificação via UserAgent (servidor)
+    ua = st.context.headers.get("User-Agent", "") if hasattr(st, 'context') else ""
+    ua = ua.lower()
+    termos_vm = ["virtualbox", "vmware", "vbox", "qemu", "kvm", "hyper-v", "citrix", "rdp", "aws workspaces", "parallels"]
+    for termo in termos_vm:
+        if termo in ua:
+            monitorado = True
+            razao = f"Termo '{termo}' detectado no User-Agent"
+            break
+    
+    # Se não detectou, podemos usar um cookie/session_state para simular monitoramento manual
+    if not monitorado and st.session_state.get("simular_monitoramento", False):
+        monitorado = True
+        razao = "Monitoramento ativado pelo administrador"
+    
+    return monitorado, razao
+
+# ====================== CARREGAR IMAGENS ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
         return Image.open(nome_arquivo)
@@ -341,7 +365,14 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 12.1 (SECURE)</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 12.2 (MONITOR)</div>', unsafe_allow_html=True)
+
+# Opção para administrador simular monitoramento (apenas se perfil == ADMIN)
+if st.session_state.get("perfil") == "ADMIN" and st.session_state.get("logado"):
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 🕵️ SIMULAR MONITORAMENTO")
+    simular = st.sidebar.checkbox("Ativar modo 'administrador monitorando'", key="simular_monitoramento", value=st.session_state.get("simular_monitoramento", False))
+    st.session_state.simular_monitoramento = simular
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -571,6 +602,19 @@ if not st.session_state.logado:
     </div>
     """, unsafe_allow_html=True)
     st.stop()
+
+# ====================== ALERTA DE MONITORAMENTO (APÓS LOGIN) ======================
+monitorado, razao = detectar_monitoramento()
+if monitorado:
+    st.markdown("""
+        <div style="background-color: #ff4444; color: white; padding: 5px 10px; border-radius: 5px; display: flex; align-items: center; gap: 10px; font-size: 12px; margin-bottom: 10px;">
+            <span style="font-size: 16px;">⚠️</span>
+            <span><strong>ATENÇÃO:</strong> Esta sessão está sendo monitorada remotamente pelo administrador.</span>
+        </div>
+    """, unsafe_allow_html=True)
+    if st.session_state.perfil == "ADMIN":
+        # Adiciona uma mensagem de log discreta na sidebar para o admin
+        st.sidebar.info("🔍 Você está no modo de monitoramento remoto ativo.")
 
 # ====================== HEADER APÓS LOGIN ======================
 st.markdown(f"""
