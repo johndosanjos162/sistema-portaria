@@ -173,6 +173,26 @@ st.markdown("""
     .stRadio label {
         font-weight: 500;
     }
+    
+    /* Campo de pesquisa com lupa */
+    .search-container {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .search-container input {
+        padding-left: 40px !important;
+    }
+    
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+        color: #67e8f9;
+        z-index: 1;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -202,6 +222,8 @@ if "logado" not in st.session_state:
     st.session_state.logado = False
 if "perfil" not in st.session_state:
     st.session_state.perfil = ""
+if "search_term" not in st.session_state:
+    st.session_state.search_term = ""
 
 # ====================== LOGIN ======================
 if not st.session_state.logado:
@@ -456,30 +478,95 @@ with st.expander("🕒 Histórico Completo de Movimentações"):
 
 # ====================== GESTÃO DE CADASTROS (ADMIN) ======================
 if st.session_state.perfil == "ADMIN":
-    with st.expander("⚙️ Gestão de Cadastros de Pessoas"):
+    with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
+        
+        # Buscar todos os cadastros
         todos_colaboradores = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
         
         if todos_colaboradores:
-            df_cadastros = pd.DataFrame(todos_colaboradores)
-            st.dataframe(df_cadastros, use_container_width=True, height=300)
             
-            st.markdown("---")
-            st.subheader("🗑️ Excluir Cadastro")
+            # ========== BARRA DE PESQUISA COM LUPA ==========
+            st.markdown("### 🔍 Pesquisar Cadastro")
             
-            lista_nomes = [f"{p['nome']} - CPF: {p['cpf']}" for p in todos_colaboradores]
-            selecionado = st.selectbox("Selecione a pessoa para excluir:", lista_nomes)
+            # Criar colunas para pesquisa e lupa visual
+            col_search1, col_search2 = st.columns([5, 1])
             
-            if st.button("🗑️ Excluir Cadastro Permanentemente", key="del_cad", use_container_width=True):
-                cpf_excluir = selecionado.split("CPF: ")[1]
-                confirm = st.checkbox("⚠️ Confirmar exclusão permanente?")
-                if confirm:
-                    supabase.table("Pessoas").delete().eq("cpf", cpf_excluir).execute()
-                    st.success(f"✅ Cadastro excluído com sucesso!")
+            with col_search1:
+                # Campo de pesquisa com placeholder e ícone visual
+                search_term = st.text_input(
+                    "🔎",  # Emoji de lupa como label visual
+                    placeholder="Digite o nome, CPF ou empresa para pesquisar...",
+                    key="search_exclusao",
+                    label_visibility="collapsed"
+                )
+            
+            with col_search2:
+                # Botão de limpar pesquisa
+                if st.button("🗑️ Limpar", key="clear_search", use_container_width=True):
+                    st.session_state.search_term = ""
                     st.rerun()
-                else:
-                    st.warning("Marque a confirmação para excluir.")
+            
+            # Filtrar resultados baseado na pesquisa
+            if search_term:
+                search_lower = search_term.lower()
+                resultados_filtrados = [
+                    p for p in todos_colaboradores 
+                    if search_lower in p['nome'].lower() 
+                    or search_lower in p['cpf'].lower() 
+                    or search_lower in p.get('empresa', '').lower()
+                ]
+                st.info(f"🔍 **{len(resultados_filtrados)}** resultado(s) encontrado(s) para: **{search_term}**")
+            else:
+                resultados_filtrados = todos_colaboradores
+                st.info(f"📋 Total de cadastros: **{len(resultados_filtrados)}** pessoas")
+            
+            # Exibir tabela com resultados filtrados
+            if resultados_filtrados:
+                df_cadastros = pd.DataFrame(resultados_filtrados)
+                st.dataframe(df_cadastros, use_container_width=True, height=300)
+                
+                st.markdown("---")
+                st.subheader("🗑️ Excluir Cadastro")
+                
+                # Criar lista para seleção apenas com resultados filtrados
+                lista_nomes = [f"{p['nome']} - CPF: {p['cpf']} {f'- Emp: {p["empresa"]}' if p.get('empresa') else ''}" for p in resultados_filtrados]
+                
+                # Selectbox para escolher qual excluir
+                selecionado = st.selectbox(
+                    "Selecione a pessoa para excluir:", 
+                    lista_nomes,
+                    key="select_excluir"
+                )
+                
+                # Mostrar informações da pessoa selecionada
+                pessoa_selecionada = resultados_filtrados[lista_nomes.index(selecionado)]
+                st.warning(f"⚠️ **Pessoa selecionada:** {pessoa_selecionada['nome']} (CPF: {pessoa_selecionada['cpf']})")
+                
+                # Confirmação dupla para exclusão
+                col_confirm1, col_confirm2 = st.columns(2)
+                with col_confirm1:
+                    confirmar = st.checkbox("✅ Confirmar que deseja excluir este cadastro permanentemente")
+                with col_confirm2:
+                    with st.popover("🗑️ Clique para excluir", use_container_width=True):
+                        st.error("⚠️ **ATENÇÃO!** Esta ação é irreversível!")
+                        if st.button("⚠️ SIM, EXCLUIR PERMANENTEMENTE", key="del_cad", use_container_width=True):
+                            try:
+                                supabase.table("Pessoas").delete().eq("cpf", pessoa_selecionada['cpf']).execute()
+                                st.success(f"✅ Cadastro de **{pessoa_selecionada['nome']}** excluído com sucesso!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ Erro ao excluir: {e}")
+                
+                if not confirmar:
+                    st.info("🔒 Marque a confirmação para habilitar a exclusão")
+            
+            else:
+                st.warning(f"⚠️ Nenhum resultado encontrado para: **{search_term}**")
+                if st.button("🔄 Mostrar todos os cadastros", key="show_all"):
+                    st.rerun()
+        
         else:
-            st.info("📭 Nenhum cadastro encontrado.")
+            st.info("📭 Nenhum cadastro encontrado no sistema.")
 
 # ====================== FOOTER ======================
 st.markdown("---")
