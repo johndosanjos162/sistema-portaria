@@ -162,7 +162,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <tr>{cabecalho_html}</tr>
+                <tr>{cabecalho_html}</td>
             </thead>
             <tbody>
                 {linhas_html}
@@ -872,13 +872,14 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
         else:
             st.error("❌ CPF e Nome são obrigatórios.")
 
-# ====================== REGISTRO DE ENTRADA (COM DESTINOS ATUALIZADOS) ======================
+# ====================== REGISTRO DE ENTRADA ======================
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
-tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
+
+# ALTERAÇÃO: "Terceirizados" → "Terceirizados / Instrumentadores"
+tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados / Instrumentadores"], horizontal=True)
 
 if tipo == "🏢 Prestador de serviços":
-    # Lista atualizada com os novos destinos solicitados
     destinos = [
         "🏥 C.C", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia",
         "🔧 Manutenção", "🧪 Laboratório", "💊 Farmacia", "🏥 P.A",
