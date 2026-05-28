@@ -9,12 +9,14 @@ url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-st.set_page_config(page_title="ACCESS GATE", layout="wide", page_icon="🔐", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="ACCESS GATE - ADMIN", 
+    layout="wide", 
+    page_icon="🏛️", 
+    initial_sidebar_state="expanded"
+)
 
 # ====================== CARREGAR IMAGENS ======================
-# ⚠️ ALTERE OS NOMES DOS ARQUIVOS CONFORME SUAS IMAGENS ⚠️
-# Coloque as imagens na mesma pasta do seu script
-
 def carregar_imagem(nome_arquivo, nome_descricao):
     """Tenta carregar uma imagem e retorna None se não encontrar"""
     try:
@@ -22,200 +24,314 @@ def carregar_imagem(nome_arquivo, nome_descricao):
     except:
         return None
 
-# Configure aqui os nomes dos seus arquivos de imagem
-# Exemplo: "logo.png", "fundo_login.jpg", "icone.png"
 IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== ESTILO ======================
+# ====================== DESIGN ADMIN ======================
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
+    /* ========== BASE ========== */
     .stApp {
-        background: linear-gradient(135deg, #0a0f1e 0%, #0f172a 100%);
-        color: #e0f2fe;
+        background: linear-gradient(135deg, #0a0e1a 0%, #0f1525 100%);
         font-family: 'Inter', sans-serif;
     }
     
-    /* Sidebar personalizada */
+    /* ========== SIDEBAR ADMIN ========== */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-        border-right: 1px solid #334155;
+        background: linear-gradient(180deg, #0a0e1a 0%, #0d1117 100%);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stImage"] {
+        margin-bottom: 20px;
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .sidebar-header {
+        text-align: center;
+        padding: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 20px;
     }
     
     .sidebar-title {
-        font-size: 26px;
-        font-weight: 700;
-        background: linear-gradient(135deg, #67e8f9, #34d399);
+        font-size: 22px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        letter-spacing: 1px;
+    }
+    
+    .sidebar-subtitle {
+        font-size: 12px;
+        color: #64748b;
         text-align: center;
-        padding: 25px 0 15px 0;
+        margin-top: 5px;
     }
     
-    h1 {
-        background: linear-gradient(135deg, #67e8f9, #34d399);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 34px !important;
-        font-weight: 700;
-        margin: 0 !important;
-    }
-    
-    /* Botões principais */
-    div.stButton > button {
-        border-radius: 12px;
-        font-weight: 600;
-        padding: 12px 24px;
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
-    }
-    
-    div.stButton > button:not([key="sair_final"]):not([key="login_btn"]) {
-        background: linear-gradient(90deg, #10b981, #34d399);
-        color: #0f172a;
-        border: 1px solid #34d399;
-    }
-    
-    div.stButton > button:not([key="sair_final"]):not([key="login_btn"]):hover {
-        background: linear-gradient(90deg, #34d399, #6ee7b7);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-    }
-    
-    div.stButton > button[key="sair_final"] {
-        background: linear-gradient(90deg, #ef4444, #f87171);
-        color: white;
-    }
-    
-    div.stButton > button[key="sair_final"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-    }
-    
-    div.stButton > button[key="login_btn"] {
-        background: linear-gradient(90deg, #3b82f6, #60a5fa);
-        color: white;
-        font-size: 18px;
-        font-weight: 700;
-    }
-    
-    div.stButton > button[key="login_btn"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
-    }
-    
-    /* Input fields */
-    .stTextInput > div > div > input {
-        background-color: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 8px;
-        color: #e0f2fe;
-    }
-    
-    .stTextInput > div > div > input:focus {
-        border-color: #34d399;
-        box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.2);
-    }
-    
-    /* Expander */
-    .streamlit-expanderHeader {
-        background-color: #1e293b;
+    /* Menu items */
+    .nav-item {
+        padding: 12px 16px;
+        margin: 4px 12px;
         border-radius: 10px;
-        font-weight: 600;
-    }
-    
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background-color: #1e293b;
-        border-radius: 8px;
-        padding: 8px 20px;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        color: #94a3b8;
         font-weight: 500;
     }
     
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #10b981, #34d399);
-        color: #0f172a;
+    .nav-item:hover {
+        background: linear-gradient(90deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        color: #e2e8f0;
+        transform: translateX(5px);
     }
     
-    /* Cards/Metrics */
-    .stMetric {
-        background-color: #1e293b;
-        padding: 15px;
-        border-radius: 12px;
-        border: 1px solid #334155;
+    .nav-item-active {
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
     }
     
-    /* Alertas */
-    .stAlert {
+    /* ========== CABEÇALHO ADMIN ========== */
+    .admin-header {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(13, 17, 23, 0.95));
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 15px 25px;
+        margin-bottom: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .badge-admin {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        padding: 8px 20px;
+        border-radius: 30px;
+        display: inline-block;
+        font-weight: 700;
+        font-size: 14px;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+    }
+    
+    /* ========== CARDS ADMIN ========== */
+    .admin-card {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(13, 17, 23, 0.8));
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .admin-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        border-color: rgba(102, 126, 234, 0.3);
+    }
+    
+    .card-title {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #64748b;
+        margin-bottom: 10px;
+    }
+    
+    .card-value {
+        font-size: 32px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .card-icon {
+        font-size: 40px;
+        opacity: 0.5;
+    }
+    
+    /* ========== BOTÕES ADMIN ========== */
+    .stButton > button {
         border-radius: 10px;
-        border-left: 4px solid;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
     }
     
-    /* Dataframe */
+    .stButton > button:not([key="sair_final"]):not([key="login_btn"]) {
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        color: white;
+    }
+    
+    .stButton > button:not([key="sair_final"]):not([key="login_btn"]):hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .stButton > button[key="sair_final"] {
+        background: linear-gradient(90deg, #ef4444, #dc2626);
+        color: white;
+    }
+    
+    .stButton > button[key="login_btn"] {
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        color: white;
+        font-size: 16px;
+        padding: 12px;
+    }
+    
+    /* ========== INPUTS ADMIN ========== */
+    .stTextInput > div > div > input,
+    .stSelectbox > div > div,
+    .stNumberInput > div > div > input {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        color: #e2e8f0;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
+    
+    /* ========== EXPANDER ADMIN ========== */
+    .streamlit-expanderHeader {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(13, 17, 23, 0.9));
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        font-weight: 600;
+    }
+    
+    .streamlit-expanderHeader:hover {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+    }
+    
+    /* ========== TABS ADMIN ========== */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: rgba(15, 23, 42, 0.5);
+        padding: 5px;
+        border-radius: 12px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 8px 20px;
+        font-weight: 600;
+        color: #94a3b8;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+    }
+    
+    /* ========== DATAFRAME ADMIN ========== */
     .stDataFrame {
         border-radius: 12px;
         overflow: hidden;
     }
     
-    /* Radio buttons */
-    .stRadio > div {
-        gap: 20px;
+    .dataframe {
+        background: rgba(15, 23, 42, 0.8);
     }
     
-    .stRadio label {
-        font-weight: 500;
+    /* ========== ALERTAS ========== */
+    .stAlert {
+        border-radius: 10px;
+        border-left: 4px solid #667eea;
+        background: rgba(15, 23, 42, 0.9);
     }
     
-    /* Campo de pesquisa com lupa */
-    .search-container {
-        position: relative;
-        margin-bottom: 20px;
+    /* ========== MÉTRICAS ========== */
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(13, 17, 23, 0.8));
+        border-radius: 12px;
+        padding: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
     
-    .search-container input {
-        padding-left: 40px !important;
+    [data-testid="stMetricLabel"] {
+        color: #64748b;
+        font-weight: 600;
     }
     
-    .search-icon {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 18px;
-        color: #67e8f9;
-        z-index: 1;
+    [data-testid="stMetricValue"] {
+        color: #e2e8f0;
+        font-weight: 800;
+    }
+    
+    /* ========== DIVIDERS ========== */
+    hr {
+        border-color: rgba(255, 255, 255, 0.05);
+        margin: 20px 0;
+    }
+    
+    /* ========== SEARCH BOX ========== */
+    .search-box {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 5px 15px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR ======================
-# Adicionar logo na sidebar
+# ====================== SIDEBAR ADMIN ======================
+# Logo
 if IMAGEM_SIDEBAR:
     st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
-
-st.sidebar.markdown("<div class='sidebar-title'>🔐 ACCESS GATE</div>", unsafe_allow_html=True)
-st.sidebar.markdown("---")
-
-# Menu com ícones
-st.sidebar.markdown("### 📌 MENU PRINCIPAL")
-st.sidebar.markdown("- 🏠 **Dashboard**")
-st.sidebar.markdown("- 👥 **Colaboradores**")
-st.sidebar.markdown("- 🔧 **Prestadores**")
-st.sidebar.markdown("- 🕒 **Histórico**")
-st.sidebar.markdown("- ⚙️ **Configurações**")
+else:
+    st.sidebar.markdown("""
+        <div class="sidebar-header">
+            <div class="sidebar-title">🏛️ ACCESS GATE</div>
+            <div class="sidebar-subtitle">SISTEMA ADMINISTRATIVO</div>
+        </div>
+    """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ℹ️ INFORMAÇÕES")
-st.sidebar.markdown("Versão: **2.0.0**")
-st.sidebar.markdown("Status: 🟢 **Online**")
+
+# Menu Admin
+st.sidebar.markdown("""
+    <div style='padding: 0 12px;'>
+        <div style='color: #64748b; font-size: 12px; letter-spacing: 2px; margin-bottom: 15px;'>MENU PRINCIPAL</div>
+    </div>
+""", unsafe_allow_html=True)
+
+menu_items = [
+    ("🏠", "Dashboard", "dashboard"),
+    ("👥", "Colaboradores", "colaboradores"),
+    ("🔧", "Prestadores", "prestadores"),
+    ("🕒", "Histórico", "historico"),
+    ("⚙️", "Configurações", "configuracoes")
+]
+
+for icon, label, key in menu_items:
+    st.sidebar.markdown(f"""
+        <div class="nav-item">
+            {icon} {label}
+        </div>
+    """, unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
+
+# Info Admin
+st.sidebar.markdown("""
+    <div style='padding: 20px 16px;'>
+        <div style='background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1)); 
+                    border-radius: 12px; padding: 15px;'>
+            <div style='color: #667eea; font-size: 12px; margin-bottom: 10px;'>📊 SISTEMA</div>
+            <div style='color: #94a3b8; font-size: 11px;'>Versão: 2.0.0</div>
+            <div style='color: #10b981; font-size: 11px;'>● Online</div>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -227,137 +343,156 @@ if "search_term" not in st.session_state:
 
 # ====================== LOGIN ======================
 if not st.session_state.logado:
-    # Container centralizado
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        # Card de login
         with st.container():
             st.markdown("""
                 <div style="
-                    background: rgba(30, 41, 59, 0.8);
-                    backdrop-filter: blur(10px);
+                    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(13, 17, 23, 0.95));
+                    backdrop-filter: blur(20px);
                     border-radius: 24px;
-                    padding: 40px;
-                    border: 1px solid #334155;
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+                    padding: 50px 40px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
                 ">
             """, unsafe_allow_html=True)
             
-            # Título
-            st.markdown("<h1 style='text-align:center;'>🔐 ACCESS GATE</h1>", unsafe_allow_html=True)
-            
-            # Imagem de login (substitui o círculo)
             if IMAGEM_LOGIN:
                 st.image(IMAGEM_LOGIN, use_container_width=True)
             else:
-                # Fallback visual se não tiver imagem
                 st.markdown("""
                     <div style='text-align:center; margin: 20px 0;'>
                         <div style='
-                            width: 200px; 
-                            height: 200px; 
-                            margin: 0 auto; 
-                            background: linear-gradient(135deg, #10b981, #3b82f6);
-                            border-radius: 50%; 
-                            display: flex; 
-                            align-items: center; 
+                            width: 120px;
+                            height: 120px;
+                            margin: 0 auto;
+                            background: linear-gradient(135deg, #667eea, #764ba2);
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
                             justify-content: center;
-                            box-shadow: 0 0 50px rgba(16, 185, 129, 0.5);
                         '>
-                            <div style='font-size: 80px;'>🔑</div>
+                            <span style='font-size: 50px;'>🏛️</span>
                         </div>
-                        <p style='margin-top: 15px; font-size: 20px; font-weight: bold; color: #67e8f9;'>
-                            ACESSO SEGURO
-                        </p>
+                        <h2 style='margin-top: 20px;'>ACCESS GATE</h2>
+                        <p style='color: #64748b;'>Sistema Administrativo</p>
                     </div>
                 """, unsafe_allow_html=True)
             
-            st.markdown("<hr style='margin: 25px 0; border-color: #334155;'>", unsafe_allow_html=True)
+            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown("<h3 style='text-align:center;'>🔐 Acesso Administrativo</h3>", unsafe_allow_html=True)
             
-            # Formulário de login
-            st.markdown("<h3 style='text-align:center; color:#67e8f9;'>🔑 ACESSO COM SENHA</h3>", unsafe_allow_html=True)
+            senha = st.text_input("Senha de acesso:", type="password", key="senha_login", placeholder="••••••••")
             
-            senha = st.text_input(
-                "Digite sua senha de acesso:", 
-                type="password", 
-                key="senha_login",
-                placeholder="••••••••"
-            )
-            
-            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-            with col_btn2:
-                if st.button("🔓 ENTRAR NO SISTEMA", key="login_btn", use_container_width=True):
-                    if senha == "fgxv4VP0/*":
-                        st.session_state.logado = True
-                        st.session_state.perfil = "ADMIN"
-                        st.rerun()
-                    elif senha == "JOHN123":
-                        st.session_state.logado = True
-                        st.session_state.perfil = "VIGILANTE"
-                        st.rerun()
-                    else:
-                        st.error("❌ Senha incorreta! Tente novamente.")
+            if st.button("🔓 ENTRAR", key="login_btn", use_container_width=True):
+                if senha == "fgxv4VP0/*":
+                    st.session_state.logado = True
+                    st.session_state.perfil = "ADMIN"
+                    st.rerun()
+                elif senha == "JOHN123":
+                    st.session_state.logado = True
+                    st.session_state.perfil = "VIGILANTE"
+                    st.rerun()
+                else:
+                    st.error("❌ Acesso negado")
             
             st.markdown("</div>", unsafe_allow_html=True)
-    
     st.stop()
 
-# ====================== HEADER ======================
-col1, col2, col3, col4 = st.columns([1, 6, 2, 2])
-
-with col1:
-    if IMAGEM_HEADER:
-        st.image(IMAGEM_HEADER, width=60)
-    else:
-        st.markdown("<div style='font-size: 40px;'>🔐</div>", unsafe_allow_html=True)
-
-with col2:
-    st.title("ACCESS GATE - PAINEL DE CONTROLE")
-
-with col3:
-    st.markdown(f"""
-        <div style='
-            background: linear-gradient(135deg, #1e293b, #334155);
-            padding: 8px 16px;
-            border-radius: 20px;
-            text-align: center;
-        '>
-            <span style='font-size: 14px;'>👤 PERFIL</span><br>
-            <span style='color:#67e8f9; font-weight: bold;'>{st.session_state.perfil}</span>
+# ====================== HEADER ADMIN ======================
+st.markdown(f"""
+    <div class="admin-header">
+        <div style='display: flex; justify-content: space-between; align-items: center;'>
+            <div style='display: flex; align-items: center; gap: 15px;'>
+                {'<img src="data:image/png;base64,..." width="50">' if IMAGEM_HEADER else '<span style="font-size: 40px;">🏛️</span>'}
+                <div>
+                    <h1 style='margin: 0; font-size: 24px;'>PAINEL ADMINISTRATIVO</h1>
+                    <p style='margin: 0; color: #64748b; font-size: 12px;'>Controle de Acesso Hospitalar</p>
+                </div>
+            </div>
+            <div style='display: flex; align-items: center; gap: 20px;'>
+                <div class="badge-admin">
+                    👑 {st.session_state.perfil}
+                </div>
+            </div>
         </div>
-    """, unsafe_allow_html=True)
+    </div>
+""", unsafe_allow_html=True)
 
-with col4:
-    if st.button("🚪 DESCONECTAR", key="sair_final", use_container_width=True):
+# Botão sair
+col1, col2, col3 = st.columns([8, 1, 1])
+with col3:
+    if st.button("🚪 SAIR", key="sair_final", use_container_width=True):
         st.session_state.logado = False
         st.rerun()
 
-st.markdown("---")
-
-# ====================== DASHBOARD RÁPIDO ======================
-# Mostrar métricas rápidas
-col_metric1, col_metric2, col_metric3 = st.columns(3)
-
-# Buscar dados para métricas
+# ====================== DASHBOARD ADMIN ======================
 pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 total_presentes = len(pessoas_presentes)
 total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
 
-with col_metric1:
-    st.metric("📍 Pessoas Presentes", total_presentes, delta=None)
-with col_metric2:
-    st.metric("👥 Total Cadastrados", total_colaboradores, delta=None)
-with col_metric3:
-    st.metric("📊 Movimentações Hoje", "---", delta=None)
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    st.markdown("""
+        <div class="admin-card">
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <div>
+                    <div class="card-title">📍 PRESENTES</div>
+                    <div class="card-value">""" + str(total_presentes) + """</div>
+                </div>
+                <div class="card-icon">👥</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown("""
+        <div class="admin-card">
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <div>
+                    <div class="card-title">📋 CADASTRADOS</div>
+                    <div class="card-value">""" + str(total_colaboradores) + """</div>
+                </div>
+                <div class="card-icon">📊</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown("""
+        <div class="admin-card">
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <div>
+                    <div class="card-title">🏥 SETORES</div>
+                    <div class="card-value">11</div>
+                </div>
+                <div class="card-icon">🏛️</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown("""
+        <div class="admin-card">
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <div>
+                    <div class="card-title">🕒 HOJE</div>
+                    <div class="card-value">---</div>
+                </div>
+                <div class="card-icon">📅</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# ====================== CADASTRO SIMPLIFICADO ======================
-st.subheader("➕ Cadastro de Nova Pessoa")
+# ====================== CADASTRO ======================
+st.markdown("### ➕ Cadastro de Nova Pessoa")
 
-with st.expander("📋 Adicionar Novo Colaborador / Prestador", expanded=True):
+with st.expander("📋 Formulário de Cadastro", expanded=True):
     col_a, col_b, col_c = st.columns(3)
     novo_cpf = col_a.text_input("CPF *", key="novo_cpf", placeholder="000.000.000-00")
     novo_nome = col_b.text_input("Nome Completo *", key="novo_nome", placeholder="Digite o nome completo")
@@ -379,8 +514,10 @@ with st.expander("📋 Adicionar Novo Colaborador / Prestador", expanded=True):
         else:
             st.error("❌ CPF e Nome Completo são obrigatórios.")
 
+st.markdown("---")
+
 # ====================== REGISTRO DE ENTRADA ======================
-st.subheader("📋 Registrar Nova Entrada")
+st.markdown("### 📋 Registrar Movimentação")
 
 tipo = st.radio("Tipo de Pessoa:", ["Colaborador Interno", "Prestador de Serviço"], horizontal=True)
 
@@ -408,12 +545,14 @@ if c3.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
             st.success(f"✅ Entrada registrada para **{setor_escolhido}**!")
             st.rerun()
         else:
-            st.error("❌ CPF não cadastrado. Cadastre primeiro na seção acima.")
+            st.error("❌ CPF não cadastrado")
     else:
-        st.warning("⚠️ Digite o CPF.")
+        st.warning("⚠️ Digite o CPF")
+
+st.markdown("---")
 
 # ====================== PESSOAS PRESENTES ======================
-st.subheader("📍 Pessoas Presentes no Hospital")
+st.markdown("### 📍 Pessoas Presentes no Hospital")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
 if dados:
@@ -426,13 +565,13 @@ if dados:
                 col1.write(f"**👤 {p['nome']}**")
                 col2.write(f"📍 {p['setor_destino']}")
                 col3.write(f"🏢 {p.get('empresa', 'N/A')}")
-                if col4.button("🚪 Registrar Saída", key=f"saida_{p['id']}"):
+                if col4.button("🚪 Saída", key=f"saida_{p['id']}"):
                     supabase.table("movimentacao").update({
                         "data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                     }).eq("id", p['id']).execute()
-                    st.success(f"✅ Saída registrada para {p['nome']}")
+                    st.success(f"✅ Saída registrada")
                     st.rerun()
-                st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin: 5px 0; opacity: 0.1;'>", unsafe_allow_html=True)
 
     for i, setor in enumerate(["C.C", "GRSA", "Brasanitas"], 1):
         with tabs[i]:
@@ -443,19 +582,21 @@ if dados:
                         col1, col2, col3, col4 = st.columns([4, 3, 2, 2])
                         col1.write(f"**👤 {p['nome']}**")
                         col2.write(f"🏢 {p.get('empresa', 'N/A')}")
-                        col3.write(f"🕒 Entrada: {p['data_entrada']}")
+                        col3.write(f"🕒 {p['data_entrada']}")
                         if col4.button("🚪 Saída", key=f"saida2_{p['id']}"):
                             supabase.table("movimentacao").update({
                                 "data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
                             }).eq("id", p['id']).execute()
                             st.rerun()
-                        st.markdown("<hr style='margin: 5px 0;'>", unsafe_allow_html=True)
+                        st.markdown("<hr style='margin: 5px 0; opacity: 0.1;'>", unsafe_allow_html=True)
             else:
                 st.info(f"📭 Nenhuma pessoa no setor {setor}")
 else:
-    st.info("🏢 Nenhuma pessoa presente no momento.")
+    st.info("🏢 Nenhuma pessoa presente no momento")
 
-# ====================== HISTÓRICO E GESTÃO ======================
+st.markdown("---")
+
+# ====================== HISTÓRICO ======================
 with st.expander("🕒 Histórico Completo de Movimentações"):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     if todos_dados:
@@ -472,41 +613,35 @@ with st.expander("🕒 Histórico Completo de Movimentações"):
                     st.success(f"✅ Registro {id_excluir} excluído!")
                     st.rerun()
                 except:
-                    st.error("❌ Erro ao excluir. Verifique o ID.")
+                    st.error("❌ Erro ao excluir")
     else:
-        st.info("📭 Nenhum registro encontrado.")
+        st.info("📭 Nenhum registro encontrado")
 
-# ====================== GESTÃO DE CADASTROS (ADMIN) ======================
+# ====================== GESTÃO DE CADASTROS (COM LUPA) ======================
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
         
-        # Buscar todos os cadastros
         todos_colaboradores = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
         
         if todos_colaboradores:
             
-            # ========== BARRA DE PESQUISA COM LUPA ==========
             st.markdown("### 🔍 Pesquisar Cadastro")
             
-            # Criar colunas para pesquisa e lupa visual
             col_search1, col_search2 = st.columns([5, 1])
             
             with col_search1:
-                # Campo de pesquisa com placeholder e ícone visual
                 search_term = st.text_input(
-                    "🔎",  # Emoji de lupa como label visual
+                    "🔎",
                     placeholder="Digite o nome, CPF ou empresa para pesquisar...",
                     key="search_exclusao",
                     label_visibility="collapsed"
                 )
             
             with col_search2:
-                # Botão de limpar pesquisa
                 if st.button("🗑️ Limpar", key="clear_search", use_container_width=True):
                     st.session_state.search_term = ""
                     st.rerun()
             
-            # Filtrar resultados baseado na pesquisa
             if search_term:
                 search_lower = search_term.lower()
                 resultados_filtrados = [
@@ -520,39 +655,34 @@ if st.session_state.perfil == "ADMIN":
                 resultados_filtrados = todos_colaboradores
                 st.info(f"📋 Total de cadastros: **{len(resultados_filtrados)}** pessoas")
             
-            # Exibir tabela com resultados filtrados
             if resultados_filtrados:
                 df_cadastros = pd.DataFrame(resultados_filtrados)
                 st.dataframe(df_cadastros, use_container_width=True, height=300)
                 
                 st.markdown("---")
-                st.subheader("🗑️ Excluir Cadastro")
+                st.markdown("### 🗑️ Excluir Cadastro")
                 
-                # Criar lista para seleção apenas com resultados filtrados
                 lista_nomes = [f"{p['nome']} - CPF: {p['cpf']} {f'- Emp: {p["empresa"]}' if p.get('empresa') else ''}" for p in resultados_filtrados]
                 
-                # Selectbox para escolher qual excluir
                 selecionado = st.selectbox(
                     "Selecione a pessoa para excluir:", 
                     lista_nomes,
                     key="select_excluir"
                 )
                 
-                # Mostrar informações da pessoa selecionada
                 pessoa_selecionada = resultados_filtrados[lista_nomes.index(selecionado)]
                 st.warning(f"⚠️ **Pessoa selecionada:** {pessoa_selecionada['nome']} (CPF: {pessoa_selecionada['cpf']})")
                 
-                # Confirmação dupla para exclusão
                 col_confirm1, col_confirm2 = st.columns(2)
                 with col_confirm1:
-                    confirmar = st.checkbox("✅ Confirmar que deseja excluir este cadastro permanentemente")
+                    confirmar = st.checkbox("✅ Confirmar exclusão permanente")
                 with col_confirm2:
                     with st.popover("🗑️ Clique para excluir", use_container_width=True):
                         st.error("⚠️ **ATENÇÃO!** Esta ação é irreversível!")
                         if st.button("⚠️ SIM, EXCLUIR PERMANENTEMENTE", key="del_cad", use_container_width=True):
                             try:
                                 supabase.table("Pessoas").delete().eq("cpf", pessoa_selecionada['cpf']).execute()
-                                st.success(f"✅ Cadastro de **{pessoa_selecionada['nome']}** excluído com sucesso!")
+                                st.success(f"✅ Cadastro excluído com sucesso!")
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"❌ Erro ao excluir: {e}")
@@ -566,12 +696,13 @@ if st.session_state.perfil == "ADMIN":
                     st.rerun()
         
         else:
-            st.info("📭 Nenhum cadastro encontrado no sistema.")
+            st.info("📭 Nenhum cadastro encontrado no sistema")
 
 # ====================== FOOTER ======================
 st.markdown("---")
 st.markdown("""
     <div style='text-align: center; padding: 20px; color: #64748b; font-size: 12px;'>
-        ACCESS GATE - Sistema de Controle de Acesso © 2024
+        <p>🏛️ ACCESS GATE - Sistema Administrativo de Controle de Acesso</p>
+        <p>© 2024 - Todos os direitos reservados</p>
     </div>
 """, unsafe_allow_html=True)
