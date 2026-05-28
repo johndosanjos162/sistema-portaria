@@ -160,7 +160,7 @@ def gerar_html_impressao(df, titulo):
     <body>
         <h1>JOHN ACESSOS - ACESSO DE DADOS - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        <tr>
+        <table>
             <thead>
                 <tr>{cabecalho_html}</tr>
             </thead>
@@ -209,12 +209,11 @@ st.markdown("""
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 """, unsafe_allow_html=True)
 
-# ====================== DESIGN BASE (CSS) COM BOTÕES TECNOLÓGICOS E SELECTOX VISÍVEL ======================
+# ====================== DESIGN BASE (CSS) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
 
-/* ANIMAÇÕES E KEYFRAMES */
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(100, 0, 255, 0.4); }
     70% { box-shadow: 0 0 0 12px rgba(100, 0, 255, 0); }
@@ -244,13 +243,11 @@ st.markdown("""
     100% { box-shadow: 0 0 5px #0ff; }
 }
 
-/* FUNDO PRINCIPAL */
 .stApp {
     background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);
     font-family: 'Inter', 'Space Mono', monospace;
 }
 
-/* SIDEBAR */
 [data-testid="stSidebar"] {
     background: rgba(8, 8, 20, 0.85);
     backdrop-filter: blur(12px);
@@ -277,7 +274,6 @@ st.markdown("""
     font-family: 'Space Mono', monospace;
 }
 
-/* CABEÇALHO */
 .admin-header {
     background: rgba(8, 8, 20, 0.7);
     backdrop-filter: blur(8px);
@@ -311,7 +307,6 @@ st.markdown("""
     filter: drop-shadow(0 0 2px #ffaa00);
 }
 
-/* CARDS */
 .admin-card {
     background: rgba(15, 15, 30, 0.6);
     backdrop-filter: blur(4px);
@@ -338,7 +333,6 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
 }
 
-/* BOTÕES TECNOLÓGICOS */
 .stButton > button, .stForm button {
     border-radius: 40px;
     font-weight: 600;
@@ -395,7 +389,6 @@ st.markdown("""
     background: linear-gradient(90deg, #666, #333);
 }
 
-/* INPUTS E SELECTOX (TEXTO DO DESTINO VISÍVEL) */
 .stTextInput > div > div > input,
 .stNumberInput > div > div > input {
     background: rgba(0, 0, 0, 0.8);
@@ -405,7 +398,6 @@ st.markdown("""
     font-family: 'Space Mono', monospace;
     padding: 8px;
 }
-/* Selectbox: valor selecionado */
 .stSelectbox > div > div {
     background: rgba(0, 0, 0, 0.8) !important;
     border: 1px solid #a855f7 !important;
@@ -413,11 +405,9 @@ st.markdown("""
     color: #0ff !important;
     font-family: 'Space Mono', monospace;
 }
-/* Texto do selectbox (o que aparece na caixa) */
 .stSelectbox [data-baseweb="select"] span {
     color: #0ff !important;
 }
-/* As opções do dropdown */
 div[data-baseweb="select"] ul {
     background-color: #0a0a1a !important;
     border: 1px solid #a855f7 !important;
@@ -430,12 +420,10 @@ div[data-baseweb="select"] li:hover {
     background-color: #a855f7 !important;
     color: black !important;
 }
-/* Label do selectbox */
 .stSelectbox label {
     color: #0ff !important;
 }
 
-/* EXPANDER, TABS */
 .streamlit-expanderHeader {
     background: rgba(15, 15, 30, 0.8);
     border: 1px solid #a855f7;
@@ -884,13 +872,19 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
         else:
             st.error("❌ CPF e Nome são obrigatórios.")
 
-# ====================== REGISTRO DE ENTRADA ======================
+# ====================== REGISTRO DE ENTRADA (COM DESTINOS ATUALIZADOS) ======================
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
 
 if tipo == "🏢 Prestador de serviços":
-    destinos = ["🏥 C.C", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "🧪 Laboratório", "💊 Farmacia"]
+    # Lista atualizada com os novos destinos solicitados
+    destinos = [
+        "🏥 C.C", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia",
+        "🔧 Manutenção", "🧪 Laboratório", "💊 Farmacia", "🏥 P.A",
+        "👶 PEDIATRIA P.A", "🔧 ENG.CLINICA", "🧹 HORTELARIA", "📦 OPME 6°AND",
+        "📦 OPME 9°AND", "🔒 SSGA", "🏥 CDU", "⚕️ ONCOLOGIA"
+    ]
 else:
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
