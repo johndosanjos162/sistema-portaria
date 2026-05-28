@@ -29,7 +29,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "<tr>"
+        linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -90,7 +90,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <tr>{cabecalho_html}</tr>
+                <tr>{cabecalho_html}<tr>
             </thead>
             <tbody>
                 {linhas_html}
@@ -104,7 +104,7 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
-# ====================== CARREGAR IMAGENS (OPCIONAL) ======================
+# ====================== CARREGAR IMAGENS ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
         return Image.open(nome_arquivo)
@@ -115,14 +115,14 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN MILITAR FUTURISTA COM RAIOS BRANCOS ======================
+# ====================== DESIGN MILITAR COM RAIOS LEVES ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
 
 /* ANIMAÇÕES */
 @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.4); }
+    0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.3); }
     70% { box-shadow: 0 0 0 10px rgba(0, 255, 255, 0); }
     100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
 }
@@ -131,23 +131,18 @@ st.markdown("""
     to { transform: rotate(360deg); }
 }
 @keyframes fall {
-    0% { background-position: 0 -200px; }
+    0% { background-position: 0 -100px; }
     100% { background-position: 0 100vh; }
 }
-@keyframes blink {
-    0%, 100% { opacity: 0.2; }
-    50% { opacity: 0.8; }
-}
 
-/* Fundo principal com raios caindo */
+/* Fundo principal - gradiente radial estável */
 .stApp {
-    background: linear-gradient(145deg, #030712 0%, #0a0f1a 100%);
+    background: radial-gradient(ellipse at center, #04070f 0%, #010101 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
     position: relative;
-    overflow-x: hidden;
 }
 
-/* Camada de raios tecnológicos brancos */
+/* Camada de raios tecnológicos (apenas duas linhas suaves) */
 .tech-rains {
     position: fixed;
     top: 0;
@@ -159,16 +154,14 @@ st.markdown("""
     background: repeating-linear-gradient(
         to bottom,
         transparent,
-        transparent 30px,
-        rgba(255, 255, 255, 0.15) 30px,
-        rgba(255, 255, 255, 0.3) 32px,
-        transparent 32px,
-        transparent 60px
+        transparent 40px,
+        rgba(255, 255, 255, 0.08) 40px,
+        rgba(255, 255, 255, 0.15) 42px,
+        transparent 42px,
+        transparent 80px
     );
-    animation: fall 6s linear infinite;
+    animation: fall 8s linear infinite;
 }
-
-/* Segundo conjunto de raios, mais finos e rápidos */
 .tech-rains::before {
     content: "";
     position: absolute;
@@ -179,37 +172,16 @@ st.markdown("""
     background: repeating-linear-gradient(
         115deg,
         transparent,
-        transparent 50px,
-        rgba(255, 255, 255, 0.1) 50px,
-        rgba(255, 255, 255, 0.25) 52px,
-        transparent 52px,
-        transparent 80px
+        transparent 60px,
+        rgba(255, 255, 255, 0.05) 60px,
+        rgba(255, 255, 255, 0.1) 62px,
+        transparent 62px,
+        transparent 100px
     );
-    animation: fall 4s linear infinite reverse;
-    opacity: 0.6;
+    animation: fall 5s linear infinite reverse;
 }
 
-/* Raios ocasionais mais brilhantes */
-@keyframes lightning {
-    0% { opacity: 0; }
-    10% { opacity: 0.8; }
-    15% { opacity: 0; }
-    100% { opacity: 0; }
-}
-.tech-rains::after {
-    content: "";
-    position: absolute;
-    top: -10%;
-    left: 20%;
-    width: 2px;
-    height: 80px;
-    background: white;
-    filter: blur(2px);
-    box-shadow: 0 0 8px white;
-    animation: lightning 3s infinite ease-in-out;
-}
-
-/* SIDEBAR */
+/* Sidebar */
 [data-testid="stSidebar"] {
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(8px);
@@ -220,7 +192,6 @@ st.markdown("""
     text-align: center;
     padding: 20px 10px;
     border-bottom: 1px solid #0ff;
-    margin-bottom: 15px;
 }
 .sidebar-title {
     font-size: 22px;
@@ -234,11 +205,10 @@ st.markdown("""
     color: #0ff;
     font-size: 12px;
     display: flex;
-    align-items: center;
     gap: 8px;
 }
 
-/* CABEÇALHO */
+/* Cabeçalho */
 .admin-header {
     background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(8px);
@@ -257,7 +227,7 @@ st.markdown("""
     color: black;
 }
 
-/* CARDS */
+/* Cards */
 .admin-card {
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(6px);
@@ -265,7 +235,6 @@ st.markdown("""
     padding: 15px;
     border: 1px solid #0ff;
     transition: 0.2s;
-    z-index: 2;
 }
 .admin-card:hover {
     transform: translateY(-3px);
@@ -284,16 +253,14 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
 }
 
-/* BOTÕES */
+/* Botões */
 .stButton > button, .stForm button {
     border-radius: 40px;
     font-weight: 700;
     font-family: 'Orbitron', monospace;
     background: linear-gradient(90deg, #0ff, #0a0);
     color: black;
-    border: none;
     transition: 0.2s;
-    z-index: 2;
 }
 .stButton > button:hover, .stForm button:hover {
     transform: scale(1.01);
@@ -304,7 +271,7 @@ st.markdown("""
     color: white;
 }
 
-/* INPUTS */
+/* Inputs */
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
 .stNumberInput > div > div > input {
@@ -314,14 +281,13 @@ st.markdown("""
     color: #0ff;
     font-family: 'Share Tech Mono', monospace;
     padding: 8px;
-    z-index: 2;
 }
 .stTextInput > div > div > input:focus {
     border-color: #0f0;
     box-shadow: 0 0 8px #0ff;
 }
 
-/* EXPANDER, TABS */
+/* Expander, Tabs */
 .streamlit-expanderHeader {
     background: rgba(0, 0, 0, 0.7);
     border: 1px solid #0ff;
@@ -359,7 +325,6 @@ st.markdown("""
     font-size: 9px;
     border-top: 1px solid rgba(0,255,255,0.2);
     margin-top: 25px;
-    z-index: 2;
 }
 h1, h2, h3 {
     font-family: 'Orbitron', monospace;
@@ -369,7 +334,7 @@ hr {
     border-color: rgba(0,255,255,0.2);
 }
 
-/* Radar visual decorativo */
+/* Radar visual */
 .radar-hud {
     position: fixed;
     bottom: 20px;
@@ -424,7 +389,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 8.2</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 8.3</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -553,7 +518,7 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     st.stop()
 
-# ====================== HEADER APÓS LOGIN ======================
+# ====================== HEADER ======================
 st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
