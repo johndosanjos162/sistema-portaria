@@ -3,15 +3,7 @@ from supabase import create_client
 from datetime import datetime
 import pandas as pd
 from PIL import Image
-import io
 import base64
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-import tempfile
-import os
 
 # --- CONFIGURAÇÃO ---
 url = st.secrets["SUPABASE_URL"]
@@ -25,89 +17,105 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== FUNÇÃO PARA GERAR PDF COM REPORTLAB ======================
-def gerar_pdf_reportlab(df, titulo):
-    """Gera PDF a partir de um DataFrame usando ReportLab."""
+# ====================== FUNÇÃO PARA GERAR HTML PARA IMPRESSÃO ======================
+def gerar_html_impressao(df, titulo):
+    """Gera um HTML formatado para impressão/salvar como PDF."""
     if df.empty:
         return None
     
-    # Criar arquivo temporário
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
-        pdf_path = tmp.name
-    
-    # Configurar documento
-    doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=1*cm, leftMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
-    elementos = []
-    
-    # Estilos
-    styles = getSampleStyleSheet()
-    titulo_estilo = ParagraphStyle(
-        'Titulo',
-        parent=styles['Heading1'],
-        fontSize=16,
-        alignment=1,  # centralizado
-        textColor=colors.HexColor('#0a0e1a')
-    )
-    subtitulo_estilo = ParagraphStyle(
-        'Subtitulo',
-        parent=styles['Normal'],
-        fontSize=10,
-        alignment=1,
-        textColor=colors.grey
-    )
-    cabecalho_estilo = ParagraphStyle(
-        'Cabecalho',
-        parent=styles['Normal'],
-        fontSize=8,
-        alignment=1,
-        textColor=colors.whitesmoke,
-        backColor=colors.HexColor('#0a0e1a')
-    )
-    
-    # Título
-    elementos.append(Paragraph(titulo, titulo_estilo))
-    elementos.append(Spacer(1, 0.2*cm))
-    elementos.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", subtitulo_estilo))
-    elementos.append(Spacer(1, 0.5*cm))
-    
-    # Preparar dados para tabela
-    # Selecionar colunas de interesse
+    # Prepara as linhas da tabela
     colunas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
     colunas_presentes = [c for c in colunas if c in df.columns]
-    dados = [colunas_presentes]  # cabeçalho
     
+    linhas_html = ""
     for _, row in df.iterrows():
-        linha = []
+        linhas_html += "<tr>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
-            linha.append(valor)
-        dados.append(linha)
+            linhas_html += f"<td>{valor}</td>"
+        linhas_html += "</tr>"
     
-    # Criar tabela
-    # Larguras proporcionais (em pontos)
-    larguras = [1.2*cm, 4*cm, 2.5*cm, 3*cm, 3*cm, 4*cm, 4*cm]
-    # Ajustar ao número real de colunas
-    larguras_ajustadas = larguras[:len(colunas_presentes)]
+    # Cabeçalho da tabela
+    cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     
-    tabela = Table(dados, colWidths=larguras_ajustadas, repeatRows=1)
-    estilo_tabela = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0a0e1a')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('FONTSIZE', (0, 1), (-1, -1), 7),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ])
-    tabela.setStyle(estilo_tabela)
-    elementos.append(tabela)
-    
-    # Construir PDF
-    doc.build(elementos)
-    return pdf_path
+    # HTML completo com CSS para impressão
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{titulo}</title>
+        <style>
+            body {{
+                font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+                margin: 2cm;
+                background: white;
+            }}
+            h1 {{
+                text-align: center;
+                color: #0a0e1a;
+                font-size: 24px;
+                margin-bottom: 10px;
+            }}
+            .sub {{
+                text-align: center;
+                color: #555;
+                font-size: 12px;
+                margin-bottom: 30px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10px;
+            }}
+            th {{
+                background: #0a0e1a;
+                color: white;
+                padding: 8px;
+                text-align: left;
+                font-weight: bold;
+            }}
+            td {{
+                border: 1px solid #ccc;
+                padding: 6px;
+                text-align: left;
+            }}
+            tr:nth-child(even) {{
+                background-color: #f9f9f9;
+            }}
+            @media print {{
+                body {{
+                    margin: 1cm;
+                }}
+                .no-print {{
+                    display: none;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>ACCESS GATE - {titulo}</h1>
+        <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
+        <table>
+            <thead>
+                <tr>{cabecalho_html}</tr>
+            </thead>
+            <tbody>
+                {linhas_html}
+            </tbody>
+        </table>
+        <div class="no-print" style="text-align:center; margin-top:30px;">
+            <button onclick="window.print();" style="padding:10px 20px; font-size:16px;">🖨️ Imprimir / Salvar como PDF</button>
+            <p style="font-size:12px; color:#666;">Clique no botão e escolha "Salvar como PDF" no destino da impressão.</p>
+        </div>
+        <script>
+            // Auto-abrir impressão (opcional, descomente se quiser abrir automaticamente)
+            // window.print();
+        </script>
+    </body>
+    </html>
+    """
+    return html
 
 # ====================== CARREGAR IMAGENS ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
@@ -535,34 +543,30 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO COM PDF (REPORTLAB) ======================
+# ====================== HISTÓRICO COM GERAÇÃO DE HTML PARA PDF ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
     if todos_dados:
         df = pd.DataFrame(todos_dados)
         
-        # ========== OPÇÕES DE RELATÓRIO EM PDF ==========
-        st.markdown("### 📄 Gerar Relatório PDF")
+        # ========== OPÇÕES DE RELATÓRIO (HTML → Imprimir/PDF) ==========
+        st.markdown("### 📄 Gerar Relatório para Impressão/PDF")
+        st.info("💡 Clique no botão, depois use **Ctrl+P** (ou **Cmd+P**) e escolha **'Salvar como PDF'**.")
         
-        # 1. PDF completo
+        # 1. Relatório completo
         st.markdown("#### 🔹 Histórico Geral")
-        if st.button("📑 Gerar PDF do Histórico Completo", key="pdf_all"):
-            caminho_pdf = gerar_pdf_reportlab(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
-            if caminho_pdf:
-                with open(caminho_pdf, "rb") as f:
-                    pdf_data = f.read()
-                st.download_button(
-                    label="📥 Baixar PDF Completo",
-                    data=pdf_data,
-                    file_name="historico_completo.pdf",
-                    mime="application/pdf"
-                )
-                os.unlink(caminho_pdf)
+        if st.button("📑 Abrir relatório completo", key="html_all"):
+            html = gerar_html_impressao(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
+            if html:
+                b64 = base64.b64encode(html.encode()).decode()
+                href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Clique aqui para abrir o relatório (nova aba)</a>'
+                st.markdown(href, unsafe_allow_html=True)
+                st.caption("Após abrir, pressione Ctrl+P e escolha 'Salvar como PDF'.")
             else:
-                st.warning("Nenhum dado para gerar PDF.")
+                st.warning("Nenhum dado para gerar relatório.")
         
-        # 2. PDF por setor (C.C, GRSA, Brasanitas)
+        # 2. Relatório por setor
         st.markdown("#### 🔹 Relatório por Setor")
         setores = ["C.C", "GRSA", "Brasanitas"]
         cols_setores = st.columns(len(setores))
@@ -570,50 +574,38 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             with cols_setores[idx]:
                 df_setor = df[df['setor_destino'] == setor]
                 if not df_setor.empty:
-                    if st.button(f"🏥 {setor} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor}"):
-                        caminho_pdf = gerar_pdf_reportlab(df_setor, f"RELATÓRIO - SETOR {setor}")
-                        if caminho_pdf:
-                            with open(caminho_pdf, "rb") as f:
-                                pdf_data = f.read()
-                            st.download_button(
-                                label=f"📥 Baixar PDF {setor}",
-                                data=pdf_data,
-                                file_name=f"historico_{setor}.pdf",
-                                mime="application/pdf"
-                            )
-                            os.unlink(caminho_pdf)
+                    if st.button(f"🏥 {setor} ({len(df_setor)} registros)", key=f"html_setor_{setor}"):
+                        html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor}")
+                        if html:
+                            b64 = base64.b64encode(html.encode()).decode()
+                            href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor}</a>'
+                            st.markdown(href, unsafe_allow_html=True)
                 else:
-                    st.button(f"🏥 {setor} (vazio)", disabled=True, key=f"btn_{setor}_pdf")
+                    st.button(f"🏥 {setor} (vazio)", disabled=True, key=f"btn_{setor}_html")
         
-        # 3. PDF por empresa (excluindo BRASANITAS, GRSA, C.C)
+        # 3. Relatório por empresa (excluindo BRASANITAS, GRSA, C.C)
         st.markdown("#### 🔹 Relatório por Empresa (Prestadores de Serviço)")
         empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
         todas_empresas = df['empresa'].dropna().unique()
         empresas_filtradas = [emp for emp in todas_empresas if emp.upper() not in [e.upper() for e in empresas_excluir]]
         
         if empresas_filtradas:
-            empresa_selecionada = st.selectbox("Selecione a empresa:", sorted(empresas_filtradas), key="select_empresa_pdf")
+            empresa_selecionada = st.selectbox("Selecione a empresa:", sorted(empresas_filtradas), key="select_empresa_html")
             if empresa_selecionada:
                 df_empresa = df[df['empresa'] == empresa_selecionada]
                 st.write(f"📌 **{len(df_empresa)} registros** para a empresa **{empresa_selecionada}**")
-                if st.button(f"📑 Gerar PDF para {empresa_selecionada}", key="pdf_empresa"):
-                    caminho_pdf = gerar_pdf_reportlab(df_empresa, f"RELATÓRIO - EMPRESA {empresa_selecionada}")
-                    if caminho_pdf:
-                        with open(caminho_pdf, "rb") as f:
-                            pdf_data = f.read()
-                        st.download_button(
-                            label=f"📥 Baixar PDF {empresa_selecionada}",
-                            data=pdf_data,
-                            file_name=f"historico_{empresa_selecionada}.pdf",
-                            mime="application/pdf"
-                        )
-                        os.unlink(caminho_pdf)
+                if st.button(f"📑 Abrir relatório da {empresa_selecionada}", key="html_empresa"):
+                    html = gerar_html_impressao(df_empresa, f"RELATÓRIO - EMPRESA {empresa_selecionada}")
+                    if html:
+                        b64 = base64.b64encode(html.encode()).decode()
+                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF da empresa {empresa_selecionada}</a>'
+                        st.markdown(href, unsafe_allow_html=True)
         else:
             st.info("Nenhuma empresa cadastrada (além das fixas: BRASANITAS, GRSA, C.C).")
         
         st.markdown("---")
         
-        # ========== SEÇÃO DE EXCLUSÃO ==========
+        # ========== SEÇÃO DE EXCLUSÃO (mantida) ==========
         st.markdown("### 🗑️ Exclusão de Registros")
         st.markdown("#### Selecione os registros que deseja excluir:")
         
