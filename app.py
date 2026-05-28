@@ -9,7 +9,7 @@ import uuid
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
 MAX_TENTATIVAS_LOGIN = 5
-SESSION_TIMEOUT_MINUTOS = 5  # sessões inativas por mais de 5 minutos são removidas
+SESSION_TIMEOUT_MINUTOS = 5
 
 # --- CONFIGURAÇÃO SUPABASE ---
 url = st.secrets["SUPABASE_URL"]
@@ -17,9 +17,9 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.set_page_config(
-    page_title="JOHN ACESSOS - ACESSO DE DADOS", 
-    layout="wide", 
-    page_icon="👮‍♂️", 
+    page_title="JOHN ACESSOS - ACESSO DE DADOS",
+    layout="wide",
+    page_icon="👮‍♂️",
     initial_sidebar_state="expanded"
 )
 
@@ -28,18 +28,19 @@ def registrar_sessao(perfil, usuario="admin"):
     """Registra uma nova sessão ativa no banco de dados."""
     session_id = str(uuid.uuid4())
     try:
-        supabase.table("sessoes_ativas").insert({
+        data = {
             "id": session_id,
             "usuario": usuario,
             "perfil": perfil,
             "ultima_atividade": datetime.now().isoformat(),
             "ip": "desconhecido",
             "user_agent": "streamlit"
-        }).execute()
+        }
+        supabase.table("sessoes_ativas").insert(data).execute()
         st.session_state.session_id = session_id
         return True
     except Exception as e:
-        print(f"Erro ao registrar sessão: {e}")
+        st.error(f"Erro ao registrar sessão: {e}")
         return False
 
 def atualizar_atividade_sessao():
@@ -62,7 +63,7 @@ def remover_sessao():
         st.session_state.session_id = None
 
 def contar_sessoes_ativas():
-    """Retorna o número de sessões ativas nos últimos SESSION_TIMEOUT_MINUTOS, incluindo a atual."""
+    """Retorna o número de sessões ativas (últimos 5 minutos)."""
     limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
     try:
         result = supabase.table("sessoes_ativas").select("id", count="exact").gte("ultima_atividade", limite).execute()
@@ -94,8 +95,8 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             valor = valor.replace('<', '&lt;').replace('>', '&gt;')
-            linhas_html += f"<td>{valor}</td>"
-        linhas_html += "<tr>"
+            linhas_html += f"70><td{valor}迟"
+        linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -418,7 +419,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 12.2 (SECURE)</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 12.3 (SECURE)</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -625,8 +626,8 @@ if not st.session_state.logado:
                 st.session_state.logado = True
                 st.session_state.perfil = "ADMIN"
                 st.session_state.tentativas_login = 0
-                # Registrar sessão no Supabase
-                registrar_sessao("ADMIN", "admin")
+                if registrar_sessao("ADMIN", "admin"):
+                    st.success("Sessão registrada com sucesso!")  # opcional
                 st.rerun()
             elif senha == "JOHN123":
                 st.session_state.logado = True
@@ -654,9 +655,9 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     st.stop()
 
-# ====================== APÓS LOGIN: GERENCIAR SESSÕES E MOSTRAR CONECTADOS ======================
-# Atualizar atividade da sessão atual e limpar expiradas (respeitando a atual)
-if st.session_state.logado and st.session_state.session_id:
+# ====================== APÓS LOGIN ======================
+# Atualizar atividade da sessão atual (se existir)
+if st.session_state.session_id:
     atualizar_atividade_sessao()
     limpar_sessoes_expiradas()
     total_conectados = contar_sessoes_ativas()
@@ -665,7 +666,13 @@ else:
 
 alerta_monitoramento = total_conectados > 1
 
-# ====================== HEADER APÓS LOGIN ======================
+# Construir o indicador de sessões
+if alerta_monitoramento:
+    indicador_html = f'<div class="session-indicator"><span class="warning-triangle">⚠️</span> <span>👥 {total_conectados}</span></div>'
+else:
+    indicador_html = f'<div class="session-indicator"><span>👥 {total_conectados}</span></div>'
+
+# ====================== HEADER APÓS LOGIN COM INDICADOR ======================
 st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -679,9 +686,7 @@ st.markdown(f"""
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
-                <div class="session-indicator">
-                    {f'<span class="warning-triangle">⚠️</span> ' if alerta_monitoramento else ''}<span>👥 {total_conectados}</span>
-                </div>
+                {indicador_html}
                 <div class="badge-admin">👑 {st.session_state.perfil}</div>
             </div>
         </div>
