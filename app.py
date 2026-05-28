@@ -11,9 +11,9 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.set_page_config(
-    page_title="JOHN ACESSOS - IA CORE", 
+    page_title="JOHN ACESSOS - ACESSO DE DADOS", 
     layout="wide", 
-    page_icon="🧠", 
+    page_icon="🛡️", 
     initial_sidebar_state="expanded"
 )
 
@@ -86,9 +86,9 @@ def gerar_html_impressao(df, titulo):
         </style>
     </head>
     <body>
-        <h1>JOHN ACESSOS - IA CORE - {titulo}</h1>
+        <h1>JOHN ACESSOS - ACESSO DE DADOS - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        <td>
+        <tr>
             <thead>
                 <tr>{cabecalho_html}</tr>
             </thead>
@@ -134,10 +134,6 @@ st.markdown("""
 @keyframes spinSlow {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
-}
-@keyframes dataFlow {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 200% 0%; }
 }
 
 /* FUNDO */
@@ -307,26 +303,26 @@ if IMAGEM_SIDEBAR:
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">🧠 JOHN ACESSOS</div>
-            <p style="color:#a78bfa; font-size:9px;">IA CORE</p>
+            <div class="sidebar-title">🛡️ JOHN ACESSOS</div>
+            <p style="color:#a78bfa; font-size:9px;">ACESSO DE DADOS</p>
         </div>
     """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚡ ESTADO IA")
+st.sidebar.markdown("### ⚡ ESTADO")
 st.sidebar.markdown('<div class="info-item">🟢 REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🤖 MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🗄️ DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📡 INFO IA")
+st.sidebar.markdown("### 📡 INFO")
 if "perfil" in st.session_state:
     st.sidebar.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 12.0 (IA)</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 12.0 (DATA)</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -342,7 +338,7 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN - MODO IA ======================
+# ====================== TELA DE LOGIN - ACESSO DE DADOS ======================
 if not st.session_state.logado:
     st.markdown("""
     <style>
@@ -390,8 +386,8 @@ if not st.session_state.logado:
         animation: float 3s ease-in-out infinite;
         box-shadow: 0 0 30px rgba(168,85,247,0.2);
     }
-    /* Núcleo IA */
-    .ia-core {
+    /* Escudo de defesa tecnológico */
+    .shield-core {
         width: 110px;
         height: 110px;
         margin: 0 auto 20px;
@@ -403,11 +399,11 @@ if not st.session_state.logado:
         position: relative;
         animation: pulse 2s infinite;
     }
-    .ia-core span {
+    .shield-core span {
         font-size: 55px;
         filter: drop-shadow(0 0 10px #a855f7);
     }
-    .ia-core::before {
+    .shield-core::before {
         content: "";
         position: absolute;
         width: 140px;
@@ -417,7 +413,7 @@ if not st.session_state.logado:
         animation: spinSlow 8s linear infinite;
         opacity: 0.6;
     }
-    .ia-core::after {
+    .shield-core::after {
         content: "⚡";
         position: absolute;
         font-size: 20px;
@@ -441,7 +437,7 @@ if not st.session_state.logado:
         margin-bottom: 25px;
     }
     /* Campos com efeito de digitação */
-    .ia-field input {
+    .data-field input {
         width: 100%;
         background: rgba(0, 0, 0, 0.6);
         border: 1px solid #a855f7;
@@ -451,12 +447,12 @@ if not st.session_state.logado:
         font-family: 'Space Mono', monospace;
         transition: 0.2s;
     }
-    .ia-field input:focus {
+    .data-field input:focus {
         outline: none;
         border-color: #3b82f6;
         box-shadow: 0 0 12px #a855f7;
     }
-    .status-bar-ia {
+    .status-bar-data {
         margin-top: 25px;
         font-size: 9px;
         color: #a78bfa;
@@ -466,12 +462,12 @@ if not st.session_state.logado:
         justify-content: center;
         gap: 15px;
     }
-    .status-item-ia {
+    .status-item-data {
         display: flex;
         align-items: center;
         gap: 5px;
     }
-    .blink-ia {
+    .blink-data {
         display: inline-block;
         width: 8px;
         height: 8px;
@@ -497,9 +493,9 @@ if not st.session_state.logado:
     <div class="neural-bg"></div>
     <div class="login-container">
         <div class="login-box">
-            <div class="ia-core"><span>🧠</span></div>
+            <div class="shield-core"><span>🛡️⚡</span></div>
             <div class="logo-title">JOHN ACESSOS</div>
-            <div class="logo-subtitle">IA CORE</div>
+            <div class="logo-subtitle">ACESSO DE DADOS</div>
     """, unsafe_allow_html=True)
     
     # Código binário "inteligente" (simula fluxo de dados)
@@ -521,9 +517,9 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     
     with st.form("login_form"):
-        st.text_input("", placeholder="Identificação (usuário)", key="ia_user", label_visibility="collapsed")
+        st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
         senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
-        submitted = st.form_submit_button("🧠 ACESSAR IA CORE", use_container_width=True)
+        submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
@@ -537,10 +533,10 @@ if not st.session_state.logado:
                 st.error("❌ ACESSO NEGADO - Assinatura inválida")
     
     st.markdown("""
-            <div class="status-bar-ia">
-                <div class="status-item-ia"><span class="blink-ia"></span> REDE NEURAL</div>
-                <div class="status-item-ia"><span class="blink-ia"></span> APRENDIZADO CONTÍNUO</div>
-                <div class="status-item-ia"><span class="blink-ia"></span> CRIPTOGRAFIA QUÂNTICA</div>
+            <div class="status-bar-data">
+                <div class="status-item-data"><span class="blink-data"></span> FIREWALL ATIVO</div>
+                <div class="status-item-data"><span class="blink-data"></span> CRIPTOGRAFIA QUÂNTICA</div>
+                <div class="status-item-data"><span class="blink-data"></span> PROTEÇÃO DE DADOS</div>
             </div>
         </div>
     </div>
@@ -553,11 +549,11 @@ st.markdown(f"""
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #a855f7, #3b82f6); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <span style="font-size: 20px;">🧠</span>
+                    <span style="font-size: 20px;">🛡️</span>
                 </div>
                 <div>
-                    <h1 style="margin:0; font-size: 16px;">JOHN ACESSOS - IA CORE</h1>
-                    <p style="margin:0; color: #a78bfa; font-size: 8px;">INTELIGÊNCIA ARTIFICIAL</p>
+                    <h1 style="margin:0; font-size: 16px;">JOHN ACESSOS - ACESSO DE DADOS</h1>
+                    <p style="margin:0; color: #a78bfa; font-size: 8px;">PROTEÇÃO DE DADOS</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -1013,6 +1009,6 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🧠 JOHN ACESSOS - IA CORE | Deep Learning | Segurança Quântica
+        🛡️ JOHN ACESSOS - ACESSO DE DADOS | Proteção de Dados | Segurança Quântica
     </div>
 """, unsafe_allow_html=True)
