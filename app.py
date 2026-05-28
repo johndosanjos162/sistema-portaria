@@ -31,7 +31,7 @@ def gerar_html_impressao(df, titulo):
         linhas_html += "<tr>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
-            linhas_html += f"<td>{valor}</td>"
+            linhas_html += f"</td>{valor}</td>"
         linhas_html += "</tr>"
     
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
@@ -110,7 +110,7 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
-# ====================== CARREGAR IMAGENS ======================
+# ====================== CARREGAR IMAGENS (OPCIONAL) ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
         return Image.open(nome_arquivo)
@@ -601,7 +601,7 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO COM PDFs CORRIGIDOS PARA SETORES ======================
+# ====================== HISTÓRICO COMPLETO ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
@@ -628,7 +628,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         # Identificar os valores reais do campo setor_destino
         setores_unicos = df['setor_destino'].unique()
-        # Mapear os nomes amigáveis para os valores reais
         setores_desejados = ["C.C", "GRSA", "Brasanitas"]
         mapa_setores = {}
         for setor in setores_desejados:
@@ -718,15 +717,19 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # ========== SEÇÃO DE EXCLUSÃO (mantida) ==========
+        # ========== SEÇÃO DE EXCLUSÃO (totalmente funcional) ==========
         st.markdown("### 🗑️ Exclusão de Registros")
         st.markdown("#### Selecione os registros que deseja excluir:")
         
+        # Exibir checkboxes para cada registro
         for idx, row in df.iterrows():
             col_check, col_data = st.columns([0.5, 9.5])
             with col_check:
-                is_checked = st.checkbox("", key=f"chk_{row['id']}", 
-                                         value=row['id'] in st.session_state.selected_ids)
+                is_checked = st.checkbox(
+                    "", 
+                    key=f"chk_{row['id']}", 
+                    value=row['id'] in st.session_state.selected_ids
+                )
                 if is_checked and row['id'] not in st.session_state.selected_ids:
                     st.session_state.selected_ids.append(row['id'])
                 elif not is_checked and row['id'] in st.session_state.selected_ids:
@@ -739,6 +742,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 </div>
                 """, unsafe_allow_html=True)
         
+        # Botões de ação
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         
         with col_btn1:
@@ -747,11 +751,14 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     with st.popover("⚠️ CONFIRMAR EXCLUSÃO DOS SELECIONADOS", use_container_width=True):
                         st.error(f"Você selecionou {len(st.session_state.selected_ids)} registro(s). Esta ação é irreversível!")
                         if st.button("✅ SIM, EXCLUIR PERMANENTEMENTE", key="confirm_selected"):
-                            for id_excluir in st.session_state.selected_ids:
-                                supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
-                            st.success(f"{len(st.session_state.selected_ids)} registro(s) excluído(s)!")
-                            st.session_state.selected_ids = []
-                            st.rerun()
+                            try:
+                                for id_excluir in st.session_state.selected_ids:
+                                    supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
+                                st.success(f"{len(st.session_state.selected_ids)} registro(s) excluído(s)!")
+                                st.session_state.selected_ids = []
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro ao excluir: {e}")
                 else:
                     st.warning("Nenhum registro selecionado.")
         
@@ -764,14 +771,18 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             if st.button("⚠️ LIMPAR TODO O HISTÓRICO", use_container_width=True):
                 with st.popover("🚨 ATENÇÃO - LIMPEZA TOTAL", use_container_width=True):
                     st.error("Isso vai APAGAR TODOS os registros de movimentação. Esta ação é IRREVERSÍVEL!")
-                    st.write(f"Total de registros: {len(todos_dados)}")
+                    total_registros = len(df)
+                    st.write(f"Total de registros no histórico: **{total_registros}**")
                     confirm = st.text_input("Digite 'LIMPAR TUDO' para confirmar:", type="password")
                     if confirm == "LIMPAR TUDO":
                         if st.button("🔥 EXCLUIR TUDO PERMANENTEMENTE", key="clear_all_confirm"):
-                            supabase.table("movimentacao").delete().neq("id", 0).execute()
-                            st.success("✅ Todo o histórico foi limpo!")
-                            st.session_state.selected_ids = []
-                            st.rerun()
+                            try:
+                                supabase.table("movimentacao").delete().neq("id", 0).execute()
+                                st.success("✅ Todo o histórico foi limpo!")
+                                st.session_state.selected_ids = []
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro ao limpar histórico: {e}")
                     elif confirm:
                         st.error("Confirmação incorreta. Digite exatamente 'LIMPAR TUDO'")
     else:
@@ -813,9 +824,12 @@ if st.session_state.perfil == "ADMIN":
                     with st.popover("⚠️ CLIQUE PARA EXCLUIR", use_container_width=True):
                         st.error("Ação irreversível!")
                         if st.button("🗑️ SIM, EXCLUIR", key="del_cad"):
-                            supabase.table("Pessoas").delete().eq("cpf", pessoa['cpf']).execute()
-                            st.success("Cadastro excluído!")
-                            st.rerun()
+                            try:
+                                supabase.table("Pessoas").delete().eq("cpf", pessoa['cpf']).execute()
+                                st.success("Cadastro excluído!")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
                 else:
                     st.info("Marque a confirmação para habilitar a exclusão")
         else:
