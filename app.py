@@ -32,7 +32,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</table>"
+        linhas_html += "</tr>"
     
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     
@@ -464,7 +464,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
 
 st.markdown("---")
 
-# ====================== REGISTRO DE ENTRADA COM AUTOCOMPLETE DO NOME/EMPRESA ======================
+# ====================== REGISTRO DE ENTRADA COM BOTÃO CONFIRMAR CPF ======================
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
 
@@ -473,38 +473,52 @@ if tipo == "🏢 Prestador de serviços":
 else:
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
-c1, c2, c3 = st.columns([2, 2, 1])
-cpf_input = c1.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF")
-setor_escolhido = c2.selectbox("📍 Destino:", destinos, key="destino")
-
-# --- EXIBIR NOME E EMPRESA AO DIGITAR O CPF ---
-if cpf_input:
-    pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_input.strip()).execute().data
-    if pessoa:
-        nome_encontrado = pessoa[0]['nome']
-        empresa_encontrada = pessoa[0].get('empresa', 'N/A')
-        st.success(f"✅ **Pessoa encontrada:** 👤 {nome_encontrado} | 🏢 Empresa: {empresa_encontrada}")
+# Layout: campo CPF + botão confirmar
+col_cpf, col_btn_confirma = st.columns([3, 1])
+with col_cpf:
+    cpf_input = st.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF")
+with col_btn_confirma:
+    # Botão "Confirmar CPF" só aparece se houver texto no campo
+    if cpf_input and len(cpf_input.strip()) > 0:
+        if st.button("✅ CONFIRMAR CPF", key="confirma_cpf"):
+            # Busca a pessoa no banco
+            pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_input.strip()).execute().data
+            if pessoa:
+                # Armazena os dados no session_state para uso posterior
+                st.session_state.pessoa_confirmada = {
+                    "cpf": cpf_input.strip(),
+                    "nome": pessoa[0]['nome'],
+                    "empresa": pessoa[0].get('empresa', '')
+                }
+                st.success(f"✅ **Pessoa confirmada:** 👤 {pessoa[0]['nome']} | 🏢 Empresa: {pessoa[0].get('empresa', 'N/A')}")
+            else:
+                st.error("❌ CPF não cadastrado. Cadastre antes de registrar entrada.")
+                st.session_state.pessoa_confirmada = None
     else:
-        st.error("❌ CPF não cadastrado. Cadastre antes de registrar entrada.")
+        # Botão desabilitado visualmente (ou simplesmente não exibe)
+        st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
 
-if c3.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
-    if cpf_input:
-        p = supabase.table("Pessoas").select("*").eq("cpf", cpf_input.strip()).execute().data
-        if p:
-            supabase.table("movimentacao").insert({
-                "cpf": p[0]['cpf'],
-                "nome": p[0]['nome'],
-                "empresa": p[0].get('empresa', ''),
-                "setor_destino": setor_escolhido,
-                "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                "data_saida": ""
-            }).execute()
-            st.success(f"✅ Entrada registrada para **{setor_escolhido}**!")
-            st.rerun()
-        else:
-            st.error("❌ CPF não cadastrado")
+# Escolha do setor
+setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
+
+# Botão de registrar entrada (só permite se houver pessoa confirmada)
+if st.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
+    if 'pessoa_confirmada' in st.session_state and st.session_state.pessoa_confirmada:
+        pessoa = st.session_state.pessoa_confirmada
+        supabase.table("movimentacao").insert({
+            "cpf": pessoa['cpf'],
+            "nome": pessoa['nome'],
+            "empresa": pessoa['empresa'],
+            "setor_destino": setor_escolhido,
+            "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            "data_saida": ""
+        }).execute()
+        st.success(f"✅ Entrada registrada para **{setor_escolhido}**!")
+        # Limpa a confirmação
+        st.session_state.pessoa_confirmada = None
+        st.rerun()
     else:
-        st.warning("⚠️ Digite o CPF")
+        st.warning("⚠️ Confirme o CPF antes de registrar a entrada.")
 
 st.markdown("---")
 
