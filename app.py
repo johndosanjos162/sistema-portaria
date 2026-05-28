@@ -11,7 +11,7 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.set_page_config(
-    page_title="JOHN ACESSOS - CENTRAL TÁTICA", 
+    page_title="JOHN ACESSOS - DEFESA CIBERNÉTICA", 
     layout="wide", 
     page_icon="🛡️", 
     initial_sidebar_state="expanded"
@@ -86,7 +86,7 @@ def gerar_html_impressao(df, titulo):
         </style>
     </head>
     <body>
-        <h1>JOHN ACESSOS - CENTRAL TÁTICA - {titulo}</h1>
+        <h1>JOHN ACESSOS - DEFESA CIBERNÉTICA - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
@@ -115,36 +115,44 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN LEVE E OTIMIZADO ======================
+# ====================== DESIGN PRINCIPAL (MANTIDO) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap');
 
-/* ANIMAÇÕES SUAVES E LEVES */
+/* ANIMAÇÕES LEVES */
 @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 180, 255, 0.3); }
-    70% { box-shadow: 0 0 0 8px rgba(0, 180, 255, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(0, 180, 255, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 180, 255, 0); }
     100% { box-shadow: 0 0 0 0 rgba(0, 180, 255, 0); }
 }
 @keyframes float {
     0% { transform: translateY(0px); }
-    50% { transform: translateY(-4px); }
+    50% { transform: translateY(-5px); }
     100% { transform: translateY(0px); }
 }
 @keyframes scan {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
 }
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes blink {
+    0%,100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
 
-/* FUNDO PRINCIPAL - GRADIENTE SUAVE */
+/* FUNDO PRINCIPAL */
 .stApp {
-    background: linear-gradient(135deg, #050a14 0%, #0a121f 100%);
+    background: linear-gradient(135deg, #030a14 0%, #061020 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
 }
 
-/* SIDEBAR - SEM ELEMENTOS FIXOS PESADOS */
+/* SIDEBAR */
 [data-testid="stSidebar"] {
-    background: rgba(8, 15, 25, 0.9);
+    background: rgba(0, 0, 0, 0.75);
     backdrop-filter: blur(8px);
     border-right: 1px solid rgba(0, 180, 255, 0.3);
 }
@@ -156,7 +164,7 @@ st.markdown("""
 .sidebar-title {
     font-size: 20px;
     font-weight: 800;
-    background: linear-gradient(135deg, #0cf, #0a0);
+    background: linear-gradient(135deg, #0cf, #0f0);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -170,7 +178,7 @@ st.markdown("""
 
 /* CABEÇALHO */
 .admin-header {
-    background: rgba(8, 15, 25, 0.7);
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(5px);
     border-radius: 12px;
     padding: 12px 20px;
@@ -186,9 +194,9 @@ st.markdown("""
     color: #000;
 }
 
-/* CARDS */
+/* CARDS (MANTIDOS) */
 .admin-card {
-    background: rgba(8, 15, 25, 0.6);
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     border-radius: 12px;
     padding: 15px;
@@ -249,7 +257,7 @@ st.markdown("""
 
 /* EXPANDER, TABS */
 .streamlit-expanderHeader {
-    background: rgba(8, 15, 25, 0.8);
+    background: rgba(0, 0, 0, 0.7);
     border: 1px solid rgba(0, 180, 255, 0.3);
     border-radius: 12px;
     color: #0cf;
@@ -303,7 +311,7 @@ else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
             <div class="sidebar-title">🛡️ JOHN ACESSOS</div>
-            <p style="color:#6a8eae; font-size:9px;">CENTRAL TÁTICA</p>
+            <p style="color:#6a8eae; font-size:9px;">DEFESA CIBERNÉTICA</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -321,7 +329,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 9.0</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 10.0</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -337,13 +345,161 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN OTIMIZADA ======================
+# ====================== TELA DE LOGIN: DEFESA CIBERNÉTICA GLOBAL ======================
 if not st.session_state.logado:
-    # Linha de código binário (leve, via JS)
+    # HTML para mapa mundial abstrato (via CSS e pequenas divs)
+    st.markdown("""
+    <style>
+    /* Camada de fundo com linhas de conexão e grades */
+    .global-grid {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 0;
+        background-image: 
+            radial-gradient(circle at 30% 40%, rgba(0,180,255,0.08) 2px, transparent 2px),
+            radial-gradient(circle at 70% 60%, rgba(0,180,255,0.06) 2px, transparent 2px);
+        background-size: 50px 50px, 80px 80px;
+    }
+    /* Linhas digitais (representando comunicação global) */
+    .digital-lines {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        background: repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(0,180,255,0.05) 30px, rgba(0,180,255,0.1) 32px);
+        z-index: 0;
+    }
+    /* Contêiner do login (acima do fundo) */
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 80vh;
+        position: relative;
+        z-index: 2;
+    }
+    .login-box {
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(12px);
+        border-radius: 30px;
+        padding: 35px 30px;
+        border: 1px solid rgba(0, 180, 255, 0.6);
+        width: 100%;
+        max-width: 450px;
+        text-align: center;
+        transition: 0.3s;
+        animation: float 3s ease-in-out infinite;
+        box-shadow: 0 0 20px rgba(0,180,255,0.2);
+    }
+    /* Escudo cyber holográfico */
+    .cyber-shield {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 20px;
+        background: radial-gradient(circle, rgba(0,180,255,0.2), transparent);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        animation: pulse 2s infinite;
+    }
+    .cyber-shield span {
+        font-size: 50px;
+        filter: drop-shadow(0 0 5px #0cf);
+    }
+    .cyber-shield::before {
+        content: "";
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        border: 2px solid #0cf;
+        border-radius: 50%;
+        animation: spin 8s linear infinite;
+        opacity: 0.6;
+    }
+    .cyber-shield::after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: repeating-conic-gradient(from 0deg, #0cf 0deg 10deg, transparent 10deg 20deg);
+        border-radius: 50%;
+        opacity: 0.15;
+        animation: spin 12s linear infinite reverse;
+    }
+    .logo-title {
+        font-size: 28px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #fff, #0cf);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 2px;
+    }
+    .logo-subtitle {
+        font-size: 10px;
+        color: #0cf;
+        letter-spacing: 3px;
+        margin-bottom: 20px;
+    }
+    /* Scanner animado para os campos */
+    .field-scanner {
+        position: relative;
+    }
+    .field-scanner::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #0cf, transparent);
+        animation: scan 2s infinite;
+    }
+    .status-bar {
+        margin-top: 25px;
+        font-size: 9px;
+        color: #8ab3cf;
+        border-top: 1px solid rgba(0,180,255,0.3);
+        padding-top: 12px;
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+    }
+    .status-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .blink {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #0f0;
+        border-radius: 50%;
+        animation: pulse 1s infinite;
+    }
+    </style>
+    <div class="global-grid"></div>
+    <div class="digital-lines"></div>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="cyber-shield"><span>🛡️</span></div>
+            <div class="logo-title">JOHN ACESSOS</div>
+            <div class="logo-subtitle">DEFESA CIBERNÉTICA GLOBAL</div>
+    """, unsafe_allow_html=True)
+    
+    # Código binário acima do formulário (opcional, mantido leve)
     st.markdown("""
     <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     <script>
-        function generateBinary(len=50) {
+        function generateBinary(len=55) {
             let bin = '';
             for(let i=0;i<len;i++) bin += Math.random()<0.5?'0':'1';
             return bin;
@@ -357,99 +513,11 @@ if not st.session_state.logado:
     </script>
     """, unsafe_allow_html=True)
     
-    st.markdown("""
-    <style>
-    .login-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 70vh;
-    }
-    .login-box {
-        background: rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(10px);
-        border-radius: 30px;
-        padding: 35px 25px;
-        border: 1px solid rgba(0, 180, 255, 0.5);
-        width: 100%;
-        max-width: 400px;
-        text-align: center;
-        transition: 0.3s;
-        animation: float 3s ease-in-out infinite;
-    }
-    .military-shield {
-        width: 80px;
-        height: 80px;
-        margin: 0 auto 15px;
-        background: radial-gradient(circle, rgba(0,180,255,0.2), transparent);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        animation: pulse 2s infinite;
-    }
-    .military-shield span {
-        font-size: 42px;
-        filter: drop-shadow(0 0 4px #0cf);
-    }
-    .military-shield::before {
-        content: "";
-        position: absolute;
-        width: 100px;
-        height: 100px;
-        border: 1px solid #0cf;
-        border-radius: 50%;
-        animation: spin 6s linear infinite;
-    }
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    .logo-title {
-        font-size: 24px;
-        font-weight: 900;
-        background: linear-gradient(135deg, #fff, #0cf);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-    .logo-subtitle {
-        font-size: 9px;
-        color: #0cf;
-        letter-spacing: 2px;
-    }
-    .status-bar {
-        margin-top: 20px;
-        font-size: 9px;
-        color: #8ab3cf;
-        border-top: 1px solid rgba(0,180,255,0.3);
-        padding-top: 10px;
-    }
-    .status-item {
-        display: inline-block;
-        margin: 0 5px;
-    }
-    .blink {
-        display: inline-block;
-        width: 6px;
-        height: 6px;
-        background: #0f0;
-        border-radius: 50%;
-        margin-right: 4px;
-        animation: pulse 1s infinite;
-    }
-    </style>
-    <div class="login-container">
-        <div class="login-box">
-            <div class="military-shield"><span>🛡️</span></div>
-            <div class="logo-title">JOHN ACESSOS</div>
-            <div class="logo-subtitle">CENTRAL TÁTICA</div>
-            <div style="height: 15px;"></div>
-    """, unsafe_allow_html=True)
-    
     with st.form("login_form"):
-        senha = st.text_input("", type="password", placeholder="Credencial de segurança", label_visibility="collapsed")
-        submitted = st.form_submit_button("🔓 ACESSAR SISTEMA", use_container_width=True)
+        # Campo Usuário (não utilizado na autenticação, mas mantido visualmente)
+        st.text_input("", placeholder="Identificação criptografada", key="login_user", label_visibility="collapsed")
+        senha = st.text_input("", type="password", placeholder="Chave de acesso", label_visibility="collapsed")
+        submitted = st.form_submit_button("🔓 ENTRAR NA CENTRAL", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
@@ -464,9 +532,9 @@ if not st.session_state.logado:
     
     st.markdown("""
             <div class="status-bar">
-                <div class="status-item"><span class="blink"></span> CFTV</div>
-                <div class="status-item"><span class="blink"></span> IA</div>
-                <div class="status-item"><span class="blink"></span> CRIPTO</div>
+                <div class="status-item"><span class="blink"></span> FIREWALL ATIVO</div>
+                <div class="status-item"><span class="blink"></span> IA GLOBAL</div>
+                <div class="status-item"><span class="blink"></span> CRIPTOGRAFIA MILITAR</div>
             </div>
         </div>
     </div>
@@ -482,8 +550,8 @@ st.markdown(f"""
                     <span style="font-size: 18px;">🛡️</span>
                 </div>
                 <div>
-                    <h1 style="margin:0; font-size: 15px;">JOHN ACESSOS - CENTRAL TÁTICA</h1>
-                    <p style="margin:0; color: #0cf; font-size: 8px;">INTELIGÊNCIA DE DEFESA</p>
+                    <h1 style="margin:0; font-size: 15px;">JOHN ACESSOS - DEFESA CIBERNÉTICA</h1>
+                    <p style="margin:0; color: #0cf; font-size: 8px;">INTELIGÊNCIA GLOBAL</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -696,7 +764,7 @@ if dados:
 else:
     st.info("🏢 Nenhuma pessoa presente no momento")
 
-# ====================== HISTÓRICO ======================
+# ====================== HISTÓRICO (com PDFs) ======================
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
@@ -939,6 +1007,6 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🛡️ JOHN ACESSOS - CENTRAL TÁTICA | IA | DEFESA AVANÇADA
+        🛡️ JOHN ACESSOS - DEFESA CIBERNÉTICA GLOBAL | IA | FIREWALL ATIVO
     </div>
 """, unsafe_allow_html=True)
