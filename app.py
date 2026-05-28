@@ -9,7 +9,7 @@ import uuid
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
 MAX_TENTATIVAS_LOGIN = 5
-SESSION_TIMEOUT_MINUTOS = 5  # tempo para considerar uma sessão inativa
+SESSION_TIMEOUT_MINUTOS = 5  # sessões inativas por mais de 5 minutos são removidas
 
 # --- CONFIGURAÇÃO SUPABASE ---
 url = st.secrets["SUPABASE_URL"]
@@ -33,16 +33,18 @@ def registrar_sessao(perfil, usuario="admin"):
             "usuario": usuario,
             "perfil": perfil,
             "ultima_atividade": datetime.now().isoformat(),
-            "ip": "desconhecido",  # Streamlit não expõe IP fácil, pode deixar assim
+            "ip": "desconhecido",
             "user_agent": "streamlit"
         }).execute()
         st.session_state.session_id = session_id
+        return True
     except Exception as e:
         print(f"Erro ao registrar sessão: {e}")
+        return False
 
 def atualizar_atividade_sessao():
     """Atualiza o timestamp da sessão atual."""
-    if "session_id" in st.session_state:
+    if "session_id" in st.session_state and st.session_state.session_id:
         try:
             supabase.table("sessoes_ativas").update({
                 "ultima_atividade": datetime.now().isoformat()
@@ -52,32 +54,33 @@ def atualizar_atividade_sessao():
 
 def remover_sessao():
     """Remove a sessão atual do banco de dados (logout)."""
-    if "session_id" in st.session_state:
+    if "session_id" in st.session_state and st.session_state.session_id:
         try:
             supabase.table("sessoes_ativas").delete().eq("id", st.session_state.session_id).execute()
         except:
             pass
-        del st.session_state.session_id
+        st.session_state.session_id = None
 
 def contar_sessoes_ativas():
-    """Retorna o número de sessões ativas nos últimos SESSION_TIMEOUT_MINUTOS."""
-    limite = datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)
+    """Retorna o número de sessões ativas nos últimos SESSION_TIMEOUT_MINUTOS, incluindo a atual."""
+    limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
     try:
-        result = supabase.table("sessoes_ativas").select("*", count="exact").lt("ultima_atividade", limite).execute()
-        # A query acima não funciona assim. Vamos fazer o filtro no Python depois ou usar gte.
-        # Melhor: usar filtro no Supabase
-        result = supabase.table("sessoes_ativas").select("id", count="exact").gte("ultima_atividade", limite.isoformat()).execute()
+        result = supabase.table("sessoes_ativas").select("id", count="exact").gte("ultima_atividade", limite).execute()
         return result.count
-    except:
+    except Exception as e:
+        print(f"Erro ao contar sessões: {e}")
         return 0
 
 def limpar_sessoes_expiradas():
-    """Remove do banco sessões que estão além do timeout (executar a cada rerun)."""
-    limite = datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)
+    """Remove sessões mais antigas que o timeout, exceto a sessão atual (se existir)."""
+    limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
     try:
-        supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite.isoformat()).execute()
-    except:
-        pass
+        if "session_id" in st.session_state and st.session_state.session_id:
+            supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).neq("id", st.session_state.session_id).execute()
+        else:
+            supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).execute()
+    except Exception as e:
+        print(f"Erro ao limpar sessões: {e}")
 
 # ====================== FUNÇÃO PARA GERAR HTML PARA IMPRESSÃO/PDF ======================
 def gerar_html_impressao(df, titulo):
@@ -92,7 +95,7 @@ def gerar_html_impressao(df, titulo):
             valor = str(row[col]) if pd.notna(row[col]) else ''
             valor = valor.replace('<', '&lt;').replace('>', '&gt;')
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</tr>"
+        linhas_html += "<tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -622,7 +625,7 @@ if not st.session_state.logado:
                 st.session_state.logado = True
                 st.session_state.perfil = "ADMIN"
                 st.session_state.tentativas_login = 0
-                # Registrar sessão após login
+                # Registrar sessão no Supabase
                 registrar_sessao("ADMIN", "admin")
                 st.rerun()
             elif senha == "JOHN123":
@@ -651,18 +654,18 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     st.stop()
 
-# ====================== APÓS LOGIN: ATUALIZAR SESSÃO E MOSTRAR CONECTADOS ======================
-# Limpar sessões expiradas
-limpar_sessoes_expiradas()
-# Atualizar atividade da sessão atual
+# ====================== APÓS LOGIN: GERENCIAR SESSÕES E MOSTRAR CONECTADOS ======================
+# Atualizar atividade da sessão atual e limpar expiradas (respeitando a atual)
 if st.session_state.logado and st.session_state.session_id:
     atualizar_atividade_sessao()
+    limpar_sessoes_expiradas()
+    total_conectados = contar_sessoes_ativas()
+else:
+    total_conectados = 0
 
-# Contar sessões ativas
-total_conectados = contar_sessoes_ativas()
 alerta_monitoramento = total_conectados > 1
 
-# ====================== HEADER APÓS LOGIN COM INDICADOR DE SESSÕES ======================
+# ====================== HEADER APÓS LOGIN ======================
 st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -677,8 +680,7 @@ st.markdown(f"""
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <div class="session-indicator">
-                    {"⚠️ " if alerta_monitoramento else ""}
-                    <span>👥 {total_conectados}</span>
+                    {f'<span class="warning-triangle">⚠️</span> ' if alerta_monitoramento else ''}<span>👥 {total_conectados}</span>
                 </div>
                 <div class="badge-admin">👑 {st.session_state.perfil}</div>
             </div>
@@ -693,7 +695,7 @@ with col3:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== DASHBOARD (mantido) ======================
+# ====================== DASHBOARD ======================
 st.markdown("---")
 pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 total_presentes = len(pessoas_presentes)
@@ -737,11 +739,7 @@ with col4:
         </div>
     """, unsafe_allow_html=True)
 
-# ====================== RESTO DO CÓDIGO (CADASTRO, ENTRADA, PESSOAS PRESENTES, HISTÓRICO, ETC.) ======================
-# (O restante permanece exatamente igual ao código anterior, apenas com as funções de sessão adicionadas.
-#  Para evitar repetir o mesmo conteúdo, usarei a continuação do código já existente.)
-
-# ====== CADASTRO ======
+# ====================== CADASTRO ======================
 st.markdown("---")
 st.markdown("### ✚ Cadastro de Nova Pessoa")
 with st.expander("📋 Formulário de Cadastro", expanded=True):
@@ -771,7 +769,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
         else:
             st.error("❌ CPF e Nome são obrigatórios.")
 
-# ====== REGISTRO DE ENTRADA ======
+# ====================== REGISTRO DE ENTRADA ======================
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
@@ -827,7 +825,7 @@ if st.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
     else:
         st.warning("⚠️ Confirme o CPF antes de registrar a entrada.")
 
-# ====== PESSOAS PRESENTES ======
+# ====================== PESSOAS PRESENTES ======================
 st.markdown("---")
 st.markdown("### 📍 Pessoas Presentes no Hospital")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
@@ -919,7 +917,7 @@ if dados:
 else:
     st.info("🏢 Nenhuma pessoa presente no momento")
 
-# ====== HISTÓRICO ======
+# ====================== HISTÓRICO ======================
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
@@ -1111,7 +1109,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     else:
         st.info("📭 Nenhum registro encontrado no histórico.")
 
-# ====== GESTÃO DE CADASTROS ======
+# ====================== GESTÃO DE CADASTROS ======================
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
