@@ -112,7 +112,7 @@ def carregar_imagem(nome_arquivo, nome_descricao):
         return None
 
 # === SE VOCÊ TIVER UMA IMAGEM DE LOGO, COLOQUE NA PASTA E DESCOMENTE AS LINHAS ABAIXO ===
-# IMAGEM_LOGIN = carregar_imagem("https://chatgpt.com/s/m_6a1850702b308191bdb5caf3cf1abe57", "Login")
+# IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 # IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 # IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 # Caso contrário, usaremos texto estilizado como logo
@@ -121,31 +121,42 @@ IMAGEM_SIDEBAR = None
 IMAGEM_HEADER = None
 
 # ====================== IMAGEM DE FUNDO ======================
-BACKGROUND_URL = "https://chatgpt.com/s/m_6a1850702b308191bdb5caf3cf1abe57"
+BACKGROUND_IMAGE = "vgilante.png"
 
 # ====================== DESIGN DE SEGURANÇA PRIVADA ======================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    
+
     .stApp {{
-        background: linear-gradient(135deg, #0a1a2a 0%, #0d2b3e 100%);
+        background:
+            linear-gradient(
+                rgba(5, 10, 20, 0.88),
+                rgba(5, 10, 20, 0.88)
+            ),
+            url("{BACKGROUND_IMAGE}");
+
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+
         font-family: 'Inter', 'Segoe UI', sans-serif;
     }}
-    
+
     [data-testid="stSidebar"] {{
         background: linear-gradient(180deg, #0a1a2a 0%, #0b2435 100%);
         border-right: 1px solid rgba(255, 255, 255, 0.05);
         box-shadow: 2px 0 10px rgba(0,0,0,0.3);
     }}
-    
+
     .sidebar-header {{
         text-align: center;
         padding: 25px 15px;
         border-bottom: 2px solid #2c7da0;
         margin-bottom: 20px;
     }}
-    
+
     .sidebar-title {{
         font-size: 22px;
         font-weight: 800;
@@ -153,17 +164,17 @@ st.markdown(f"""
         letter-spacing: 2px;
         text-transform: uppercase;
     }}
-    
+
     .admin-header {{
-        background: rgba(10, 26, 42, 0.9);
-        backdrop-filter: blur(8px);
-        border-radius: 12px;
+        background: rgba(10, 26, 42, 0.90);
+        backdrop-filter: blur(10px);
+        border-radius: 14px;
         padding: 15px 25px;
         margin-bottom: 25px;
         border-bottom: 2px solid #2c7da0;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }}
-    
+
     .badge-admin {{
         background: #2c7da0;
         padding: 6px 18px;
@@ -173,23 +184,23 @@ st.markdown(f"""
         color: white;
         letter-spacing: 0.5px;
     }}
-    
+
     .admin-card {{
-        background: rgba(15, 35, 55, 0.8);
-        backdrop-filter: blur(8px);
+        background: rgba(15, 35, 55, 0.82);
+        backdrop-filter: blur(10px);
         border-radius: 16px;
         padding: 20px;
         border: 1px solid rgba(44, 125, 160, 0.3);
         transition: all 0.2s;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }}
-    
+
     .admin-card:hover {{
         transform: translateY(-3px);
         border-color: #2c7da0;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.35);
     }}
-    
+
     .card-title {{
         font-size: 12px;
         text-transform: uppercase;
@@ -197,14 +208,14 @@ st.markdown(f"""
         color: #89c2d9;
         margin-bottom: 8px;
     }}
-    
+
     .card-value {{
         font-size: 32px;
         font-weight: 800;
         color: #ffffff;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
     }}
-    
+
     .stButton > button {{
         border-radius: 8px;
         font-weight: 600;
@@ -212,81 +223,81 @@ st.markdown(f"""
         border: none;
         background: #2c7da0;
         color: white;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.25);
     }}
-    
+
     .stButton > button:hover {{
         background: #1f5e7a;
         transform: translateY(-1px);
         box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }}
-    
+
     .stButton > button[key="sair_final"] {{
         background: #9e2a2a;
     }}
-    
+
     .stButton > button[key="sair_final"]:hover {{
         background: #7e1f1f;
     }}
-    
+
     .stTextInput > div > div > input,
     .stSelectbox > div > div,
     .stNumberInput > div > div > input {{
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.55);
         border: 1px solid #2c7da0;
         border-radius: 8px;
         color: #e0e0e0;
         padding: 10px;
     }}
-    
+
     .stTextInput > div > div > input:focus {{
         border-color: #61a5c2;
         box-shadow: 0 0 0 1px #61a5c2;
     }}
-    
+
     .streamlit-expanderHeader {{
-        background: rgba(15, 35, 55, 0.9);
+        background: rgba(15, 35, 55, 0.92);
         border-radius: 12px;
         border: 1px solid #2c7da0;
         font-weight: 600;
         color: #89c2d9;
     }}
-    
+
     .stTabs [data-baseweb="tab-list"] {{
         gap: 5px;
-        background: rgba(0,0,0,0.3);
+        background: rgba(0,0,0,0.35);
         padding: 5px;
         border-radius: 12px;
     }}
-    
+
     .stTabs [data-baseweb="tab"] {{
         border-radius: 8px;
         padding: 6px 20px;
         font-weight: 500;
         color: #ccc;
     }}
-    
+
     .stTabs [aria-selected="true"] {{
         background: #2c7da0;
         color: white;
     }}
-    
+
     .stCheckbox label {{
         color: #e0e0e0;
     }}
-    
+
     .stDataFrame {{
         border-radius: 12px;
         overflow: hidden;
         border: 1px solid #2c7da0;
     }}
-    
+
     .stAlert {{
         background: rgba(0,0,0,0.7);
         border-left: 4px solid #2c7da0;
         border-radius: 8px;
     }}
-    
+
     .footer {{
         text-align: center;
         padding: 20px;
@@ -295,17 +306,16 @@ st.markdown(f"""
         border-top: 1px solid rgba(44,125,160,0.2);
         margin-top: 30px;
     }}
-    
+
     h1, h2, h3 {{
         color: #e0e0e0;
         font-weight: 600;
     }}
-    
+
     hr {{
         border-color: rgba(44,125,160,0.3);
     }}
-    
-    /* Logo estilizada */
+
     .logo-text {{
         font-size: 24px;
         font-weight: 800;
@@ -314,11 +324,82 @@ st.markdown(f"""
         -webkit-text-fill-color: transparent;
         letter-spacing: 1px;
     }}
+
     .logo-icon {{
         font-size: 32px;
         margin-right: 8px;
         vertical-align: middle;
     }}
+
+    /* ================= LOGIN ================= */
+
+    .login-box {{
+        background: rgba(10, 26, 42, 0.93);
+        backdrop-filter: blur(12px);
+        border-radius: 24px;
+        padding: 40px 30px;
+        border: 1px solid #2c7da0;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    }}
+
+    .login-logo {{
+        width: 120px;
+        height: 120px;
+        margin: auto;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2c7da0, #61a5c2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 20px rgba(44,125,160,0.7);
+        font-size: 52px;
+    }}
+
+    .login-title {{
+        text-align: center;
+        color: white;
+        font-size: 28px;
+        font-weight: 800;
+        margin-top: 20px;
+        letter-spacing: 1px;
+    }}
+
+    .login-sub {{
+        text-align: center;
+        color: #89c2d9;
+        margin-bottom: 25px;
+        font-size: 14px;
+    }}
+
+    /* ================= EFEITO VIDRO ================= */
+
+    .glass-box {{
+        background: rgba(15, 35, 55, 0.75);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 15px;
+    }}
+
+    /* ================= SCROLL ================= */
+
+    ::-webkit-scrollbar {{
+        width: 10px;
+    }}
+
+    ::-webkit-scrollbar-track {{
+        background: #08121d;
+    }}
+
+    ::-webkit-scrollbar-thumb {{
+        background: #2c7da0;
+        border-radius: 10px;
+    }}
+
+    ::-webkit-scrollbar-thumb:hover {{
+        background: #61a5c2;
+    }}
+
     </style>
 """, unsafe_allow_html=True)
 
