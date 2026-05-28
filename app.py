@@ -25,10 +25,10 @@ def gerar_html_impressao(df, titulo):
     colunas_presentes = [c for c in colunas if c in df.columns]
     linhas_html = ""
     for _, row in df.iterrows():
-        linhas_html += "</table>"
+        linhas_html += "<tr>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
-            linhas_html += f"<td>{valor}</table>"
+            linhas_html += f"<td>{valor}</td>"
         linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
@@ -116,9 +116,6 @@ IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
 # ====================== FUNDO (gradiente escuro rápido, sem scanner) ======================
-# Se quiser usar uma imagem externa, descomente a linha abaixo e comente o gradiente
-# BACKGROUND_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg"
-
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
@@ -231,7 +228,7 @@ st.markdown("""
 }
 
 /* ========== BOTÕES ========== */
-.stButton > button {
+.stButton > button, .stForm button {
     border-radius: 50px;
     font-weight: 800;
     font-family: 'Orbitron', monospace;
@@ -244,7 +241,7 @@ st.markdown("""
     letter-spacing: 1px;
 }
 
-.stButton > button:hover {
+.stButton > button:hover, .stForm button:hover {
     transform: scale(1.03);
     box-shadow: 0 0 25px rgba(0, 191, 255, 0.9);
 }
@@ -399,7 +396,7 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN ======================
+# ====================== TELA DE LOGIN COM FORMULÁRIO (ENTER FUNCIONA) ======================
 if not st.session_state.logado:
     # HTML/CSS para a caixa de login
     st.markdown("""
@@ -492,6 +489,28 @@ if not st.session_state.logado:
                 <div class="logo-title">JOHN ACESSOS</div>
                 <div class="logo-subtitle">SECURITY SYSTEM</div>
             </div>
+    """, unsafe_allow_html=True)
+    
+    # FORMULÁRIO PARA CAPTURAR ENTER
+    with st.form("login_form"):
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            senha = st.text_input("", type="password", key="senha_login", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
+            submitted = st.form_submit_button("🔓 ACESSAR SISTEMA", use_container_width=True)
+            
+            if submitted:
+                if senha == "fgxv4VP0/*":
+                    st.session_state.logado = True
+                    st.session_state.perfil = "ADMIN"
+                    st.rerun()
+                elif senha == "JOHN123":
+                    st.session_state.logado = True
+                    st.session_state.perfil = "VIGILANTE"
+                    st.rerun()
+                else:
+                    st.error("❌ ACESSO NEGADO - Credenciais inválidas")
+    
+    st.markdown("""
             <div class="status-bar">
                 <div class="status-item"><span class="blink"></span> CFTV ONLINE</div>
                 <div class="status-item"><span class="blink"></span> IA MONITORANDO</div>
@@ -500,21 +519,6 @@ if not st.session_state.logado:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        senha = st.text_input("", type="password", key="senha_login", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
-        if st.button("🔓 ACESSAR SISTEMA", key="login_btn", use_container_width=True):
-            if senha == "fgxv4VP0/*":
-                st.session_state.logado = True
-                st.session_state.perfil = "ADMIN"
-                st.rerun()
-            elif senha == "JOHN123":
-                st.session_state.logado = True
-                st.session_state.perfil = "VIGILANTE"
-                st.rerun()
-            else:
-                st.error("❌ ACESSO NEGADO - Credenciais inválidas")
     st.stop()
 
 # ====================== HEADER ======================
