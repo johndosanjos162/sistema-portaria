@@ -4,6 +4,7 @@ from datetime import datetime
 import pandas as pd
 from PIL import Image
 import base64
+import time
 
 # --- CONFIGURAÇÃO ---
 url = st.secrets["SUPABASE_URL"]
@@ -11,9 +12,9 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.set_page_config(
-    page_title="JOHN ACESSOS - SECURITY", 
+    page_title="JOHN ACESSOS SECURITY", 
     layout="wide", 
-    page_icon="🔒", 
+    page_icon="🔐", 
     initial_sidebar_state="expanded"
 )
 
@@ -86,11 +87,11 @@ def gerar_html_impressao(df, titulo):
         </style>
     </head>
     <body>
-        <h1>JOHN ACESSOS - {titulo}</h1>
+        <h1>JOHN ACESSOS SECURITY - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <td>{cabecalho_html}</tr>
+                <tr>{cabecalho_html}</tr>
             </thead>
             <tbody>
                 {linhas_html}
@@ -115,263 +116,323 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== IMAGEM DE FUNDO ======================
+# ====================== IMAGEM DE FUNDO (4K TECNOLÓGICA) ======================
 BACKGROUND_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg"
 
-# ====================== DESIGN TECNOLÓGICO COM CADEADO ======================
+# ====================== DESIGN TECNOLÓGICO PREMIUM ======================
 st.markdown(f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
-    
-    /* ========== ANIMAÇÕES ========== */
-    @keyframes pulse {{
-        0% {{ box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.4); }}
-        70% {{ box-shadow: 0 0 0 20px rgba(0, 255, 255, 0); }}
-        100% {{ box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }}
-    }}
-    
-    @keyframes rotate {{
-        from {{ transform: rotate(0deg); }}
-        to {{ transform: rotate(360deg); }}
-    }}
-    
-    @keyframes glow {{
-        0% {{ text-shadow: 0 0 5px #0ff, 0 0 10px #0ff; }}
-        100% {{ text-shadow: 0 0 15px #0ff, 0 0 25px #0ff; }}
-    }}
-    
-    @keyframes slideIn {{
-        from {{
-            opacity: 0;
-            transform: translateY(-20px);
-        }}
-        to {{
-            opacity: 1;
-            transform: translateY(0);
-        }}
-    }}
-    
-    /* ========== BASE ========== */
-    .stApp {{
-        background: linear-gradient(135deg, #0a0f1a 0%, #0a1a2a 50%, #0d1525 100%);
-        font-family: 'Orbitron', 'Inter', monospace;
-    }}
-    
-    /* ========== SIDEBAR ========== */
-    [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, rgba(5, 10, 20, 0.95), rgba(0, 5, 15, 0.98));
-        backdrop-filter: blur(10px);
-        border-right: 1px solid rgba(0, 255, 255, 0.3);
-        box-shadow: -5px 0 20px rgba(0, 255, 255, 0.1);
-    }}
-    
-    .sidebar-header {{
-        text-align: center;
-        padding: 25px 15px;
-        border-bottom: 2px solid #0ff;
-        margin-bottom: 20px;
-        animation: slideIn 0.5s ease;
-    }}
-    
-    .sidebar-title {{
-        font-size: 24px;
-        font-weight: 900;
-        background: linear-gradient(135deg, #0ff, #f0f);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-    }}
-    
-    /* ========== CABEÇALHO ========== */
-    .admin-header {{
-        background: rgba(5, 15, 25, 0.85);
-        backdrop-filter: blur(10px);
-        border-radius: 15px;
-        padding: 15px 25px;
-        margin-bottom: 25px;
-        border: 1px solid rgba(0, 255, 255, 0.4);
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
-        animation: slideIn 0.5s ease;
-    }}
-    
-    .badge-admin {{
-        background: linear-gradient(135deg, #0ff, #f0f);
-        padding: 6px 20px;
-        border-radius: 30px;
-        font-weight: 700;
-        font-size: 13px;
-        color: #000;
-        letter-spacing: 1px;
-        box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-    }}
-    
-    /* ========== CARDS ========== */
-    .admin-card {{
-        background: rgba(5, 15, 25, 0.75);
-        backdrop-filter: blur(10px);
-        border-radius: 15px;
-        padding: 20px;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        transition: all 0.3s ease;
-        animation: slideIn 0.5s ease;
-    }}
-    
-    .admin-card:hover {{
-        transform: translateY(-5px);
-        border-color: #0ff;
-        box-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
-    }}
-    
-    .card-title {{
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        color: #0ff;
-        margin-bottom: 8px;
-    }}
-    
-    .card-value {{
-        font-size: 36px;
-        font-weight: 800;
-        background: linear-gradient(135deg, #ffffff, #0ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }}
-    
-    /* ========== BOTÕES ========== */
-    .stButton > button {{
-        border-radius: 10px;
-        font-weight: 700;
-        font-family: 'Orbitron', monospace;
-        transition: all 0.3s ease;
-        border: none;
-        background: linear-gradient(90deg, #0ff, #00aaff);
-        color: #000;
-        box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
-    }}
-    
-    .stButton > button:hover {{
-        transform: scale(1.02);
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
-        background: linear-gradient(90deg, #00aaff, #0ff);
-    }}
-    
-    .stButton > button[key="sair_final"] {{
-        background: linear-gradient(90deg, #ff4444, #cc0000);
-        color: white;
-    }}
-    
-    /* ========== INPUTS ========== */
-    .stTextInput > div > div > input,
-    .stSelectbox > div > div,
-    .stNumberInput > div > div > input {{
-        background: rgba(0, 0, 0, 0.7);
-        border: 2px solid #0ff;
-        border-radius: 12px;
-        color: #0ff;
-        font-family: 'Orbitron', monospace;
-        box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
-    }}
-    
-    .stTextInput > div > div > input:focus {{
-        border-color: #f0f;
-        box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
-        color: #fff;
-    }}
-    
-    /* ========== EXPANDER ========== */
-    .streamlit-expanderHeader {{
-        background: rgba(5, 15, 25, 0.9);
-        border-radius: 12px;
-        border: 1px solid #0ff;
-        font-weight: 700;
-        font-family: 'Orbitron', monospace;
-        color: #0ff;
-    }}
-    
-    /* ========== TABS ========== */
-    .stTabs [data-baseweb="tab-list"] {{
-        gap: 8px;
-        background: rgba(0, 0, 0, 0.4);
-        padding: 6px;
-        border-radius: 50px;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-    }}
-    
-    .stTabs [data-baseweb="tab"] {{
-        border-radius: 40px;
-        padding: 6px 25px;
-        font-weight: 600;
-        font-family: 'Orbitron', monospace;
-        color: #ccc;
-    }}
-    
-    .stTabs [aria-selected="true"] {{
-        background: linear-gradient(135deg, #0ff, #f0f);
-        color: #000;
-        box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-    }}
-    
-    /* ========== CHECKBOX ========== */
-    .stCheckbox label {{
-        color: #0ff;
-        font-weight: 500;
-    }}
-    
-    /* ========== DATAFRAME ========== */
-    .stDataFrame {{
-        background: rgba(0, 0, 0, 0.5);
-        border-radius: 12px;
-        border: 1px solid #0ff;
-    }}
-    
-    /* ========== ALERTAS ========== */
-    .stAlert {{
-        background: rgba(0, 0, 0, 0.8);
-        border-left: 4px solid #0ff;
-        border-radius: 10px;
-        color: #0ff;
-    }}
-    
-    /* ========== FOOTER ========== */
-    .footer {{
-        text-align: center;
-        padding: 20px;
-        color: #0ff;
-        font-size: 10px;
-        border-top: 1px solid rgba(0, 255, 255, 0.2);
-        margin-top: 30px;
-        font-family: 'Orbitron', monospace;
-        text-shadow: 0 0 5px #0ff;
-    }}
-    
-    /* ========== TÍTULOS ========== */
-    h1, h2, h3, h4, h5, h6 {{
-        font-family: 'Orbitron', monospace;
-        color: #0ff;
-        text-shadow: 0 0 5px #0ff;
-    }}
-    
-    hr {{
-        border-color: rgba(0, 255, 255, 0.3);
-    }}
-    </style>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
+
+/* ========== ANIMAÇÕES AVANÇADAS ========== */
+@keyframes pulseNeon {{
+    0% {{ box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.7); }}
+    70% {{ box-shadow: 0 0 0 20px rgba(0, 191, 255, 0); }}
+    100% {{ box-shadow: 0 0 0 0 rgba(0, 191, 255, 0); }}
+}}
+
+@keyframes glowText {{
+    0% {{ text-shadow: 0 0 5px #00BFFF, 0 0 10px #00BFFF; }}
+    100% {{ text-shadow: 0 0 15px #00BFFF, 0 0 25px #00BFFF; }}
+}}
+
+@keyframes scanLine {{
+    0% {{ transform: translateY(-100%); }}
+    100% {{ transform: translateY(100%); }}
+}}
+
+@keyframes rotateRadar {{
+    from {{ transform: rotate(0deg); }}
+    to {{ transform: rotate(360deg); }}
+}}
+
+@keyframes floatBox {{
+    0% {{ transform: translateY(0px); }}
+    50% {{ transform: translateY(-8px); }}
+    100% {{ transform: translateY(0px); }}
+}}
+
+@keyframes particleFloat {{
+    0% {{ opacity: 0; transform: translateY(0px) scale(0.5); }}
+    50% {{ opacity: 1; transform: translateY(-20px) scale(1); }}
+    100% {{ opacity: 0; transform: translateY(-40px) scale(0.5); }}
+}}
+
+@keyframes circuitFlow {{
+    0% {{ background-position: 0% 0%; }}
+    100% {{ background-position: 200% 0%; }}
+}}
+
+/* ========== BASE ========== */
+.stApp {{
+    background: radial-gradient(ellipse at center, #0a0f1a 0%, #050a14 100%);
+    font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    position: relative;
+    overflow-x: hidden;
+}}
+
+/* Partículas digitais de fundo */
+.stApp::before {{
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background-image: radial-gradient(circle at 20% 50%, rgba(0,191,255,0.08) 1px, transparent 1px),
+                      radial-gradient(circle at 80% 70%, rgba(0,191,255,0.05) 1px, transparent 1px);
+    background-size: 50px 50px, 80px 80px;
+    animation: particleFloat 4s infinite;
+}}
+
+/* Scanner holográfico animado */
+.stApp::after {{
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(transparent 50%, rgba(0,191,255,0.03) 50%);
+    background-size: 100% 4px;
+    animation: scanLine 8s linear infinite;
+    z-index: 0;
+}}
+
+/* ========== SIDEBAR PREMIUM ========== */
+[data-testid="stSidebar"] {{
+    background: linear-gradient(135deg, rgba(5, 10, 20, 0.95), rgba(0, 5, 15, 0.98));
+    backdrop-filter: blur(15px);
+    border-right: 2px solid #00BFFF;
+    box-shadow: -10px 0 30px rgba(0, 191, 255, 0.2);
+}}
+
+.sidebar-header {{
+    text-align: center;
+    padding: 25px 15px;
+    border-bottom: 2px solid #00BFFF;
+    margin-bottom: 20px;
+    animation: floatBox 3s ease-in-out infinite;
+}}
+
+.sidebar-title {{
+    font-size: 24px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #00BFFF, #0080FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(0,191,255,0.5);
+}}
+
+/* ========== CABEÇALHO ========== */
+.admin-header {{
+    background: rgba(5, 15, 25, 0.75);
+    backdrop-filter: blur(15px);
+    border-radius: 20px;
+    padding: 15px 25px;
+    margin-bottom: 25px;
+    border: 1px solid #00BFFF;
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.3);
+    animation: floatBox 3s ease-in-out infinite;
+}}
+
+.badge-admin {{
+    background: linear-gradient(135deg, #00BFFF, #0080FF);
+    padding: 6px 20px;
+    border-radius: 30px;
+    font-weight: 800;
+    font-size: 13px;
+    color: #000;
+    letter-spacing: 1px;
+    box-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
+    text-transform: uppercase;
+}}
+
+/* ========== CARDS ========== */
+.admin-card {{
+    background: rgba(5, 15, 25, 0.7);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid #00BFFF;
+    transition: all 0.3s ease;
+    animation: floatBox 4s ease-in-out infinite;
+}}
+
+.admin-card:hover {{
+    transform: translateY(-8px) scale(1.02);
+    border-color: #00BFFF;
+    box-shadow: 0 0 30px rgba(0, 191, 255, 0.4);
+}}
+
+.card-title {{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #00BFFF;
+    margin-bottom: 8px;
+    font-weight: 700;
+}}
+
+.card-value {{
+    font-size: 38px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ffffff, #00BFFF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 10px rgba(0,191,255,0.3);
+}}
+
+/* ========== BOTÕES ========== */
+.stButton > button {{
+    border-radius: 50px;
+    font-weight: 800;
+    font-family: 'Orbitron', monospace;
+    transition: all 0.3s ease;
+    border: none;
+    background: linear-gradient(90deg, #00BFFF, #0080FF);
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 191, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}}
+
+.stButton > button:hover {{
+    transform: scale(1.03);
+    box-shadow: 0 0 25px rgba(0, 191, 255, 0.9);
+    background: linear-gradient(90deg, #0080FF, #00BFFF);
+}}
+
+.stButton > button[key="sair_final"] {{
+    background: linear-gradient(90deg, #ff4444, #cc0000);
+    color: white;
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}}
+
+/* ========== INPUTS ========== */
+.stTextInput > div > div > input,
+.stSelectbox > div > div,
+.stNumberInput > div > div > input {{
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #00BFFF;
+    border-radius: 15px;
+    color: #00BFFF;
+    font-family: 'Share Tech Mono', monospace;
+    box-shadow: 0 0 5px rgba(0, 191, 255, 0.3);
+    padding: 12px;
+}}
+
+.stTextInput > div > div > input:focus {{
+    border-color: #00BFFF;
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
+    color: #fff;
+}}
+
+/* ========== EXPANDER ========== */
+.streamlit-expanderHeader {{
+    background: rgba(5, 15, 25, 0.9);
+    border-radius: 15px;
+    border: 1px solid #00BFFF;
+    font-weight: 800;
+    font-family: 'Orbitron', monospace;
+    color: #00BFFF;
+}}
+
+/* ========== TABS ========== */
+.stTabs [data-baseweb="tab-list"] {{
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 6px;
+    border-radius: 50px;
+    border: 1px solid #00BFFF;
+}}
+
+.stTabs [data-baseweb="tab"] {{
+    border-radius: 40px;
+    padding: 8px 25px;
+    font-weight: 700;
+    font-family: 'Orbitron', monospace;
+    color: #ccc;
+}}
+
+.stTabs [aria-selected="true"] {{
+    background: linear-gradient(135deg, #00BFFF, #0080FF);
+    color: #000;
+    box-shadow: 0 0 15px #00BFFF;
+}}
+
+/* ========== CHECKBOX ========== */
+.stCheckbox label {{
+    color: #00BFFF;
+    font-weight: 500;
+    font-family: 'Share Tech Mono', monospace;
+}}
+
+/* ========== DATAFRAME ========== */
+.stDataFrame {{
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 15px;
+    border: 1px solid #00BFFF;
+}}
+
+/* ========== ALERTAS ========== */
+.stAlert {{
+    background: rgba(0, 0, 0, 0.85);
+    border-left: 5px solid #00BFFF;
+    border-radius: 12px;
+    color: #00BFFF;
+    font-family: 'Share Tech Mono', monospace;
+}}
+
+/* ========== FOOTER ========== */
+.footer {{
+    text-align: center;
+    padding: 20px;
+    color: #00BFFF;
+    font-size: 10px;
+    border-top: 1px solid rgba(0, 191, 255, 0.3);
+    margin-top: 30px;
+    font-family: 'Orbitron', monospace;
+    text-shadow: 0 0 5px #00BFFF;
+}}
+
+/* ========== TÍTULOS ========== */
+h1, h2, h3, h4, h5, h6 {{
+    font-family: 'Orbitron', monospace;
+    color: #00BFFF;
+    text-shadow: 0 0 10px #00BFFF;
+}}
+
+hr {{
+    border-color: rgba(0, 191, 255, 0.3);
+}}
+</style>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR ======================
+# ====================== SIDEBAR (com indicadores interativos) ======================
 if IMAGEM_SIDEBAR:
     st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">🔒 JOHN ACESSOS</div>
-            <p style="color:#0ff; font-size:11px; margin-top:8px;">TECHNOLOGY SECURITY</p>
+            <div class="sidebar-title">🔐 JOHN ACESSOS</div>
+            <p style="color:#00BFFF; font-size:10px; margin-top:8px;">SECURITY SYSTEM</p>
         </div>
     """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚡ MENU")
+st.sidebar.markdown("### ⚡ SISTEMA ONLINE")
+st.sidebar.markdown("• 🟢 **CFTV:** ATIVO")
+st.sidebar.markdown("• 🤖 **IA:** MONITORANDO")
+st.sidebar.markdown("• 🔒 **CRIPTOGRAFIA:** 256-BIT")
+st.sidebar.markdown("• 🗄️ **BANCO DE DADOS:** SEGURO")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📋 MENU")
 st.sidebar.markdown("• 🏠 **Dashboard**")
 st.sidebar.markdown("• 👤 **Colaboradores**")
 st.sidebar.markdown("• 🔧 **Prestadores**")
@@ -385,7 +446,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("• 👑 **Perfil:** ---")
 st.sidebar.markdown("• 🟢 **Status:** Online")
-st.sidebar.markdown("• 📦 **Versão:** 4.0.0")
+st.sidebar.markdown("• 📦 **Versão:** 5.0.0")
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -401,91 +462,211 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== LOGIN ======================
+# ====================== TELA DE LOGIN ULTRA TECNOLÓGICA ======================
 if not st.session_state.logado:
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    # Usamos HTML/CSS puro para maior controle
+    st.markdown("""
+    <style>
+    /* Estilos específicos do login */
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 85vh;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .login-box {
+        background: rgba(10, 20, 35, 0.82);
+        backdrop-filter: blur(15px);
+        border-radius: 32px;
+        padding: 45px 40px;
+        border: 2px solid #00BFFF;
+        box-shadow: 0 0 50px rgba(0, 191, 255, 0.4), inset 0 0 30px rgba(0, 191, 255, 0.05);
+        animation: floatBox 3s ease-in-out infinite;
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+        transition: all 0.3s;
+    }
+    
+    .logo-animated {
+        text-align: center;
+        margin-bottom: 30px;
+        position: relative;
+    }
+    
+    .logo-icon {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, #0a1a2a, #0d2b3e);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid #00BFFF;
+        box-shadow: 0 0 30px #00BFFF, inset 0 0 20px rgba(0,191,255,0.3);
+        animation: pulseNeon 2s infinite;
+        position: relative;
+    }
+    
+    .logo-icon span {
+        font-size: 60px;
+    }
+    
+    .radar-effect {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        width: 30px;
+        height: 30px;
+        background: #00BFFF;
+        border-radius: 50%;
+        box-shadow: 0 0 15px #00BFFF;
+        animation: pulseNeon 1s infinite;
+    }
+    
+    .logo-title {
+        font-size: 32px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #ffffff, #00BFFF);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-top: 20px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        animation: glowText 2s infinite alternate;
+    }
+    
+    .logo-subtitle {
+        font-size: 12px;
+        color: #00BFFF;
+        letter-spacing: 3px;
+        margin-top: 5px;
+    }
+    
+    .circuit-lines {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,191,255,0.03) 10px, rgba(0,191,255,0.03) 20px);
+    }
+    
+    .input-neon {
+        background: rgba(0, 0, 0, 0.7) !important;
+        border: 2px solid #00BFFF !important;
+        border-radius: 15px !important;
+        color: #00BFFF !important;
+        font-family: 'Share Tech Mono', monospace !important;
+        padding: 12px 15px !important;
+        width: 100%;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+    }
+    
+    .input-neon:focus {
+        border-color: #00BFFF !important;
+        box-shadow: 0 0 20px rgba(0,191,255,0.6) !important;
+        color: white !important;
+    }
+    
+    .btn-login {
+        background: linear-gradient(90deg, #00BFFF, #0080FF) !important;
+        color: #000 !important;
+        border-radius: 50px !important;
+        padding: 12px !important;
+        font-weight: 800 !important;
+        font-family: 'Orbitron', monospace !important;
+        text-transform: uppercase !important;
+        letter-spacing: 2px !important;
+        border: none !important;
+        width: 100%;
+        transition: all 0.3s;
+        cursor: pointer;
+        box-shadow: 0 0 15px rgba(0,191,255,0.5);
+    }
+    
+    .btn-login:hover {
+        transform: scale(1.02);
+        box-shadow: 0 0 30px rgba(0,191,255,0.8);
+        background: linear-gradient(90deg, #0080FF, #00BFFF) !important;
+    }
+    
+    .status-bar {
+        margin-top: 25px;
+        text-align: center;
+        font-size: 11px;
+        color: #00BFFF;
+        border-top: 1px solid rgba(0,191,255,0.3);
+        padding-top: 15px;
+    }
+    
+    .status-item {
+        display: inline-block;
+        margin: 0 10px;
+    }
+    
+    .blink {
+        animation: pulseNeon 1s infinite;
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #00FF00;
+        border-radius: 50%;
+        margin-right: 5px;
+        box-shadow: 0 0 5px #00FF00;
+    }
+    </style>
+    
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo-animated">
+                <div class="logo-icon">
+                    <span>🔐</span>
+                    <div class="radar-effect"></div>
+                </div>
+                <div class="logo-title">JOHN ACESSOS</div>
+                <div class="logo-subtitle">SECURITY SYSTEM</div>
+                <div class="circuit-lines"></div>
+            </div>
+            
+            <div>
+                <div style="margin-bottom: 15px;">
+                    <div style="text-align:center; margin-bottom:5px;">
+                        <span style="color:#00BFFF; font-size:12px;">🔒 CREDENCIAL DE SEGURANÇA</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="status-bar">
+                <div class="status-item"><span class="blink"></span> CFTV ONLINE</div>
+                <div class="status-item"><span class="blink"></span> IA MONITORANDO</div>
+                <div class="status-item"><span class="blink"></span> CRIPTOGRAFIA ATIVA</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Campos de login (usando Streamlit puro para manter funcionalidade)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        with st.container():
-            st.markdown("""
-                <div style="
-                    background: rgba(5, 15, 25, 0.92);
-                    backdrop-filter: blur(20px);
-                    border-radius: 30px;
-                    padding: 50px 40px;
-                    border: 2px solid #0ff;
-                    box-shadow: 0 0 50px rgba(0, 255, 255, 0.4), inset 0 0 30px rgba(0, 255, 255, 0.1);
-                    animation: pulse 2s infinite;
-                ">
-            """, unsafe_allow_html=True)
-            
-            # Logo tecnológica com cadeado
-            st.markdown("""
-                <div style='text-align:center; margin-bottom: 30px;'>
-                    <div style="
-                        width: 130px;
-                        height: 130px;
-                        margin: 0 auto;
-                        background: linear-gradient(135deg, #0a1a2a, #0d2b3e);
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        border: 3px solid #0ff;
-                        box-shadow: 0 0 30px #0ff, inset 0 0 20px rgba(0,255,255,0.3);
-                        animation: pulse 2s infinite;
-                    ">
-                        <div style="position: relative;">
-                            <span style="font-size: 60px;">🔒</span>
-                            <div style="
-                                position: absolute;
-                                top: -10px;
-                                right: -10px;
-                                width: 20px;
-                                height: 20px;
-                                background: #0ff;
-                                border-radius: 50%;
-                                box-shadow: 0 0 10px #0ff;
-                                animation: pulse 1s infinite;
-                            "></div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 20px;">
-                        <div style="
-                            display: inline-block;
-                            padding: 5px 15px;
-                            background: rgba(0,255,255,0.1);
-                            border-radius: 20px;
-                            border: 1px solid #0ff;
-                        ">
-                            <span style="color: #0ff; font-size: 12px; letter-spacing: 2px;">● SECURE SYSTEM ●</span>
-                        </div>
-                    </div>
-                    <h2 style="color:#0ff; margin-top: 20px; text-shadow: 0 0 10px #0ff;">JOHN ACESSOS</h2>
-                    <p style="color:#89c2d9;">Sistema de Controle de Acesso<br>Tecnologia de Ponta</p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            st.markdown("<hr style='border-color:#0ff;'>", unsafe_allow_html=True)
-            st.markdown("<h3 style='text-align:center; color:#0ff;'>🔐 ACESSO AUTORIZADO</h3>", unsafe_allow_html=True)
-            
-            senha = st.text_input("Senha de acesso:", type="password", key="senha_login", placeholder="••••••••")
-            
-            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-            with col_btn2:
-                if st.button("🔓 ENTRAR", key="login_btn", use_container_width=True):
-                    if senha == "fgxv4VP0/*":
-                        st.session_state.logado = True
-                        st.session_state.perfil = "ADMIN"
-                        st.rerun()
-                    elif senha == "JOHN123":
-                        st.session_state.logado = True
-                        st.session_state.perfil = "VIGILANTE"
-                        st.rerun()
-                    else:
-                        st.error("❌ Acesso negado - Credenciais inválidas")
-            
-            st.markdown("</div>", unsafe_allow_html=True)
+        senha = st.text_input("", type="password", key="senha_login", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
+        if st.button("🔓 ACESSAR SISTEMA", key="login_btn", use_container_width=True):
+            if senha == "fgxv4VP0/*":
+                st.session_state.logado = True
+                st.session_state.perfil = "ADMIN"
+                st.rerun()
+            elif senha == "JOHN123":
+                st.session_state.logado = True
+                st.session_state.perfil = "VIGILANTE"
+                st.rerun()
+            else:
+                st.error("❌ ACESSO NEGADO - Credenciais inválidas")
     st.stop()
 
 # ====================== HEADER ======================
@@ -496,18 +677,18 @@ st.markdown(f"""
                 <div style="
                     width: 45px;
                     height: 45px;
-                    background: linear-gradient(135deg, #0ff, #f0f);
+                    background: linear-gradient(135deg, #00BFFF, #0080FF);
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    box-shadow: 0 0 15px #0ff;
+                    box-shadow: 0 0 15px #00BFFF;
                 ">
-                    <span style="font-size: 24px;">🔒</span>
+                    <span style="font-size: 24px;">🔐</span>
                 </div>
                 <div>
-                    <h1 style="margin:0; font-size: 22px;">JOHN ACESSOS - PAINEL DE CONTROLE</h1>
-                    <p style="margin:0; color: #0ff; font-size: 11px;">SECURE ACCESS SYSTEM</p>
+                    <h1 style="margin:0; font-size: 20px;">JOHN ACESSOS SECURITY</h1>
+                    <p style="margin:0; color: #00BFFF; font-size: 10px;">INTELLIGENT ACCESS CONTROL</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -521,7 +702,7 @@ with col3:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== DASHBOARD ======================
+# ====================== DASHBOARD (MESMO DE ANTES) ======================
 pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 total_presentes = len(pessoas_presentes)
 total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
@@ -937,7 +1118,7 @@ if st.session_state.perfil == "ADMIN":
                     idx = lista.index(selecionado)
                     pessoa = filtrados[idx]
                     st.markdown(f"""
-                        <div style="background:rgba(0,255,255,0.1); border-radius:12px; padding:12px; border-left:3px solid #0ff;">
+                        <div style="background:rgba(0,191,255,0.1); border-radius:12px; padding:12px; border-left:3px solid #00BFFF;">
                             <b>👤 {pessoa['nome']}</b><br>
                             📄 CPF: {pessoa['cpf']}<br>
                             🏢 Empresa: {pessoa.get('empresa','N/A')}
@@ -966,7 +1147,7 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🔒 JOHN ACESSOS - Sistema de Controle de Acesso de Alta Tecnologia<br>
-        Monitoramento 24/7 | Criptografia Avançada | Segurança em Tempo Real
+        🔒 JOHN ACESSOS SECURITY - Sistema de Controle de Acesso de Alta Tecnologia<br>
+        Monitoramento 24/7 | Criptografia Avançada | IA de Vigilância
     </div>
 """, unsafe_allow_html=True)
