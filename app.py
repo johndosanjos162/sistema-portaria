@@ -27,16 +27,14 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== IMAGEM DE FUNDO (VIGILANTE TECNOLÓGICO) ======================
-# URL da imagem (Pexels - gratuita para uso comercial)
+# ====================== IMAGEM DE FUNDO ======================
 BACKGROUND_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg"
 
-# ====================== DESIGN ADMIN COM FUNDO ======================
+# ====================== DESIGN ADMIN ======================
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
-    /* Fundo com imagem de vigilante + tecnologia */
     .stApp {{
         background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.8)), url("{BACKGROUND_URL}");
         background-size: cover;
@@ -45,7 +43,6 @@ st.markdown(f"""
         font-family: 'Inter', sans-serif;
     }}
     
-    /* Sidebar com leve transparência para dar destaque ao fundo */
     [data-testid="stSidebar"] {{
         background: linear-gradient(180deg, rgba(0, 20, 40, 0.92), rgba(0, 10, 25, 0.96));
         backdrop-filter: blur(12px);
@@ -68,7 +65,6 @@ st.markdown(f"""
         letter-spacing: 1px;
     }}
     
-    /* Cabeçalho com efeito vidro */
     .admin-header {{
         background: linear-gradient(135deg, rgba(0, 20, 40, 0.85), rgba(0, 10, 25, 0.9));
         backdrop-filter: blur(12px);
@@ -88,7 +84,6 @@ st.markdown(f"""
         box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
     }}
     
-    /* Cards com transparência e borda neon */
     .admin-card {{
         background: rgba(0, 20, 40, 0.75);
         backdrop-filter: blur(12px);
@@ -119,7 +114,6 @@ st.markdown(f"""
         -webkit-text-fill-color: transparent;
     }}
     
-    /* Botões principais */
     .stButton > button {{
         border-radius: 40px;
         font-weight: 600;
@@ -138,7 +132,6 @@ st.markdown(f"""
         box-shadow: 0 4px 16px rgba(0, 212, 255, 0.5);
     }}
     
-    /* Inputs com fundo escuro e borda sutil */
     .stTextInput > div > div > input,
     .stSelectbox > div > div,
     .stNumberInput > div > div > input {{
@@ -153,7 +146,6 @@ st.markdown(f"""
         box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.3);
     }}
     
-    /* Expander e Tabs estilizados */
     .streamlit-expanderHeader {{
         background: rgba(0, 20, 40, 0.85);
         backdrop-filter: blur(8px);
@@ -180,7 +172,6 @@ st.markdown(f"""
         color: white;
     }}
     
-    /* Contador de resultados */
     .results-count {{
         background: rgba(0, 212, 255, 0.1);
         border-radius: 16px;
@@ -189,7 +180,6 @@ st.markdown(f"""
         color: #b0e0ff;
     }}
     
-    /* Footer */
     .footer {{
         text-align: center;
         padding: 20px;
@@ -374,24 +364,29 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
 
 st.markdown("---")
 
-# ====================== REGISTRO DE ENTRADA ======================
+# ====================== REGISTRO DE ENTRADA (COM NOME ALTERADO) ======================
 st.markdown("### 📋 Registrar Movimentação")
-tipo = st.radio("👥 Tipo de Pessoa:", ["👨‍💼 Colaborador Interno", "🔧 Prestador de Serviço"], horizontal=True)
+
+# ALTERAÇÃO AQUI: "Prestador de Serviço" foi substituído por "Colaborado Interno"
+tipo = st.radio("👥 Tipo de Pessoa:", ["👨‍💼 Colaborador Interno", "🔧 Colaborado Interno"], horizontal=True)
+
 if tipo == "👨‍💼 Colaborador Interno":
     destinos = ["🏥 C.C", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "🧪 Laboratório", "💊 Farmacia"]
-else:
+else:  # agora "Colaborado Interno" (antigo Prestador de Serviço) – mesmos destinos
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
 c1, c2, c3 = st.columns([2,2,1])
 cpf_input = c1.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF")
-setor_escolhido = c2.selectbox("📍 Destino:", destinos)
+setor_escolhido = c2.selectbox("📍 Destino:", destinos, key="destino")
 
-if c3.button("✅ Registrar Entrada", type="primary"):
+if c3.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
     if cpf_input:
         p = supabase.table("Pessoas").select("*").eq("cpf", cpf_input.strip()).execute().data
         if p:
             supabase.table("movimentacao").insert({
-                "cpf": p[0]['cpf'], "nome": p[0]['nome'], "empresa": p[0].get('empresa',''),
+                "cpf": p[0]['cpf'],
+                "nome": p[0]['nome'],
+                "empresa": p[0].get('empresa', ''),
                 "setor_destino": setor_escolhido,
                 "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
                 "data_saida": ""
