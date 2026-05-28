@@ -11,9 +11,9 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.set_page_config(
-    page_title="JOHN ACESSOS - CENTRAL ELÉTRICA", 
+    page_title="JOHN ACESSOS - IA CORE", 
     layout="wide", 
-    page_icon="⚡", 
+    page_icon="🧠", 
     initial_sidebar_state="expanded"
 )
 
@@ -86,9 +86,9 @@ def gerar_html_impressao(df, titulo):
         </style>
     </head>
     <body>
-        <h1>JOHN ACESSOS - CENTRAL ELÉTRICA - {titulo}</h1>
+        <h1>JOHN ACESSOS - IA CORE - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        <table>
+        <td>
             <thead>
                 <tr>{cabecalho_html}</tr>
             </thead>
@@ -115,105 +115,105 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN BASE (ESTÁVEL) ======================
+# ====================== DESIGN BASE ======================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
 
-/* ANIMAÇÕES BÁSICAS */
+/* ANIMAÇÕES */
 @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 180, 255, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(0, 180, 255, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 180, 255, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(100, 0, 255, 0.4); }
+    70% { box-shadow: 0 0 0 12px rgba(100, 0, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(100, 0, 255, 0); }
 }
 @keyframes float {
     0% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
+    50% { transform: translateY(-6px); }
     100% { transform: translateY(0px); }
 }
-@keyframes spin {
+@keyframes spinSlow {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
-@keyframes electricBolt {
-    0% { background-position: 0 0; opacity: 0; }
-    10% { opacity: 0.8; }
-    20% { opacity: 0; }
-    100% { background-position: 0 100px; opacity: 0; }
+@keyframes dataFlow {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
 }
 
-/* FUNDO PRINCIPAL */
+/* FUNDO */
 .stApp {
-    background: linear-gradient(135deg, #030b14 0%, #07121f 100%);
-    font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);
+    font-family: 'Inter', 'Space Mono', monospace;
 }
 
 /* SIDEBAR */
 [data-testid="stSidebar"] {
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(8px);
-    border-right: 1px solid rgba(0, 180, 255, 0.3);
+    background: rgba(8, 8, 20, 0.85);
+    backdrop-filter: blur(12px);
+    border-right: 1px solid rgba(100, 0, 255, 0.3);
 }
 .sidebar-header {
     text-align: center;
-    padding: 20px 10px;
-    border-bottom: 1px solid rgba(0, 180, 255, 0.3);
+    padding: 25px 10px;
+    border-bottom: 1px solid rgba(100, 0, 255, 0.5);
 }
 .sidebar-title {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 800;
-    background: linear-gradient(135deg, #0cf, #0f0);
+    background: linear-gradient(135deg, #a855f7, #3b82f6);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 .info-item {
-    margin-bottom: 10px;
-    color: #8ab3cf;
+    margin-bottom: 12px;
+    color: #c4b5fd;
     font-size: 12px;
     display: flex;
     gap: 8px;
+    font-family: 'Space Mono', monospace;
 }
 
 /* CABEÇALHO */
 .admin-header {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(5px);
-    border-radius: 12px;
+    background: rgba(8, 8, 20, 0.7);
+    backdrop-filter: blur(8px);
+    border-radius: 16px;
     padding: 12px 20px;
     margin-bottom: 20px;
-    border: 1px solid rgba(0, 180, 255, 0.3);
+    border: 1px solid rgba(168, 85, 247, 0.4);
 }
 .badge-admin {
-    background: linear-gradient(135deg, #0cf, #0a0);
+    background: linear-gradient(135deg, #a855f7, #3b82f6);
     padding: 4px 15px;
-    border-radius: 20px;
-    font-weight: 800;
+    border-radius: 30px;
+    font-weight: 700;
     font-size: 11px;
-    color: #000;
+    color: white;
 }
 
 /* CARDS */
 .admin-card {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(15, 15, 30, 0.6);
     backdrop-filter: blur(4px);
-    border-radius: 12px;
-    padding: 15px;
-    border: 1px solid rgba(0, 180, 255, 0.2);
+    border-radius: 20px;
+    padding: 18px;
+    border: 1px solid rgba(168, 85, 247, 0.2);
     transition: 0.2s;
 }
 .admin-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0, 180, 255, 0.1);
+    border-color: #a855f7;
+    box-shadow: 0 5px 20px rgba(168, 85, 247, 0.15);
 }
 .card-title {
     font-size: 10px;
-    letter-spacing: 1px;
-    color: #8ab3cf;
+    letter-spacing: 2px;
+    color: #a78bfa;
 }
 .card-value {
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 800;
-    background: linear-gradient(135deg, #fff, #0cf);
+    background: linear-gradient(135deg, #fff, #a855f7);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -221,20 +221,19 @@ st.markdown("""
 /* BOTÕES */
 .stButton > button, .stForm button {
     border-radius: 40px;
-    font-weight: 700;
-    font-family: 'Orbitron', monospace;
-    background: linear-gradient(90deg, #0cf, #0a0);
-    color: #000;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(90deg, #a855f7, #3b82f6);
+    color: white;
     border: none;
     transition: 0.2s;
 }
 .stButton > button:hover, .stForm button:hover {
     transform: scale(1.01);
-    box-shadow: 0 0 10px #0cf;
+    box-shadow: 0 0 12px #a855f7;
 }
 .stButton > button[key="sair_final"] {
-    background: linear-gradient(90deg, #f44, #a00);
-    color: white;
+    background: linear-gradient(90deg, #ef4444, #b91c1c);
 }
 
 /* INPUTS */
@@ -242,62 +241,62 @@ st.markdown("""
 .stSelectbox > div > div,
 .stNumberInput > div > div > input {
     background: rgba(0, 0, 0, 0.6);
-    border: 1px solid #0cf;
+    border: 1px solid #a855f7;
     border-radius: 12px;
-    color: #0cf;
-    font-family: 'Share Tech Mono', monospace;
+    color: #c4b5fd;
+    font-family: 'Space Mono', monospace;
     padding: 8px;
 }
 .stTextInput > div > div > input:focus {
-    border-color: #0f0;
-    box-shadow: 0 0 5px #0cf;
+    border-color: #3b82f6;
+    box-shadow: 0 0 8px #a855f7;
 }
 
 /* EXPANDER, TABS */
 .streamlit-expanderHeader {
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid rgba(0, 180, 255, 0.3);
-    border-radius: 12px;
-    color: #0cf;
+    background: rgba(15, 15, 30, 0.8);
+    border: 1px solid #a855f7;
+    border-radius: 14px;
+    color: #c4b5fd;
 }
 .stTabs [data-baseweb="tab-list"] {
-    gap: 5px;
+    gap: 6px;
     background: rgba(0,0,0,0.3);
     padding: 5px;
     border-radius: 30px;
 }
 .stTabs [data-baseweb="tab"] {
-    border-radius: 20px;
-    padding: 5px 18px;
-    font-weight: 600;
+    border-radius: 25px;
+    padding: 5px 20px;
+    font-weight: 500;
     color: #ccc;
 }
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, #0cf, #0a0);
-    color: #000;
+    background: linear-gradient(135deg, #a855f7, #3b82f6);
+    color: white;
 }
 .stCheckbox label {
-    color: #8ab3cf;
+    color: #c4b5fd;
 }
 .stDataFrame {
     background: rgba(0,0,0,0.3);
-    border-radius: 10px;
-    border: 1px solid rgba(0, 180, 255, 0.2);
+    border-radius: 12px;
+    border: 1px solid #a855f7;
 }
 .footer {
     text-align: center;
     padding: 15px;
-    color: #6a8eae;
+    color: #6b7280;
     font-size: 9px;
-    border-top: 1px solid rgba(0, 180, 255, 0.2);
+    border-top: 1px solid rgba(168,85,247,0.2);
     margin-top: 25px;
 }
 h1, h2, h3 {
-    font-family: 'Orbitron', monospace;
-    color: #0cf;
+    font-family: 'Inter', sans-serif;
+    color: #e9d5ff;
 }
 hr {
-    border-color: rgba(0, 180, 255, 0.2);
+    border-color: rgba(168,85,247,0.2);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -308,26 +307,26 @@ if IMAGEM_SIDEBAR:
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">⚡ JOHN ACESSOS</div>
-            <p style="color:#6a8eae; font-size:9px;">CENTRAL ELÉTRICA</p>
+            <div class="sidebar-title">🧠 JOHN ACESSOS</div>
+            <p style="color:#a78bfa; font-size:9px;">IA CORE</p>
         </div>
     """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚡ ESTADO")
-st.sidebar.markdown('<div class="info-item">🟢 CFTV: ATIVO</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">🤖 IA: MONITORANDO</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: 256-BIT</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">🗄️ DB: SEGURO</div>', unsafe_allow_html=True)
+st.sidebar.markdown("### ⚡ ESTADO IA")
+st.sidebar.markdown('<div class="info-item">🟢 REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🤖 MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🗄️ DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📡 INFO")
+st.sidebar.markdown("### 📡 INFO IA")
 if "perfil" in st.session_state:
     st.sidebar.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 11.0</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 12.0 (IA)</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -343,12 +342,12 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN: TECNOLOGIA ELÉTRICA FUTURISTA ======================
+# ====================== TELA DE LOGIN - MODO IA ======================
 if not st.session_state.logado:
     st.markdown("""
     <style>
-    /* Camada de fundo com cidade futurista (abstrato) */
-    .cyber-city {
+    /* Fundo com dados fluindo */
+    .data-stream {
         position: fixed;
         top: 0;
         left: 0;
@@ -356,64 +355,21 @@ if not st.session_state.logado:
         height: 100%;
         pointer-events: none;
         z-index: 0;
-        background: radial-gradient(ellipse at 50% 80%, rgba(0,180,255,0.05) 0%, transparent 70%),
-                    linear-gradient(0deg, rgba(0,180,255,0.1) 1px, transparent 1px);
-        background-size: 100% 100%, 30px 30px;
+        background: repeating-linear-gradient(90deg, rgba(168,85,247,0.05) 0px, rgba(168,85,247,0.05) 2px, transparent 2px, transparent 10px);
+        background-size: 20px 100%;
     }
-    /* Raios de energia descendo pelas bordas */
-    .electric-bolts {
+    /* Camada de rede neural */
+    .neural-bg {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        pointer-events: none;
-        z-index: 1;
-    }
-    .bolt-left {
-        position: absolute;
-        left: 5%;
-        top: -10%;
-        width: 2px;
-        height: 120%;
-        background: repeating-linear-gradient(180deg, transparent, #0cf, transparent);
-        opacity: 0.3;
-        animation: electricBolt 3s infinite;
-    }
-    .bolt-right {
-        position: absolute;
-        right: 5%;
-        top: -10%;
-        width: 2px;
-        height: 120%;
-        background: repeating-linear-gradient(180deg, transparent, #0cf, transparent);
-        opacity: 0.3;
-        animation: electricBolt 4s infinite;
-    }
-    .bolt-center {
-        position: absolute;
-        left: 50%;
-        top: -10%;
-        width: 1px;
-        height: 120%;
-        background: linear-gradient(180deg, transparent, #0cf, transparent);
-        opacity: 0.2;
-        animation: electricBolt 2.5s infinite;
-        transform: translateX(-50%);
-    }
-    /* Partículas flutuantes */
-    .particles-electric {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: radial-gradient(circle at 30% 40%, rgba(0,180,255,0.1) 1px, transparent 1px);
-        background-size: 60px 60px;
+        background-image: radial-gradient(circle at 20% 30%, rgba(168,85,247,0.08) 2px, transparent 2px);
+        background-size: 40px 40px;
         pointer-events: none;
         z-index: 0;
     }
-    /* Container do login */
     .login-container {
         display: flex;
         justify-content: center;
@@ -423,24 +379,23 @@ if not st.session_state.logado:
         z-index: 2;
     }
     .login-box {
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(15px);
-        border-radius: 40px;
-        padding: 40px 30px;
-        border: 2px solid rgba(0, 180, 255, 0.8);
+        background: rgba(8, 8, 20, 0.7);
+        backdrop-filter: blur(20px);
+        border-radius: 50px;
+        padding: 45px 35px;
+        border: 1px solid rgba(168,85,247,0.6);
         width: 100%;
-        max-width: 460px;
+        max-width: 480px;
         text-align: center;
-        transition: 0.3s;
         animation: float 3s ease-in-out infinite;
-        box-shadow: 0 0 30px rgba(0,180,255,0.3);
+        box-shadow: 0 0 30px rgba(168,85,247,0.2);
     }
-    /* Escudo energético */
-    .energy-shield {
+    /* Núcleo IA */
+    .ia-core {
         width: 110px;
         height: 110px;
         margin: 0 auto 20px;
-        background: radial-gradient(circle, rgba(0,180,255,0.25), transparent);
+        background: radial-gradient(circle, rgba(168,85,247,0.3), rgba(59,130,246,0.1));
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -448,144 +403,127 @@ if not st.session_state.logado:
         position: relative;
         animation: pulse 2s infinite;
     }
-    .energy-shield span {
+    .ia-core span {
         font-size: 55px;
-        filter: drop-shadow(0 0 8px #0cf);
+        filter: drop-shadow(0 0 10px #a855f7);
     }
-    .energy-shield::before {
+    .ia-core::before {
         content: "";
         position: absolute;
-        width: 130px;
-        height: 130px;
-        border: 2px solid #0cf;
+        width: 140px;
+        height: 140px;
+        border: 2px solid #a855f7;
         border-radius: 50%;
-        animation: spin 6s linear infinite;
-        opacity: 0.7;
+        animation: spinSlow 8s linear infinite;
+        opacity: 0.6;
     }
-    .energy-shield::after {
-        content: "";
+    .ia-core::after {
+        content: "⚡";
         position: absolute;
-        width: 100%;
-        height: 100%;
-        background: repeating-conic-gradient(from 0deg, #0cf 0deg 15deg, transparent 15deg 30deg);
-        border-radius: 50%;
-        opacity: 0.2;
-        animation: spin 8s linear infinite reverse;
+        font-size: 20px;
+        top: -15px;
+        right: -15px;
+        color: #a855f7;
+        animation: pulse 1s infinite;
     }
     .logo-title {
         font-size: 32px;
-        font-weight: 900;
-        background: linear-gradient(135deg, #fff, #0cf);
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff, #a855f7);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        letter-spacing: 2px;
-        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     .logo-subtitle {
         font-size: 11px;
-        color: #0cf;
-        letter-spacing: 4px;
+        color: #a78bfa;
+        letter-spacing: 3px;
         margin-bottom: 25px;
     }
-    /* Campos com efeito elétrico */
-    .electric-field input {
+    /* Campos com efeito de digitação */
+    .ia-field input {
         width: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        border: 1px solid #0cf;
-        border-radius: 30px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid #a855f7;
+        border-radius: 40px;
         padding: 12px 20px;
-        color: #0cf;
-        font-family: 'Share Tech Mono', monospace;
+        color: #c4b5fd;
+        font-family: 'Space Mono', monospace;
         transition: 0.2s;
     }
-    .electric-field input:focus {
+    .ia-field input:focus {
         outline: none;
-        border-color: #0f0;
-        box-shadow: 0 0 12px #0cf;
+        border-color: #3b82f6;
+        box-shadow: 0 0 12px #a855f7;
     }
-    /* Botão com efeito de choque */
-    .shock-button {
-        background: linear-gradient(90deg, #0cf, #00aaff);
-        border: none;
-        border-radius: 50px;
-        padding: 12px;
-        font-weight: 800;
-        font-family: 'Orbitron', monospace;
-        color: #000;
-        width: 100%;
-        cursor: pointer;
-        transition: 0.2s;
-        margin-top: 10px;
-        font-size: 16px;
-        letter-spacing: 2px;
-    }
-    .shock-button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 0 20px #0cf;
-        background: linear-gradient(90deg, #00aaff, #0cf);
-    }
-    /* Status bar */
-    .status-bar-electric {
+    .status-bar-ia {
         margin-top: 25px;
         font-size: 9px;
-        color: #8ab3cf;
-        border-top: 1px solid rgba(0,180,255,0.3);
+        color: #a78bfa;
+        border-top: 1px solid rgba(168,85,247,0.3);
         padding-top: 12px;
         display: flex;
         justify-content: center;
         gap: 15px;
     }
-    .status-item-electric {
+    .status-item-ia {
         display: flex;
         align-items: center;
         gap: 5px;
     }
-    .blink-electric {
+    .blink-ia {
         display: inline-block;
         width: 8px;
         height: 8px;
-        background: #0f0;
+        background: #a855f7;
         border-radius: 50%;
         animation: pulse 1s infinite;
     }
+    /* Animated binary (stream) */
+    .binary-stream {
+        font-family: 'Space Mono', monospace;
+        font-size: 10px;
+        letter-spacing: 2px;
+        background: rgba(0,0,0,0.5);
+        padding: 6px;
+        border-radius: 20px;
+        margin-bottom: 15px;
+        display: inline-block;
+        width: auto;
+        color: #a855f7;
+    }
     </style>
-    <div class="cyber-city"></div>
-    <div class="electric-bolts">
-        <div class="bolt-left"></div>
-        <div class="bolt-right"></div>
-        <div class="bolt-center"></div>
-    </div>
-    <div class="particles-electric"></div>
+    <div class="data-stream"></div>
+    <div class="neural-bg"></div>
     <div class="login-container">
         <div class="login-box">
-            <div class="energy-shield"><span>⚡🛡️</span></div>
+            <div class="ia-core"><span>🧠</span></div>
             <div class="logo-title">JOHN ACESSOS</div>
-            <div class="logo-subtitle">CENTRAL ELÉTRICA</div>
+            <div class="logo-subtitle">IA CORE</div>
     """, unsafe_allow_html=True)
     
-    # Código binário animado (opcional)
+    # Código binário "inteligente" (simula fluxo de dados)
     st.markdown("""
     <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     <script>
-        function generateBinary(len=60) {
+        function generateBinary(len=50) {
             let bin = '';
             for(let i=0;i<len;i++) bin += Math.random()<0.5?'0':'1';
             return bin;
         }
         function updateBinary() {
             const el = document.getElementById('binary-container');
-            if(el) el.innerHTML = `<div style="font-family: 'Share Tech Mono', monospace; background: rgba(0,0,0,0.5); padding:6px; border-radius:8px; font-size:11px; letter-spacing:2px; color:#0cf; border:1px solid #0cf; display:inline-block;">${generateBinary(60)}</div>`;
+            if(el) el.innerHTML = `<div class="binary-stream">${generateBinary(60)}</div>`;
         }
-        setInterval(updateBinary, 500);
+        setInterval(updateBinary, 400);
         updateBinary();
     </script>
     """, unsafe_allow_html=True)
     
-    # Formulário de login
     with st.form("login_form"):
-        st.text_input("", placeholder="Identificação criptografada", key="electric_user", label_visibility="collapsed")
-        senha = st.text_input("", type="password", placeholder="Chave de acesso energizada", label_visibility="collapsed")
-        submitted = st.form_submit_button("⚡ ACESSAR SISTEMA", use_container_width=True)
+        st.text_input("", placeholder="Identificação (usuário)", key="ia_user", label_visibility="collapsed")
+        senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
+        submitted = st.form_submit_button("🧠 ACESSAR IA CORE", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
@@ -596,13 +534,13 @@ if not st.session_state.logado:
                 st.session_state.perfil = "VIGILANTE"
                 st.rerun()
             else:
-                st.error("❌ ACESSO NEGADO - Choque de segurança ativado")
+                st.error("❌ ACESSO NEGADO - Assinatura inválida")
     
     st.markdown("""
-            <div class="status-bar-electric">
-                <div class="status-item-electric"><span class="blink-electric"></span> FIREWALL ATIVO</div>
-                <div class="status-item-electric"><span class="blink-electric"></span> IA ENERGÉTICA</div>
-                <div class="status-item-electric"><span class="blink-electric"></span> CRIPTOGRAFIA MILITAR</div>
+            <div class="status-bar-ia">
+                <div class="status-item-ia"><span class="blink-ia"></span> REDE NEURAL</div>
+                <div class="status-item-ia"><span class="blink-ia"></span> APRENDIZADO CONTÍNUO</div>
+                <div class="status-item-ia"><span class="blink-ia"></span> CRIPTOGRAFIA QUÂNTICA</div>
             </div>
         </div>
     </div>
@@ -614,12 +552,12 @@ st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #0cf, #0a0); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <span style="font-size: 18px;">⚡</span>
+                <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #a855f7, #3b82f6); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 20px;">🧠</span>
                 </div>
                 <div>
-                    <h1 style="margin:0; font-size: 15px;">JOHN ACESSOS - CENTRAL ELÉTRICA</h1>
-                    <p style="margin:0; color: #0cf; font-size: 8px;">INTELIGÊNCIA ENERGÉTICA</p>
+                    <h1 style="margin:0; font-size: 16px;">JOHN ACESSOS - IA CORE</h1>
+                    <p style="margin:0; color: #a78bfa; font-size: 8px;">INTELIGÊNCIA ARTIFICIAL</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -1046,7 +984,7 @@ if st.session_state.perfil == "ADMIN":
                     idx = lista.index(selecionado)
                     pessoa = filtrados[idx]
                     st.markdown(f"""
-                        <div style="background:rgba(0,180,255,0.1); border-radius:10px; padding:10px; border-left:3px solid #0cf;">
+                        <div style="background:rgba(168,85,247,0.1); border-radius:12px; padding:12px; border-left:3px solid #a855f7;">
                             <b>👤 {pessoa['nome']}</b><br>
                             📄 CPF: {pessoa['cpf']}<br>
                             🏢 Empresa: {pessoa.get('empresa','N/A')}
@@ -1075,6 +1013,6 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        ⚡ JOHN ACESSOS - CENTRAL ELÉTRICA | IA | FIREWALL ENERGÉTICO
+        🧠 JOHN ACESSOS - IA CORE | Deep Learning | Segurança Quântica
     </div>
 """, unsafe_allow_html=True)
