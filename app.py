@@ -209,7 +209,7 @@ st.markdown("""
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 """, unsafe_allow_html=True)
 
-# ====================== DESIGN BASE (CSS) COM BOTÕES TECNOLÓGICOS ======================
+# ====================== DESIGN BASE (CSS) COM BOTÕES TECNOLÓGICOS E SELECTOX VISÍVEL ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
@@ -242,10 +242,6 @@ st.markdown("""
     0% { box-shadow: 0 0 5px #0ff; }
     50% { box-shadow: 0 0 20px #0ff; }
     100% { box-shadow: 0 0 5px #0ff; }
-}
-@keyframes hologram {
-    0% { text-shadow: 0 0 2px #0ff; opacity: 0.8; }
-    100% { text-shadow: 0 0 10px #0ff; opacity: 1; }
 }
 
 /* FUNDO PRINCIPAL */
@@ -342,7 +338,7 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
 }
 
-/* BOTÕES TECNOLÓGICOS - ESTILO GLOBAL */
+/* BOTÕES TECNOLÓGICOS */
 .stButton > button, .stForm button {
     border-radius: 40px;
     font-weight: 600;
@@ -355,7 +351,6 @@ st.markdown("""
     overflow: hidden;
     z-index: 1;
 }
-/* Efeito de scan futurista no hover */
 .stButton > button::before, .stForm button::before {
     content: '';
     position: absolute;
@@ -375,78 +370,69 @@ st.markdown("""
     box-shadow: 0 0 20px #a855f7;
     animation: buttonGlow 0.8s infinite alternate;
 }
-/* Botão ATUALIZAR (estilo especial) */
 .stButton > button[key="btn_atualizar"] {
     background: linear-gradient(90deg, #0ff, #0080ff);
 }
-.stButton > button[key="btn_atualizar"]:hover {
-    box-shadow: 0 0 25px #0ff;
-}
-/* Botão SAIR */
 .stButton > button[key="sair_final"] {
     background: linear-gradient(90deg, #f44, #a00);
 }
-/* Botão CONFIRMAR CPF */
 .stButton > button[key="confirma_cpf"] {
     background: linear-gradient(90deg, #f0f, #a0f);
 }
-/* Botão REGISTRAR ENTRADA */
 .stButton > button[key="btn_entrada"] {
     background: linear-gradient(90deg, #0f0, #0a0);
 }
-/* Botão SALVAR CADASTRO */
 .stButton > button[key="salvar_cadastro"] {
     background: linear-gradient(90deg, #ffa500, #ff6600);
 }
-/* Botão EXCLUIR, LIMPAR, etc. */
 .stButton > button[key="del_cad"], .stButton > button[key="del_reg"], .stButton > button[key="confirm_delete"] {
     background: linear-gradient(90deg, #ff3333, #990000);
 }
-/* Botão LIMPAR TUDO */
 .stButton > button[key="clear_all_confirm"] {
     background: linear-gradient(90deg, #ff0000, #660000);
 }
-/* Botão LIMPAR SELEÇÃO */
 .stButton > button[key="cancel_delete"], .stButton > button[key="cancel_clear_all"] {
     background: linear-gradient(90deg, #666, #333);
 }
 
 /* INPUTS E SELECTOX (TEXTO DO DESTINO VISÍVEL) */
 .stTextInput > div > div > input,
-.stSelectbox > div > div,
 .stNumberInput > div > div > input {
     background: rgba(0, 0, 0, 0.8);
     border: 1px solid #a855f7;
     border-radius: 12px;
-    color: #0ff !important;  /* Força texto azul neon */
+    color: #0ff !important;
     font-family: 'Space Mono', monospace;
     padding: 8px;
 }
-/* As opções do selectbox */
-.stSelectbox > div > div > div {
-    color: #0ff;
-    background: rgba(0,0,0,0.9);
+/* Selectbox: valor selecionado */
+.stSelectbox > div > div {
+    background: rgba(0, 0, 0, 0.8) !important;
+    border: 1px solid #a855f7 !important;
+    border-radius: 12px !important;
+    color: #0ff !important;
+    font-family: 'Space Mono', monospace;
 }
-/* Para garantir que o texto dentro do selectbox seja visível */
-.stSelectbox label {
+/* Texto do selectbox (o que aparece na caixa) */
+.stSelectbox [data-baseweb="select"] span {
     color: #0ff !important;
 }
-.stSelectbox [data-baseweb="select"] {
-    color: #0ff !important;
-}
-/* Dropdown do selectbox (opções) */
-div[data-baseweb="select"] > div {
-    background-color: #0a0a1a;
-}
+/* As opções do dropdown */
 div[data-baseweb="select"] ul {
-    background-color: #0a0a1a;
+    background-color: #0a0a1a !important;
+    border: 1px solid #a855f7 !important;
 }
 div[data-baseweb="select"] li {
     color: #0ff !important;
+    background-color: #0a0a1a !important;
 }
 div[data-baseweb="select"] li:hover {
     background-color: #a855f7 !important;
     color: black !important;
+}
+/* Label do selectbox */
+.stSelectbox label {
+    color: #0ff !important;
 }
 
 /* EXPANDER, TABS */
@@ -523,7 +509,7 @@ if st.session_state.get("perfil"):
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 13.0 (TECH)</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 13.1 (TECH)</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO (INICIALIZAÇÃO) ======================
 if "logado" not in st.session_state:
