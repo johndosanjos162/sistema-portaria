@@ -4,8 +4,13 @@ from datetime import datetime
 import pandas as pd
 from PIL import Image
 import base64
+import re
 
-# --- CONFIGURAÇÃO ---
+# --- CONFIGURAÇÃO DE SEGURANÇA ---
+# Limite de tentativas de login (força bruta)
+MAX_TENTATIVAS_LOGIN = 5
+
+# --- CONFIGURAÇÃO SUPABASE ---
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
@@ -25,9 +30,11 @@ def gerar_html_impressao(df, titulo):
     colunas_presentes = [c for c in colunas if c in df.columns]
     linhas_html = ""
     for _, row in df.iterrows():
+        # Sanitização básica dos valores para evitar injeção HTML no PDF gerado
         linhas_html += "<tr>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
+            valor = valor.replace('<', '&lt;').replace('>', '&gt;')
             linhas_html += f"<td>{valor}</td>"
         linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
@@ -88,7 +95,7 @@ def gerar_html_impressao(df, titulo):
     <body>
         <h1>JOHN ACESSOS - ACESSO DE DADOS - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        <tr>
+        <table>
             <thead>
                 <tr>{cabecalho_html}</tr>
             </thead>
@@ -104,6 +111,25 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
+# ====================== FUNÇÃO DE VALIDAÇÃO DE CPF ======================
+def validar_cpf(cpf):
+    """Valida se o CPF tem 11 dígitos numéricos (sem pontuação)"""
+    cpf_limpo = re.sub(r'\D', '', cpf)
+    return cpf_limpo.isdigit() and len(cpf_limpo) == 11
+
+def sanitizar_cpf(cpf):
+    """Remove tudo que não for dígito e retorna apenas números"""
+    return re.sub(r'\D', '', cpf)
+
+def sanitizar_texto(texto):
+    """Remove tags HTML/JS e caracteres perigosos"""
+    if not texto:
+        return texto
+    # Substitui caracteres especiais por seus equivalentes seguros
+    texto = texto.replace('<', '&lt;').replace('>', '&gt;')
+    texto = texto.replace('"', '&quot;').replace("'", '&#39;')
+    return texto
+
 # ====================== CARREGAR IMAGENS (OPCIONAL) ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
@@ -115,7 +141,14 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN BASE ======================
+# ====================== DESIGN BASE (com cabeçalhos de segurança) ======================
+st.markdown("""
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+""", unsafe_allow_html=True)
+
+# O restante do CSS (mantido igual, sem alterações)
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
@@ -322,7 +355,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 12.0 (DATA)</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 12.1 (SECURE)</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -337,9 +370,18 @@ if "pending_delete_ids" not in st.session_state:
     st.session_state.pending_delete_ids = []
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
+if "tentativas_login" not in st.session_state:
+    st.session_state.tentativas_login = 0
+if "bloqueado_ate" not in st.session_state:
+    st.session_state.bloqueado_ate = None
 
-# ====================== TELA DE LOGIN - ACESSO DE DADOS ======================
+# ====================== TELA DE LOGIN COM PROTEÇÃO CONTRA FORÇA BRUTA ======================
 if not st.session_state.logado:
+    # Verifica se está bloqueado
+    if st.session_state.bloqueado_ate and datetime.now() < st.session_state.bloqueado_ate:
+        st.error(f"⛔ Muitas tentativas inválidas. Tente novamente após {st.session_state.bloqueado_ate.strftime('%H:%M:%S')}")
+        st.stop()
+
     st.markdown("""
     <style>
     /* Fundo com dados fluindo */
@@ -386,7 +428,6 @@ if not st.session_state.logado:
         animation: float 3s ease-in-out infinite;
         box-shadow: 0 0 30px rgba(168,85,247,0.2);
     }
-    /* Escudo de defesa tecnológico */
     .shield-core {
         width: 110px;
         height: 110px;
@@ -436,7 +477,6 @@ if not st.session_state.logado:
         letter-spacing: 3px;
         margin-bottom: 25px;
     }
-    /* Campos com efeito de digitação */
     .data-field input {
         width: 100%;
         background: rgba(0, 0, 0, 0.6);
@@ -475,7 +515,6 @@ if not st.session_state.logado:
         border-radius: 50%;
         animation: pulse 1s infinite;
     }
-    /* Animated binary (stream) */
     .binary-stream {
         font-family: 'Space Mono', monospace;
         font-size: 10px;
@@ -498,7 +537,7 @@ if not st.session_state.logado:
             <div class="logo-subtitle">ACESSO DE DADOS</div>
     """, unsafe_allow_html=True)
     
-    # Código binário "inteligente" (simula fluxo de dados)
+    # Código binário animado (simula fluxo de dados)
     st.markdown("""
     <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     <script>
@@ -517,6 +556,7 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     
     with st.form("login_form"):
+        # Campo identificação (apenas visual, não usado)
         st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
         senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
         submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
@@ -524,13 +564,22 @@ if not st.session_state.logado:
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
                 st.session_state.perfil = "ADMIN"
+                st.session_state.tentativas_login = 0
                 st.rerun()
             elif senha == "JOHN123":
                 st.session_state.logado = True
                 st.session_state.perfil = "VIGILANTE"
+                st.session_state.tentativas_login = 0
                 st.rerun()
             else:
-                st.error("❌ ACESSO NEGADO - Assinatura inválida")
+                st.session_state.tentativas_login += 1
+                restantes = MAX_TENTATIVAS_LOGIN - st.session_state.tentativas_login
+                if st.session_state.tentativas_login >= MAX_TENTATIVAS_LOGIN:
+                    # Bloqueia por 5 minutos
+                    st.session_state.bloqueado_ate = datetime.now() + pd.Timedelta(minutes=5)
+                    st.error("⛔ Muitas tentativas inválidas. Acesso bloqueado por 5 minutos.")
+                else:
+                    st.error(f"❌ ACESSO NEGADO - Assinatura inválida. Tentativas restantes: {restantes}")
     
     st.markdown("""
             <div class="status-bar-data">
@@ -621,17 +670,24 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
     novo_empresa = col_c.text_input("🏢 Empresa")
     if st.button("💾 Salvar Cadastro", type="primary"):
         if novo_cpf and novo_nome:
-            try:
-                supabase.table("Pessoas").insert({
-                    "cpf": novo_cpf.strip(),
-                    "nome": novo_nome.strip().upper(),
-                    "empresa": novo_empresa.strip().upper() if novo_empresa else ""
-                }).execute()
-                st.success("✅ Cadastro salvo com sucesso!")
-                st.balloons()
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ Erro: {e}")
+            # Validação de CPF
+            if not validar_cpf(novo_cpf):
+                st.error("❌ CPF inválido. Digite um CPF válido (11 dígitos).")
+            else:
+                cpf_limpo = sanitizar_cpf(novo_cpf)
+                nome_limpo = sanitizar_texto(novo_nome).strip().upper()
+                empresa_limpa = sanitizar_texto(novo_empresa).strip().upper() if novo_empresa else ""
+                try:
+                    supabase.table("Pessoas").insert({
+                        "cpf": cpf_limpo,
+                        "nome": nome_limpo,
+                        "empresa": empresa_limpa
+                    }).execute()
+                    st.success("✅ Cadastro salvo com sucesso!")
+                    st.balloons()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Erro ao salvar: {e}")
         else:
             st.error("❌ CPF e Nome são obrigatórios.")
 
@@ -651,17 +707,21 @@ with col_cpf:
 with col_btn_confirma:
     if cpf_input and len(cpf_input.strip()) > 0:
         if st.button("✅ CONFIRMAR CPF", key="confirma_cpf"):
-            pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_input.strip()).execute().data
-            if pessoa:
-                st.session_state.pessoa_confirmada = {
-                    "cpf": cpf_input.strip(),
-                    "nome": pessoa[0]['nome'],
-                    "empresa": pessoa[0].get('empresa', '')
-                }
-                st.success(f"✅ **Pessoa confirmada:** 👤 {pessoa[0]['nome']} | 🏢 Empresa: {pessoa[0].get('empresa', 'N/A')}")
+            cpf_limpo = sanitizar_cpf(cpf_input)
+            if not validar_cpf(cpf_limpo):
+                st.error("❌ CPF inválido. Digite um CPF com 11 dígitos.")
             else:
-                st.error("❌ CPF não cadastrado")
-                st.session_state.pessoa_confirmada = None
+                pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_limpo).execute().data
+                if pessoa:
+                    st.session_state.pessoa_confirmada = {
+                        "cpf": cpf_limpo,
+                        "nome": sanitizar_texto(pessoa[0]['nome']),
+                        "empresa": sanitizar_texto(pessoa[0].get('empresa', ''))
+                    }
+                    st.success(f"✅ **Pessoa confirmada:** 👤 {pessoa[0]['nome']} | 🏢 Empresa: {pessoa[0].get('empresa', 'N/A')}")
+                else:
+                    st.error("❌ CPF não cadastrado")
+                    st.session_state.pessoa_confirmada = None
     else:
         st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
 
@@ -670,17 +730,20 @@ setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
 if st.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
     if 'pessoa_confirmada' in st.session_state and st.session_state.pessoa_confirmada:
         pessoa = st.session_state.pessoa_confirmada
-        supabase.table("movimentacao").insert({
-            "cpf": pessoa['cpf'],
-            "nome": pessoa['nome'],
-            "empresa": pessoa['empresa'],
-            "setor_destino": setor_escolhido,
-            "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-            "data_saida": ""
-        }).execute()
-        st.success(f"✅ Entrada registrada para **{setor_escolhido}**!")
-        st.session_state.pessoa_confirmada = None
-        st.rerun()
+        try:
+            supabase.table("movimentacao").insert({
+                "cpf": pessoa['cpf'],
+                "nome": pessoa['nome'],
+                "empresa": pessoa['empresa'],
+                "setor_destino": setor_escolhido,
+                "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                "data_saida": ""
+            }).execute()
+            st.success(f"✅ Entrada registrada para **{setor_escolhido}**!")
+            st.session_state.pessoa_confirmada = None
+            st.rerun()
+        except Exception as e:
+            st.error(f"❌ Erro ao registrar entrada: {e}")
     else:
         st.warning("⚠️ Confirme o CPF antes de registrar a entrada.")
 
@@ -697,9 +760,10 @@ if dados:
     with col_botao:
         if st.button("🔎 Buscar", key="buscar_saida"):
             if cpf_pesquisa:
+                cpf_limpo = sanitizar_cpf(cpf_pesquisa)
                 pessoa_encontrada = None
                 for p in dados:
-                    if p['cpf'] == cpf_pesquisa.strip():
+                    if p['cpf'] == cpf_limpo:
                         pessoa_encontrada = p
                         break
                 if pessoa_encontrada:
@@ -725,12 +789,15 @@ if dados:
                 st.write(f"**🕒 Entrada:** {p['data_entrada']}")
             with col_sair:
                 if st.button("🚪 Registrar Saída", key="sair_pesquisado"):
-                    supabase.table("movimentacao").update({
-                        "data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-                    }).eq("id", p['id']).execute()
-                    st.success(f"✅ Saída registrada para {p['nome']}")
-                    st.session_state.pessoa_saida = None
-                    st.rerun()
+                    try:
+                        supabase.table("movimentacao").update({
+                            "data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                        }).eq("id", p['id']).execute()
+                        st.success(f"✅ Saída registrada para {p['nome']}")
+                        st.session_state.pessoa_saida = None
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao registrar saída: {e}")
             st.markdown("---")
     
     st.markdown("#### 📋 Lista completa de presentes")
@@ -743,8 +810,11 @@ if dados:
             col2.write(f"📍 {p['setor_destino']}")
             col3.write(f"🏢 {p.get('empresa','N/A')}")
             if col4.button("🚪 Saída", key=f"saida_{p['id']}"):
-                supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                st.rerun()
+                try:
+                    supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao registrar saída: {e}")
             st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
 
     for i, setor in enumerate(["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"], 1):
@@ -758,8 +828,11 @@ if dados:
                     col2.write(f"🏢 {p.get('empresa','N/A')}")
                     col3.write(f"🕒 {p['data_entrada']}")
                     if col4.button("🚪 Saída", key=f"saida2_{p['id']}"):
-                        supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                        st.rerun()
+                        try:
+                            supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro ao registrar saída: {e}")
                     st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
             else:
                 st.info(f"📭 Nenhuma pessoa no setor {setor}")
@@ -968,7 +1041,8 @@ if st.session_state.perfil == "ADMIN":
             with col_search:
                 search_term = st.text_input("🔍 Pesquisar", placeholder="Nome, CPF ou empresa...", key="search_exclusao", label_visibility="collapsed")
                 if search_term:
-                    filtrados = [p for p in todos if search_term.lower() in p['nome'].lower() or search_term.lower() in p['cpf'].lower() or search_term.lower() in p.get('empresa','').lower()]
+                    search_term_sanitizado = sanitizar_texto(search_term).lower()
+                    filtrados = [p for p in todos if search_term_sanitizado in p['nome'].lower() or search_term_sanitizado in p['cpf'].lower() or search_term_sanitizado in p.get('empresa','').lower()]
                     st.markdown(f"📊 {len(filtrados)} resultado(s) para: **{search_term}**")
                 else:
                     filtrados = todos
