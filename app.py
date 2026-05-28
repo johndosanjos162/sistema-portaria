@@ -31,8 +31,8 @@ def gerar_html_impressao(df, titulo):
         linhas_html += "<tr>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
-            linhas_html += f"<tr>{valor}</td>"
-        linhas_html += "</tr>"
+            linhas_html += f"<td>{valor}</td>"
+        linhas_html += "</table>"
     
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     
@@ -93,7 +93,7 @@ def gerar_html_impressao(df, titulo):
     <body>
         <h1>ACCESS GATE - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        <table>
+        </table>
             <thead>
                 <tr>{cabecalho_html}</tr>
             </thead>
@@ -110,7 +110,7 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
-# ====================== CARREGAR IMAGENS ======================
+# ====================== CARREGAR IMAGENS (OPCIONAL) ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
         return Image.open(nome_arquivo)
@@ -325,6 +325,10 @@ if "search_term_exclusao" not in st.session_state:
     st.session_state.search_term_exclusao = ""
 if "selected_ids" not in st.session_state:
     st.session_state.selected_ids = []
+if "pending_delete_ids" not in st.session_state:
+    st.session_state.pending_delete_ids = []
+if "pending_clear_all" not in st.session_state:
+    st.session_state.pending_clear_all = False
 
 # ====================== LOGIN ======================
 if not st.session_state.logado:
@@ -520,6 +524,7 @@ st.markdown("### 📍 Pessoas Presentes no Hospital")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
 if dados:
+    # Barra de pesquisa por CPF para saída
     st.markdown("#### 🔍 Pesquisar por CPF para registrar saída")
     col_pesquisa, col_botao = st.columns([3, 1])
     with col_pesquisa:
@@ -563,6 +568,7 @@ if dados:
                     st.rerun()
             st.markdown("---")
     
+    # Abas existentes
     st.markdown("#### 📋 Lista completa de presentes")
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
@@ -608,6 +614,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.markdown("### 📄 Gerar Relatório para Impressão/PDF")
         st.info("💡 Clique no botão, depois use **Ctrl+P** (ou **Cmd+P**) e escolha **'Salvar como PDF'**.")
         
+        # --- Relatório completo ---
         st.markdown("#### 🔹 Histórico Geral")
         if st.button("📑 Abrir relatório completo", key="html_all"):
             html = gerar_html_impressao(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
@@ -619,7 +626,9 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
+        # --- PDFs separados por setor ---
         st.markdown("#### 🔹 Relatório por Setor (PDF separado para cada setor)")
+        
         setores_unicos = df['setor_destino'].unique()
         setores_desejados = ["C.C", "GRSA", "Brasanitas"]
         mapa_setores = {}
@@ -634,6 +643,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 mapa_setores[setor] = setor
         
         col1, col2, col3 = st.columns(3)
+        
         with col1:
             setor_nome = "C.C"
             valor_real = mapa_setores[setor_nome]
@@ -647,6 +657,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                         st.markdown(href, unsafe_allow_html=True)
             else:
                 st.button(f"🏥 {setor_nome} (vazio)", disabled=True, key=f"btn_{setor_nome}_pdf")
+        
         with col2:
             setor_nome = "GRSA"
             valor_real = mapa_setores[setor_nome]
@@ -660,6 +671,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                         st.markdown(href, unsafe_allow_html=True)
             else:
                 st.button(f"🔧 {setor_nome} (vazio)", disabled=True, key=f"btn_{setor_nome}_pdf")
+        
         with col3:
             setor_nome = "Brasanitas"
             valor_real = mapa_setores[setor_nome]
@@ -676,6 +688,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
+        # --- Relatório por Empresa (Prestadores de Serviço) ---
         st.markdown("#### 🔹 Relatório por Empresa (Prestadores de Serviço)")
         empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
         todas_empresas = df['empresa'].dropna().unique()
@@ -737,48 +750,77 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         with col_btn1:
             if st.button("🗑️ Excluir Selecionados", use_container_width=True):
                 if st.session_state.selected_ids:
-                    with st.popover("⚠️ CONFIRMAR EXCLUSÃO DOS SELECIONADOS", use_container_width=True):
-                        st.error(f"Você selecionou {len(st.session_state.selected_ids)} registro(s). Esta ação é irreversível!")
-                        if st.button("✅ SIM, EXCLUIR PERMANENTEMENTE", key="confirm_selected"):
-                            try:
-                                # Excluir cada ID individualmente
-                                for id_excluir in st.session_state.selected_ids:
-                                    supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
-                                st.success(f"{len(st.session_state.selected_ids)} registro(s) excluído(s)!")
-                                st.session_state.selected_ids = []
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Erro ao excluir: {e}")
+                    st.session_state.pending_delete_ids = st.session_state.selected_ids.copy()
+                    st.rerun()
                 else:
                     st.warning("Nenhum registro selecionado.")
         
         with col_btn2:
             if st.button("📋 Limpar Seleção", use_container_width=True):
                 st.session_state.selected_ids = []
+                st.session_state.pending_delete_ids = []
+                st.session_state.pending_clear_all = False
                 st.rerun()
         
         with col_btn3:
             if st.button("⚠️ LIMPAR TODO O HISTÓRICO", use_container_width=True):
-                with st.popover("🚨 ATENÇÃO - LIMPEZA TOTAL", use_container_width=True):
-                    st.error("Isso vai APAGAR TODOS os registros de movimentação. Esta ação é IRREVERSÍVEL!")
-                    total_registros = len(df)
-                    st.write(f"Total de registros no histórico: **{total_registros}**")
-                    confirm = st.text_input("Digite 'LIMPAR TUDO' para confirmar:", type="password")
+                st.session_state.pending_clear_all = True
+                st.rerun()
+        
+        # Processar exclusão pendente (se houver)
+        if st.session_state.pending_delete_ids:
+            st.markdown("---")
+            st.error(f"⚠️ **Confirmação necessária:** você está prestes a excluir {len(st.session_state.pending_delete_ids)} registro(s).")
+            st.write("IDs:", ", ".join(map(str, st.session_state.pending_delete_ids)))
+            col_confirm, col_cancel = st.columns(2)
+            with col_confirm:
+                if st.button("✅ SIM, EXCLUIR PERMANENTEMENTE", key="confirm_delete"):
+                    try:
+                        for id_excluir in st.session_state.pending_delete_ids:
+                            supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
+                        st.success(f"{len(st.session_state.pending_delete_ids)} registro(s) excluído(s)!")
+                        st.session_state.selected_ids = []
+                        st.session_state.pending_delete_ids = []
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao excluir: {e}")
+                        st.session_state.pending_delete_ids = []
+            with col_cancel:
+                if st.button("❌ Cancelar", key="cancel_delete"):
+                    st.session_state.pending_delete_ids = []
+                    st.rerun()
+        
+        # Processar limpeza total pendente
+        if st.session_state.pending_clear_all:
+            st.markdown("---")
+            st.error("🚨 **ATENÇÃO – LIMPEZA TOTAL DO HISTÓRICO**")
+            st.write("Esta ação apagará **TODOS** os registros da tabela de movimentação. É irreversível!")
+            total_registros = len(df)
+            st.write(f"Total de registros atuais: **{total_registros}**")
+            confirm = st.text_input("Digite 'LIMPAR TUDO' para confirmar:", type="password")
+            col_clear_confirm, col_clear_cancel = st.columns(2)
+            with col_clear_confirm:
+                if st.button("🔥 EXCLUIR TUDO PERMANENTEMENTE", key="confirm_clear_all"):
                     if confirm == "LIMPAR TUDO":
-                        if st.button("🔥 EXCLUIR TUDO PERMANENTEMENTE", key="clear_all_confirm"):
-                            try:
-                                supabase.table("movimentacao").delete().neq("id", 0).execute()
-                                st.success("✅ Todo o histórico foi limpo!")
-                                st.session_state.selected_ids = []
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Erro ao limpar histórico: {e}")
-                    elif confirm:
+                        try:
+                            supabase.table("movimentacao").delete().neq("id", 0).execute()
+                            st.success("✅ Todo o histórico foi limpo!")
+                            st.session_state.selected_ids = []
+                            st.session_state.pending_delete_ids = []
+                            st.session_state.pending_clear_all = False
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro ao limpar histórico: {e}")
+                    else:
                         st.error("Confirmação incorreta. Digite exatamente 'LIMPAR TUDO'")
+            with col_clear_cancel:
+                if st.button("Cancelar", key="cancel_clear_all"):
+                    st.session_state.pending_clear_all = False
+                    st.rerun()
     else:
         st.info("📭 Nenhum registro encontrado no histórico.")
 
-# ====================== GESTÃO DE CADASTROS ======================
+# ====================== GESTÃO DE CADASTROS (COM LUPA) ======================
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
         todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
