@@ -5,7 +5,11 @@ import pandas as pd
 from PIL import Image
 import io
 import base64
-from fpdf import FPDF
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
 import tempfile
 import os
 
@@ -21,69 +25,89 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== FUNÇÃO PARA GERAR PDF ======================
-class PDF(FPDF):
-    def header(self):
-        self.set_font('Arial', 'B', 12)
-        self.cell(0, 10, 'ACCESS GATE - Relatório de Movimentações', 0, 1, 'C')
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 5, f'Gerado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 1, 'C')
-        self.ln(5)
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
-
-def gerar_pdf(df, titulo):
-    """
-    Gera um PDF a partir de um DataFrame com o título especificado.
-    Retorna o caminho do arquivo temporário para download.
-    """
+# ====================== FUNÇÃO PARA GERAR PDF COM REPORTLAB ======================
+def gerar_pdf_reportlab(df, titulo):
+    """Gera PDF a partir de um DataFrame usando ReportLab."""
     if df.empty:
         return None
     
-    pdf = PDF()
-    pdf.add_page()
-    pdf.set_font('Arial', 'B', 10)
-    pdf.cell(0, 10, titulo, 0, 1, 'L')
-    pdf.ln(5)
-    
-    # Cabeçalho da tabela
-    colunas = list(df.columns)
-    # Remover colunas que não são necessárias no relatório
-    colunas_uteis = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
-    colunas_exibidas = [c for c in colunas_uteis if c in df.columns]
-    
-    # Larguras proporcionais
-    larguras = [15, 50, 35, 35, 35, 50, 50]
-    # Ajustar larguras conforme colunas existentes
-    larguras_ajustadas = [larguras[i] for i in range(len(colunas_exibidas))]
-    
-    pdf.set_font('Arial', 'B', 8)
-    for i, col in enumerate(colunas_exibidas):
-        pdf.cell(larguras_ajustadas[i], 8, col.upper(), 1, 0, 'C')
-    pdf.ln()
-    
-    pdf.set_font('Arial', '', 7)
-    for _, row in df.iterrows():
-        for i, col in enumerate(colunas_exibidas):
-            valor = str(row[col]) if pd.notna(row[col]) else ''
-            pdf.cell(larguras_ajustadas[i], 6, valor, 1, 0, 'L')
-        pdf.ln()
-        if pdf.get_y() > 270:
-            pdf.add_page()
-            # Recriar cabeçalho
-            pdf.set_font('Arial', 'B', 8)
-            for i, col in enumerate(colunas_exibidas):
-                pdf.cell(larguras_ajustadas[i], 8, col.upper(), 1, 0, 'C')
-            pdf.ln()
-            pdf.set_font('Arial', '', 7)
-    
-    # Salvar em arquivo temporário
+    # Criar arquivo temporário
     with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
-        pdf.output(tmp.name)
-        return tmp.name
+        pdf_path = tmp.name
+    
+    # Configurar documento
+    doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=1*cm, leftMargin=1*cm, topMargin=1*cm, bottomMargin=1*cm)
+    elementos = []
+    
+    # Estilos
+    styles = getSampleStyleSheet()
+    titulo_estilo = ParagraphStyle(
+        'Titulo',
+        parent=styles['Heading1'],
+        fontSize=16,
+        alignment=1,  # centralizado
+        textColor=colors.HexColor('#0a0e1a')
+    )
+    subtitulo_estilo = ParagraphStyle(
+        'Subtitulo',
+        parent=styles['Normal'],
+        fontSize=10,
+        alignment=1,
+        textColor=colors.grey
+    )
+    cabecalho_estilo = ParagraphStyle(
+        'Cabecalho',
+        parent=styles['Normal'],
+        fontSize=8,
+        alignment=1,
+        textColor=colors.whitesmoke,
+        backColor=colors.HexColor('#0a0e1a')
+    )
+    
+    # Título
+    elementos.append(Paragraph(titulo, titulo_estilo))
+    elementos.append(Spacer(1, 0.2*cm))
+    elementos.append(Paragraph(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", subtitulo_estilo))
+    elementos.append(Spacer(1, 0.5*cm))
+    
+    # Preparar dados para tabela
+    # Selecionar colunas de interesse
+    colunas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
+    colunas_presentes = [c for c in colunas if c in df.columns]
+    dados = [colunas_presentes]  # cabeçalho
+    
+    for _, row in df.iterrows():
+        linha = []
+        for col in colunas_presentes:
+            valor = str(row[col]) if pd.notna(row[col]) else ''
+            linha.append(valor)
+        dados.append(linha)
+    
+    # Criar tabela
+    # Larguras proporcionais (em pontos)
+    larguras = [1.2*cm, 4*cm, 2.5*cm, 3*cm, 3*cm, 4*cm, 4*cm]
+    # Ajustar ao número real de colunas
+    larguras_ajustadas = larguras[:len(colunas_presentes)]
+    
+    tabela = Table(dados, colWidths=larguras_ajustadas, repeatRows=1)
+    estilo_tabela = TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0a0e1a')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('FONTSIZE', (0, 1), (-1, -1), 7),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ])
+    tabela.setStyle(estilo_tabela)
+    elementos.append(tabela)
+    
+    # Construir PDF
+    doc.build(elementos)
+    return pdf_path
 
 # ====================== CARREGAR IMAGENS ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
@@ -511,7 +535,7 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO COM PDF ======================
+# ====================== HISTÓRICO COM PDF (REPORTLAB) ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
@@ -524,7 +548,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         # 1. PDF completo
         st.markdown("#### 🔹 Histórico Geral")
         if st.button("📑 Gerar PDF do Histórico Completo", key="pdf_all"):
-            caminho_pdf = gerar_pdf(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
+            caminho_pdf = gerar_pdf_reportlab(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
             if caminho_pdf:
                 with open(caminho_pdf, "rb") as f:
                     pdf_data = f.read()
@@ -547,7 +571,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 df_setor = df[df['setor_destino'] == setor]
                 if not df_setor.empty:
                     if st.button(f"🏥 {setor} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor}"):
-                        caminho_pdf = gerar_pdf(df_setor, f"RELATÓRIO - SETOR {setor}")
+                        caminho_pdf = gerar_pdf_reportlab(df_setor, f"RELATÓRIO - SETOR {setor}")
                         if caminho_pdf:
                             with open(caminho_pdf, "rb") as f:
                                 pdf_data = f.read()
@@ -573,7 +597,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 df_empresa = df[df['empresa'] == empresa_selecionada]
                 st.write(f"📌 **{len(df_empresa)} registros** para a empresa **{empresa_selecionada}**")
                 if st.button(f"📑 Gerar PDF para {empresa_selecionada}", key="pdf_empresa"):
-                    caminho_pdf = gerar_pdf(df_empresa, f"RELATÓRIO - EMPRESA {empresa_selecionada}")
+                    caminho_pdf = gerar_pdf_reportlab(df_empresa, f"RELATÓRIO - EMPRESA {empresa_selecionada}")
                     if caminho_pdf:
                         with open(caminho_pdf, "rb") as f:
                             pdf_data = f.read()
@@ -589,7 +613,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # ========== SEÇÃO DE EXCLUSÃO (mantida) ==========
+        # ========== SEÇÃO DE EXCLUSÃO ==========
         st.markdown("### 🗑️ Exclusão de Registros")
         st.markdown("#### Selecione os registros que deseja excluir:")
         
