@@ -45,12 +45,6 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
     
-    [data-testid="stSidebar"] [data-testid="stImage"] {
-        margin-bottom: 20px;
-        padding: 20px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
     .sidebar-header {
         text-align: center;
         padding: 20px;
@@ -67,37 +61,7 @@ st.markdown("""
         letter-spacing: 1px;
     }
     
-    .sidebar-subtitle {
-        font-size: 12px;
-        color: #64748b;
-        text-align: center;
-        margin-top: 5px;
-    }
-    
-    /* Menu items */
-    .nav-item {
-        padding: 12px 16px;
-        margin: 4px 12px;
-        border-radius: 10px;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        color: #94a3b8;
-        font-weight: 500;
-    }
-    
-    .nav-item:hover {
-        background: linear-gradient(90deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-        color: #e2e8f0;
-        transform: translateX(5px);
-    }
-    
-    .nav-item-active {
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        color: white;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    }
-    
-    /* ========== CABEÇALHO ADMIN ========== */
+    /* ========== CABEÇALHO ========== */
     .admin-header {
         background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(13, 17, 23, 0.95));
         backdrop-filter: blur(10px);
@@ -118,7 +82,7 @@ st.markdown("""
         box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
     }
     
-    /* ========== CARDS ADMIN ========== */
+    /* ========== CARDS ========== */
     .admin-card {
         background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(13, 17, 23, 0.8));
         backdrop-filter: blur(10px);
@@ -131,13 +95,12 @@ st.markdown("""
     .admin-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        border-color: rgba(102, 126, 234, 0.3);
     }
     
     .card-title {
-        font-size: 14px;
+        font-size: 13px;
         text-transform: uppercase;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         color: #64748b;
         margin-bottom: 10px;
     }
@@ -150,12 +113,7 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
     }
     
-    .card-icon {
-        font-size: 40px;
-        opacity: 0.5;
-    }
-    
-    /* ========== BOTÕES ADMIN ========== */
+    /* ========== BOTÕES ========== */
     .stButton > button {
         border-radius: 10px;
         font-weight: 600;
@@ -178,14 +136,7 @@ st.markdown("""
         color: white;
     }
     
-    .stButton > button[key="login_btn"] {
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        color: white;
-        font-size: 16px;
-        padding: 12px;
-    }
-    
-    /* ========== INPUTS ADMIN ========== */
+    /* ========== INPUTS ========== */
     .stTextInput > div > div > input,
     .stSelectbox > div > div,
     .stNumberInput > div > div > input {
@@ -200,7 +151,7 @@ st.markdown("""
         box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
     }
     
-    /* ========== EXPANDER ADMIN ========== */
+    /* ========== EXPANDER ========== */
     .streamlit-expanderHeader {
         background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(13, 17, 23, 0.9));
         border-radius: 12px;
@@ -208,11 +159,7 @@ st.markdown("""
         font-weight: 600;
     }
     
-    .streamlit-expanderHeader:hover {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
-    }
-    
-    /* ========== TABS ADMIN ========== */
+    /* ========== TABS ========== */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background: rgba(15, 23, 42, 0.5);
@@ -232,114 +179,60 @@ st.markdown("""
         color: white;
     }
     
-    /* ========== DATAFRAME ADMIN ========== */
-    .stDataFrame {
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    
-    .dataframe {
-        background: rgba(15, 23, 42, 0.8);
-    }
-    
-    /* ========== ALERTAS ========== */
-    .stAlert {
-        border-radius: 10px;
-        border-left: 4px solid #667eea;
-        background: rgba(15, 23, 42, 0.9);
-    }
-    
-    /* ========== MÉTRICAS ========== */
-    [data-testid="stMetric"] {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(13, 17, 23, 0.8));
+    /* ========== SEARCH CONTAINER ========== */
+    .search-container {
+        background: rgba(15, 23, 42, 0.6);
         border-radius: 12px;
         padding: 15px;
+        margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.05);
     }
     
-    [data-testid="stMetricLabel"] {
-        color: #64748b;
-        font-weight: 600;
-    }
-    
-    [data-testid="stMetricValue"] {
-        color: #e2e8f0;
-        font-weight: 800;
-    }
-    
-    /* ========== DIVIDERS ========== */
-    hr {
-        border-color: rgba(255, 255, 255, 0.05);
-        margin: 20px 0;
-    }
-    
-    /* ========== SEARCH BOX ========== */
-    .search-box {
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
-        padding: 5px 15px;
+    /* ========== RESULTADOS ========== */
+    .results-count {
+        background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR ADMIN ======================
-# Logo
+# ====================== SIDEBAR ======================
 if IMAGEM_SIDEBAR:
     st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
             <div class="sidebar-title">🏛️ ACCESS GATE</div>
-            <div class="sidebar-subtitle">SISTEMA ADMINISTRATIVO</div>
         </div>
     """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 
-# Menu Admin
-st.sidebar.markdown("""
-    <div style='padding: 0 12px;'>
-        <div style='color: #64748b; font-size: 12px; letter-spacing: 2px; margin-bottom: 15px;'>MENU PRINCIPAL</div>
-    </div>
-""", unsafe_allow_html=True)
-
-menu_items = [
-    ("🏠", "Dashboard", "dashboard"),
-    ("👥", "Colaboradores", "colaboradores"),
-    ("🔧", "Prestadores", "prestadores"),
-    ("🕒", "Histórico", "historico"),
-    ("⚙️", "Configurações", "configuracoes")
-]
-
-for icon, label, key in menu_items:
-    st.sidebar.markdown(f"""
-        <div class="nav-item">
-            {icon} {label}
-        </div>
-    """, unsafe_allow_html=True)
+# Menu com ícones realistas
+st.sidebar.markdown("### 📋 MENU")
+st.sidebar.markdown("• 🏠 **Dashboard**")
+st.sidebar.markdown("• 👤 **Colaboradores**")
+st.sidebar.markdown("• 🔧 **Prestadores**")
+st.sidebar.markdown("• 📅 **Histórico**")
+st.sidebar.markdown("• ⚙️ **Configurações**")
 
 st.sidebar.markdown("---")
-
-# Info Admin
-st.sidebar.markdown("""
-    <div style='padding: 20px 16px;'>
-        <div style='background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1)); 
-                    border-radius: 12px; padding: 15px;'>
-            <div style='color: #667eea; font-size: 12px; margin-bottom: 10px;'>📊 SISTEMA</div>
-            <div style='color: #94a3b8; font-size: 11px;'>Versão: 2.0.0</div>
-            <div style='color: #10b981; font-size: 11px;'>● Online</div>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+st.sidebar.markdown("### ℹ️ INFO")
+st.sidebar.markdown(f"• 👑 **Perfil:** {st.session_state.perfil if 'perfil' in st.session_state else '---'}")
+st.sidebar.markdown("• 🟢 **Status:** Online")
+st.sidebar.markdown("• 📦 **Versão:** 2.0.0")
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
     st.session_state.logado = False
 if "perfil" not in st.session_state:
     st.session_state.perfil = ""
-if "search_term" not in st.session_state:
-    st.session_state.search_term = ""
+if "search_term_exclusao" not in st.session_state:
+    st.session_state.search_term_exclusao = ""
 
 # ====================== LOGIN ======================
 if not st.session_state.logado:
@@ -401,7 +294,7 @@ if not st.session_state.logado:
             st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# ====================== HEADER ADMIN ======================
+# ====================== HEADER ======================
 st.markdown(f"""
     <div class="admin-header">
         <div style='display: flex; justify-content: space-between; align-items: center;'>
@@ -421,14 +314,13 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Botão sair
 col1, col2, col3 = st.columns([8, 1, 1])
 with col3:
     if st.button("🚪 SAIR", key="sair_final", use_container_width=True):
         st.session_state.logado = False
         st.rerun()
 
-# ====================== DASHBOARD ADMIN ======================
+# ====================== DASHBOARD ======================
 pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 total_presentes = len(pessoas_presentes)
 total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
@@ -436,53 +328,53 @@ total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
-    st.markdown("""
+    st.markdown(f"""
         <div class="admin-card">
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
                     <div class="card-title">📍 PRESENTES</div>
-                    <div class="card-value">""" + str(total_presentes) + """</div>
+                    <div class="card-value">{total_presentes}</div>
                 </div>
-                <div class="card-icon">👥</div>
+                <div style='font-size: 35px;'>👥</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown("""
+    st.markdown(f"""
         <div class="admin-card">
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
                     <div class="card-title">📋 CADASTRADOS</div>
-                    <div class="card-value">""" + str(total_colaboradores) + """</div>
+                    <div class="card-value">{total_colaboradores}</div>
                 </div>
-                <div class="card-icon">📊</div>
+                <div style='font-size: 35px;'>📊</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
 with col3:
-    st.markdown("""
+    st.markdown(f"""
         <div class="admin-card">
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
                     <div class="card-title">🏥 SETORES</div>
                     <div class="card-value">11</div>
                 </div>
-                <div class="card-icon">🏛️</div>
+                <div style='font-size: 35px;'>🏛️</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
 with col4:
-    st.markdown("""
+    st.markdown(f"""
         <div class="admin-card">
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
                     <div class="card-title">🕒 HOJE</div>
                     <div class="card-value">---</div>
                 </div>
-                <div class="card-icon">📅</div>
+                <div style='font-size: 35px;'>📅</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -490,13 +382,13 @@ with col4:
 st.markdown("---")
 
 # ====================== CADASTRO ======================
-st.markdown("### ➕ Cadastro de Nova Pessoa")
+st.markdown("### ✚ Cadastro de Nova Pessoa")
 
 with st.expander("📋 Formulário de Cadastro", expanded=True):
     col_a, col_b, col_c = st.columns(3)
-    novo_cpf = col_a.text_input("CPF *", key="novo_cpf", placeholder="000.000.000-00")
-    novo_nome = col_b.text_input("Nome Completo *", key="novo_nome", placeholder="Digite o nome completo")
-    novo_empresa = col_c.text_input("Empresa", key="novo_empresa", placeholder="Empresa (opcional)")
+    novo_cpf = col_a.text_input("📄 CPF *", key="novo_cpf", placeholder="000.000.000-00")
+    novo_nome = col_b.text_input("👤 Nome Completo *", key="novo_nome", placeholder="Digite o nome completo")
+    novo_empresa = col_c.text_input("🏢 Empresa", key="novo_empresa", placeholder="Empresa (opcional)")
     
     if st.button("💾 Salvar Cadastro", key="salvar_cadastro", type="primary"):
         if novo_cpf and novo_nome:
@@ -519,16 +411,16 @@ st.markdown("---")
 # ====================== REGISTRO DE ENTRADA ======================
 st.markdown("### 📋 Registrar Movimentação")
 
-tipo = st.radio("Tipo de Pessoa:", ["Colaborador Interno", "Prestador de Serviço"], horizontal=True)
+tipo = st.radio("👥 Tipo de Pessoa:", ["👨‍💼 Colaborador Interno", "🔧 Prestador de Serviço"], horizontal=True)
 
-if tipo == "Colaborador Interno":
-    destinos = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Laboratório", "Farmacia"]
+if tipo == "👨‍💼 Colaborador Interno":
+    destinos = ["🏥 C.C", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "🧪 Laboratório", "💊 Farmacia"]
 else:
-    destinos = ["C.C", "GRSA", "Brasanitas"]
+    destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
 c1, c2, c3 = st.columns([2, 2, 1])
-cpf_input = c1.text_input("CPF:", key="cpf_entrada", placeholder="Digite o CPF")
-setor_escolhido = c2.selectbox("Destino:", destinos, key="destino")
+cpf_input = c1.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF")
+setor_escolhido = c2.selectbox("📍 Destino:", destinos, key="destino")
 
 if c3.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
     if cpf_input:
@@ -573,7 +465,7 @@ if dados:
                     st.rerun()
                 st.markdown("<hr style='margin: 5px 0; opacity: 0.1;'>", unsafe_allow_html=True)
 
-    for i, setor in enumerate(["C.C", "GRSA", "Brasanitas"], 1):
+    for i, setor in enumerate(["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"], 1):
         with tabs[i]:
             pessoas_setor = [r for r in dados if r.get('setor_destino') == setor]
             if pessoas_setor:
@@ -617,7 +509,7 @@ with st.expander("🕒 Histórico Completo de Movimentações"):
     else:
         st.info("📭 Nenhum registro encontrado")
 
-# ====================== GESTÃO DE CADASTROS (COM LUPA) ======================
+# ====================== GESTÃO DE CADASTROS COM LUPA INTEGRADA ======================
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
         
@@ -625,75 +517,112 @@ if st.session_state.perfil == "ADMIN":
         
         if todos_colaboradores:
             
-            st.markdown("### 🔍 Pesquisar Cadastro")
+            st.markdown("### 🔍 Pesquisar e Excluir Cadastro")
             
-            col_search1, col_search2 = st.columns([5, 1])
+            # Container para pesquisa e resultados lado a lado
+            col_search, col_results = st.columns([1, 1])
             
-            with col_search1:
+            with col_search:
+                st.markdown("#### 🔎 Barra de Pesquisa")
                 search_term = st.text_input(
-                    "🔎",
-                    placeholder="Digite o nome, CPF ou empresa para pesquisar...",
-                    key="search_exclusao",
+                    "🔍",
+                    placeholder="Digite nome, CPF ou empresa...",
+                    key="search_term_exclusao",
                     label_visibility="collapsed"
                 )
-            
-            with col_search2:
-                if st.button("🗑️ Limpar", key="clear_search", use_container_width=True):
-                    st.session_state.search_term = ""
-                    st.rerun()
-            
-            if search_term:
-                search_lower = search_term.lower()
-                resultados_filtrados = [
-                    p for p in todos_colaboradores 
-                    if search_lower in p['nome'].lower() 
-                    or search_lower in p['cpf'].lower() 
-                    or search_lower in p.get('empresa', '').lower()
-                ]
-                st.info(f"🔍 **{len(resultados_filtrados)}** resultado(s) encontrado(s) para: **{search_term}**")
-            else:
-                resultados_filtrados = todos_colaboradores
-                st.info(f"📋 Total de cadastros: **{len(resultados_filtrados)}** pessoas")
-            
-            if resultados_filtrados:
-                df_cadastros = pd.DataFrame(resultados_filtrados)
-                st.dataframe(df_cadastros, use_container_width=True, height=300)
                 
+                if search_term:
+                    search_lower = search_term.lower()
+                    resultados_filtrados = [
+                        p for p in todos_colaboradores 
+                        if search_lower in p['nome'].lower() 
+                        or search_lower in p['cpf'].lower() 
+                        or search_lower in p.get('empresa', '').lower()
+                    ]
+                    st.markdown(f"""
+                        <div class="results-count">
+                            📊 {len(resultados_filtrados)} resultado(s) encontrado(s) para: <strong>{search_term}</strong>
+                        </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    resultados_filtrados = todos_colaboradores
+                    st.markdown(f"""
+                        <div class="results-count">
+                            📋 Total de cadastros: <strong>{len(resultados_filtrados)}</strong> pessoas
+                        </div>
+                    """, unsafe_allow_html=True)
+            
+            with col_results:
+                st.markdown("#### 👤 Selecione para Excluir")
+                
+                if resultados_filtrados:
+                    # Lista para o selectbox
+                    lista_nomes = [
+                        f"{p['nome']} - CPF: {p['cpf']} {f'| Emp: {p["empresa"]}' if p.get('empresa') else ''}" 
+                        for p in resultados_filtrados
+                    ]
+                    
+                    # Selectbox com os resultados
+                    selecionado = st.selectbox(
+                        "👤 Pessoa selecionada:",
+                        lista_nomes,
+                        key="select_excluir",
+                        label_visibility="collapsed"
+                    )
+                    
+                    # Encontrar a pessoa selecionada
+                    idx_selecionado = lista_nomes.index(selecionado)
+                    pessoa_selecionada = resultados_filtrados[idx_selecionado]
+                    
+                    # Card com informações da pessoa selecionada
+                    st.markdown(f"""
+                        <div style='
+                            background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+                            border-radius: 10px;
+                            padding: 12px;
+                            margin-top: 10px;
+                            border-left: 3px solid #667eea;
+                        '>
+                            <div style='font-size: 13px; color: #94a3b8;'>PESSOA SELECIONADA</div>
+                            <div style='font-weight: 700; margin-top: 5px;'>👤 {pessoa_selecionada['nome']}</div>
+                            <div style='font-size: 12px; color: #64748b;'>📄 CPF: {pessoa_selecionada['cpf']}</div>
+                            {f"<div style='font-size: 12px; color: #64748b;'>🏢 Empresa: {pessoa_selecionada['empresa']}</div>" if pessoa_selecionada.get('empresa') else ""}
+                        </div>
+                    """, unsafe_allow_html=True)
+                    
+                else:
+                    st.warning(f"⚠️ Nenhum resultado encontrado para: {search_term}")
+                    if st.button("🔄 Mostrar todos", key="show_all"):
+                        st.session_state.search_term_exclusao = ""
+                        st.rerun()
+            
+            # Área de exclusão (abaixo das duas colunas)
+            if resultados_filtrados and 'pessoa_selecionada' in locals():
                 st.markdown("---")
-                st.markdown("### 🗑️ Excluir Cadastro")
-                
-                lista_nomes = [f"{p['nome']} - CPF: {p['cpf']} {f'- Emp: {p["empresa"]}' if p.get('empresa') else ''}" for p in resultados_filtrados]
-                
-                selecionado = st.selectbox(
-                    "Selecione a pessoa para excluir:", 
-                    lista_nomes,
-                    key="select_excluir"
-                )
-                
-                pessoa_selecionada = resultados_filtrados[lista_nomes.index(selecionado)]
-                st.warning(f"⚠️ **Pessoa selecionada:** {pessoa_selecionada['nome']} (CPF: {pessoa_selecionada['cpf']})")
+                st.markdown("#### 🗑️ Confirmar Exclusão")
                 
                 col_confirm1, col_confirm2 = st.columns(2)
-                with col_confirm1:
-                    confirmar = st.checkbox("✅ Confirmar exclusão permanente")
-                with col_confirm2:
-                    with st.popover("🗑️ Clique para excluir", use_container_width=True):
-                        st.error("⚠️ **ATENÇÃO!** Esta ação é irreversível!")
-                        if st.button("⚠️ SIM, EXCLUIR PERMANENTEMENTE", key="del_cad", use_container_width=True):
-                            try:
-                                supabase.table("Pessoas").delete().eq("cpf", pessoa_selecionada['cpf']).execute()
-                                st.success(f"✅ Cadastro excluído com sucesso!")
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"❌ Erro ao excluir: {e}")
                 
-                if not confirmar:
-                    st.info("🔒 Marque a confirmação para habilitar a exclusão")
-            
-            else:
-                st.warning(f"⚠️ Nenhum resultado encontrado para: **{search_term}**")
-                if st.button("🔄 Mostrar todos os cadastros", key="show_all"):
-                    st.rerun()
+                with col_confirm1:
+                    confirmar = st.checkbox("✅ Confirmo que desejo excluir este cadastro PERMANENTEMENTE")
+                
+                with col_confirm2:
+                    if confirmar:
+                        with st.popover("⚠️ CLIQUE PARA EXCLUIR", use_container_width=True):
+                            st.error("🚨 **ATENÇÃO!** Esta ação é IRREVERSÍVEL!")
+                            st.write(f"Você está prestes a excluir:")
+                            st.write(f"**{pessoa_selecionada['nome']}**")
+                            st.write(f"CPF: {pessoa_selecionada['cpf']}")
+                            st.markdown("---")
+                            if st.button("🗑️ SIM, EXCLUIR PERMANENTEMENTE", key="del_cad", use_container_width=True):
+                                try:
+                                    supabase.table("Pessoas").delete().eq("cpf", pessoa_selecionada['cpf']).execute()
+                                    st.success(f"✅ Cadastro de **{pessoa_selecionada['nome']}** excluído com sucesso!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"❌ Erro ao excluir: {e}")
+                    else:
+                        st.info("🔒 **Marque a confirmação** para habilitar a exclusão")
         
         else:
             st.info("📭 Nenhum cadastro encontrado no sistema")
