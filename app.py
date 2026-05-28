@@ -25,11 +25,11 @@ def gerar_html_impressao(df, titulo):
     colunas_presentes = [c for c in colunas if c in df.columns]
     linhas_html = ""
     for _, row in df.iterrows():
-        linhas_html += "<tr>"
+        linhas_html += "<table>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</tr>"
+        linhas_html += "</table>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -90,7 +90,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <tr>{cabecalho_html}</tr>
+                <td>{cabecalho_html}</tr>
             </thead>
             <tbody>
                 {linhas_html}
@@ -168,6 +168,23 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
     letter-spacing: 3px;
     text-transform: uppercase;
+}
+
+/* Menu interativo */
+.nav-link {
+    display: block;
+    padding: 8px 12px;
+    margin: 5px 0;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #00BFFF;
+    font-weight: 600;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+.nav-link:hover {
+    background: rgba(0, 191, 255, 0.2);
+    transform: translateX(5px);
 }
 
 /* ========== CABEÇALHO ========== */
@@ -344,10 +361,15 @@ h1, h2, h3, h4, h5, h6 {
 hr {
     border-color: rgba(0, 191, 255, 0.3);
 }
+
+/* Rolar suave */
+html {
+    scroll-behavior: smooth;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR ======================
+# ====================== SIDEBAR COM MENU INTERATIVO ======================
 if IMAGEM_SIDEBAR:
     st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
 else:
@@ -367,11 +389,12 @@ st.sidebar.markdown("• 🗄️ **BANCO DE DADOS:** SEGURO")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📋 MENU")
-st.sidebar.markdown("• 🏠 **Dashboard**")
-st.sidebar.markdown("• 👤 **Colaboradores**")
-st.sidebar.markdown("• 🔧 **Prestadores**")
-st.sidebar.markdown("• 📅 **Histórico**")
-st.sidebar.markdown("• ⚙️ **Configurações**")
+# Menu interativo com links âncora
+st.sidebar.markdown('<a href="#dashboard" class="nav-link">🏠 Dashboard</a>', unsafe_allow_html=True)
+st.sidebar.markdown('<a href="#cadastro" class="nav-link">👤 Colaboradores</a>', unsafe_allow_html=True)
+st.sidebar.markdown('<a href="#prestadores" class="nav-link">🔧 Prestadores</a>', unsafe_allow_html=True)
+st.sidebar.markdown('<a href="#historico" class="nav-link">📅 Histórico</a>', unsafe_allow_html=True)
+st.sidebar.markdown('<a href="#configuracoes" class="nav-link">⚙️ Configurações</a>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ℹ️ INFO")
@@ -396,9 +419,8 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN COM FORMULÁRIO (ENTER FUNCIONA) ======================
+# ====================== TELA DE LOGIN (com Enter) ======================
 if not st.session_state.logado:
-    # HTML/CSS para a caixa de login
     st.markdown("""
     <style>
     .login-container {
@@ -491,13 +513,11 @@ if not st.session_state.logado:
             </div>
     """, unsafe_allow_html=True)
     
-    # FORMULÁRIO PARA CAPTURAR ENTER
     with st.form("login_form"):
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             senha = st.text_input("", type="password", key="senha_login", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
             submitted = st.form_submit_button("🔓 ACESSAR SISTEMA", use_container_width=True)
-            
             if submitted:
                 if senha == "fgxv4VP0/*":
                     st.session_state.logado = True
@@ -545,7 +565,9 @@ with col3:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== DASHBOARD ======================
+# ====================== DASHBOARD (com âncora) ======================
+st.markdown('<span id="dashboard"></span>', unsafe_allow_html=True)
+st.markdown("---")
 pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 total_presentes = len(pessoas_presentes)
 total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
@@ -588,9 +610,9 @@ with col4:
         </div>
     """, unsafe_allow_html=True)
 
-st.markdown("---")
-
 # ====================== CADASTRO ======================
+st.markdown('<span id="cadastro"></span>', unsafe_allow_html=True)
+st.markdown("---")
 st.markdown("### ✚ Cadastro de Nova Pessoa")
 with st.expander("📋 Formulário de Cadastro", expanded=True):
     col_a, col_b, col_c = st.columns(3)
@@ -613,9 +635,9 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
         else:
             st.error("❌ CPF e Nome são obrigatórios.")
 
+# ====================== PRESTADORES (Registro de Movimentação) ======================
+st.markdown('<span id="prestadores"></span>', unsafe_allow_html=True)
 st.markdown("---")
-
-# ====================== REGISTRO DE ENTRADA ======================
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
 
@@ -663,9 +685,8 @@ if st.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
     else:
         st.warning("⚠️ Confirme o CPF antes de registrar a entrada.")
 
-st.markdown("---")
-
 # ====================== PESSOAS PRESENTES ======================
+st.markdown("---")
 st.markdown("### 📍 Pessoas Presentes no Hospital")
 
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
@@ -747,9 +768,9 @@ if dados:
 else:
     st.info("🏢 Nenhuma pessoa presente no momento")
 
+# ====================== HISTÓRICO ======================
+st.markdown('<span id="historico"></span>', unsafe_allow_html=True)
 st.markdown("---")
-
-# ====================== HISTÓRICO COMPLETO ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
@@ -941,6 +962,8 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.info("📭 Nenhum registro encontrado no histórico.")
 
 # ====================== GESTÃO DE CADASTROS ======================
+st.markdown('<span id="configuracoes"></span>', unsafe_allow_html=True)
+st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
         todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
@@ -987,6 +1010,7 @@ if st.session_state.perfil == "ADMIN":
         else:
             st.info("Nenhum cadastro encontrado")
 
+# ====================== FOOTER ======================
 st.markdown("---")
 st.markdown("""
     <div class="footer">
