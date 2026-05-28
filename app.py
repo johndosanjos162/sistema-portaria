@@ -581,7 +581,9 @@ if dados:
 
     for i, setor in enumerate(["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"], 1):
         with tabs[i]:
-            pessoas_setor = [r for r in dados if r['setor_destino'] == setor]
+            # Normaliza o nome do setor para comparação: remove emojis e espaços extras
+            setor_normalizado = setor.split()[-1] if ' ' in setor else setor
+            pessoas_setor = [r for r in dados if setor_normalizado in r['setor_destino']]
             if pessoas_setor:
                 for p in pessoas_setor:
                     col1, col2, col3, col4 = st.columns([4,3,2,2])
@@ -599,7 +601,7 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO COM PDFs PARA CADA SETOR ======================
+# ====================== HISTÓRICO COM PDFs CORRIGIDOS PARA SETORES ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
@@ -621,49 +623,67 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # --- PDFs separados por setor (C.C, GRSA, Brasanitas) ---
+        # --- PDFs separados por setor (CORRIGIDO) ---
         st.markdown("#### 🔹 Relatório por Setor (PDF separado para cada setor)")
+        
+        # Identificar os valores reais do campo setor_destino
+        setores_unicos = df['setor_destino'].unique()
+        # Mapear os nomes amigáveis para os valores reais
+        setores_desejados = ["C.C", "GRSA", "Brasanitas"]
+        mapa_setores = {}
+        for setor in setores_desejados:
+            encontrado = False
+            for valor in setores_unicos:
+                if setor.lower() in str(valor).lower():
+                    mapa_setores[setor] = valor
+                    encontrado = True
+                    break
+            if not encontrado:
+                mapa_setores[setor] = setor  # fallback
         
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            setor = "C.C"
-            df_setor = df[df['setor_destino'] == setor]
+            setor_nome = "C.C"
+            valor_real = mapa_setores[setor_nome]
+            df_setor = df[df['setor_destino'] == valor_real]
             if not df_setor.empty:
-                if st.button(f"🏥 {setor} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor}"):
-                    html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor}")
+                if st.button(f"🏥 {setor_nome} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor_nome}"):
+                    html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor_nome}")
                     if html:
                         b64 = base64.b64encode(html.encode()).decode()
-                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor}</a>'
+                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor_nome}</a>'
                         st.markdown(href, unsafe_allow_html=True)
             else:
-                st.button(f"🏥 {setor} (vazio)", disabled=True, key=f"btn_{setor}_pdf")
+                st.button(f"🏥 {setor_nome} (vazio)", disabled=True, key=f"btn_{setor_nome}_pdf")
         
         with col2:
-            setor = "GRSA"
-            df_setor = df[df['setor_destino'] == setor]
+            setor_nome = "GRSA"
+            valor_real = mapa_setores[setor_nome]
+            df_setor = df[df['setor_destino'] == valor_real]
             if not df_setor.empty:
-                if st.button(f"🔧 {setor} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor}"):
-                    html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor}")
+                if st.button(f"🔧 {setor_nome} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor_nome}"):
+                    html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor_nome}")
                     if html:
                         b64 = base64.b64encode(html.encode()).decode()
-                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor}</a>'
+                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor_nome}</a>'
                         st.markdown(href, unsafe_allow_html=True)
             else:
-                st.button(f"🔧 {setor} (vazio)", disabled=True, key=f"btn_{setor}_pdf")
+                st.button(f"🔧 {setor_nome} (vazio)", disabled=True, key=f"btn_{setor_nome}_pdf")
         
         with col3:
-            setor = "Brasanitas"
-            df_setor = df[df['setor_destino'] == setor]
+            setor_nome = "Brasanitas"
+            valor_real = mapa_setores[setor_nome]
+            df_setor = df[df['setor_destino'] == valor_real]
             if not df_setor.empty:
-                if st.button(f"🏭 {setor} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor}"):
-                    html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor}")
+                if st.button(f"🏭 {setor_nome} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor_nome}"):
+                    html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor_nome}")
                     if html:
                         b64 = base64.b64encode(html.encode()).decode()
-                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor}</a>'
+                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor_nome}</a>'
                         st.markdown(href, unsafe_allow_html=True)
             else:
-                st.button(f"🏭 {setor} (vazio)", disabled=True, key=f"btn_{setor}_pdf")
+                st.button(f"🏭 {setor_nome} (vazio)", disabled=True, key=f"btn_{setor_nome}_pdf")
         
         st.markdown("---")
         
