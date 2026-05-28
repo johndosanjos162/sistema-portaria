@@ -104,7 +104,7 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
-# ====================== CARREGAR IMAGENS ======================
+# ====================== CARREGAR IMAGENS (OPCIONAL) ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
         return Image.open(nome_arquivo)
@@ -115,49 +115,54 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN MILITAR ESTÁVEL ======================
+# ====================== DESIGN LEVE E OTIMIZADO ======================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap');
 
-/* ANIMAÇÕES LEVES */
+/* ANIMAÇÕES SUAVES E LEVES */
 @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.3); }
-    70% { box-shadow: 0 0 0 10px rgba(0, 255, 255, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(0, 180, 255, 0.3); }
+    70% { box-shadow: 0 0 0 8px rgba(0, 180, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 180, 255, 0); }
 }
-@keyframes rotate {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-4px); }
+    100% { transform: translateY(0px); }
+}
+@keyframes scan {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
 }
 
-/* FUNDO */
+/* FUNDO PRINCIPAL - GRADIENTE SUAVE */
 .stApp {
-    background: linear-gradient(145deg, #030712 0%, #0a0f1a 100%);
+    background: linear-gradient(135deg, #050a14 0%, #0a121f 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
 }
 
-/* SIDEBAR */
+/* SIDEBAR - SEM ELEMENTOS FIXOS PESADOS */
 [data-testid="stSidebar"] {
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(8, 15, 25, 0.9);
     backdrop-filter: blur(8px);
-    border-right: 1px solid #0ff;
+    border-right: 1px solid rgba(0, 180, 255, 0.3);
 }
 .sidebar-header {
     text-align: center;
     padding: 20px 10px;
-    border-bottom: 1px solid #0ff;
+    border-bottom: 1px solid rgba(0, 180, 255, 0.3);
 }
 .sidebar-title {
-    font-size: 22px;
-    font-weight: 900;
-    background: linear-gradient(135deg, #0ff, #0f0);
+    font-size: 20px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #0cf, #0a0);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 .info-item {
     margin-bottom: 10px;
-    color: #0ff;
+    color: #8ab3cf;
     font-size: 12px;
     display: flex;
     gap: 8px;
@@ -165,44 +170,44 @@ st.markdown("""
 
 /* CABEÇALHO */
 .admin-header {
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(8px);
-    border-radius: 15px;
+    background: rgba(8, 15, 25, 0.7);
+    backdrop-filter: blur(5px);
+    border-radius: 12px;
     padding: 12px 20px;
     margin-bottom: 20px;
-    border: 1px solid #0ff;
+    border: 1px solid rgba(0, 180, 255, 0.3);
 }
 .badge-admin {
-    background: linear-gradient(135deg, #0ff, #0f0);
+    background: linear-gradient(135deg, #0cf, #0a0);
     padding: 4px 15px;
     border-radius: 20px;
     font-weight: 800;
     font-size: 11px;
-    color: black;
+    color: #000;
 }
 
 /* CARDS */
 .admin-card {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(6px);
-    border-radius: 15px;
+    background: rgba(8, 15, 25, 0.6);
+    backdrop-filter: blur(4px);
+    border-radius: 12px;
     padding: 15px;
-    border: 1px solid #0ff;
+    border: 1px solid rgba(0, 180, 255, 0.2);
     transition: 0.2s;
 }
 .admin-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 0 12px #0ff;
+    box-shadow: 0 5px 15px rgba(0, 180, 255, 0.1);
 }
 .card-title {
     font-size: 10px;
     letter-spacing: 1px;
-    color: #0ff;
+    color: #8ab3cf;
 }
 .card-value {
     font-size: 28px;
-    font-weight: 900;
-    background: linear-gradient(135deg, #fff, #0ff);
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, #0cf);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -212,14 +217,14 @@ st.markdown("""
     border-radius: 40px;
     font-weight: 700;
     font-family: 'Orbitron', monospace;
-    background: linear-gradient(90deg, #0ff, #0a0);
-    color: black;
-    transition: 0.2s;
+    background: linear-gradient(90deg, #0cf, #0a0);
+    color: #000;
     border: none;
+    transition: 0.2s;
 }
 .stButton > button:hover, .stForm button:hover {
     transform: scale(1.01);
-    box-shadow: 0 0 12px #0ff;
+    box-shadow: 0 0 10px #0cf;
 }
 .stButton > button[key="sair_final"] {
     background: linear-gradient(90deg, #f44, #a00);
@@ -230,28 +235,28 @@ st.markdown("""
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
 .stNumberInput > div > div > input {
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid #0ff;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid #0cf;
     border-radius: 12px;
-    color: #0ff;
+    color: #0cf;
     font-family: 'Share Tech Mono', monospace;
     padding: 8px;
 }
 .stTextInput > div > div > input:focus {
     border-color: #0f0;
-    box-shadow: 0 0 8px #0ff;
+    box-shadow: 0 0 5px #0cf;
 }
 
 /* EXPANDER, TABS */
 .streamlit-expanderHeader {
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid #0ff;
+    background: rgba(8, 15, 25, 0.8);
+    border: 1px solid rgba(0, 180, 255, 0.3);
     border-radius: 12px;
-    color: #0ff;
+    color: #0cf;
 }
 .stTabs [data-baseweb="tab-list"] {
     gap: 5px;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.3);
     padding: 5px;
     border-radius: 30px;
 }
@@ -262,47 +267,31 @@ st.markdown("""
     color: #ccc;
 }
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, #0ff, #0f0);
-    color: black;
+    background: linear-gradient(135deg, #0cf, #0a0);
+    color: #000;
 }
 .stCheckbox label {
-    color: #0ff;
+    color: #8ab3cf;
 }
 .stDataFrame {
-    background: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.3);
     border-radius: 10px;
-    border: 1px solid #0ff;
+    border: 1px solid rgba(0, 180, 255, 0.2);
 }
 .footer {
     text-align: center;
     padding: 15px;
-    color: #0ff;
+    color: #6a8eae;
     font-size: 9px;
-    border-top: 1px solid rgba(0,255,255,0.2);
+    border-top: 1px solid rgba(0, 180, 255, 0.2);
     margin-top: 25px;
 }
 h1, h2, h3 {
     font-family: 'Orbitron', monospace;
-    color: #0ff;
+    color: #0cf;
 }
 hr {
-    border-color: rgba(0,255,255,0.2);
-}
-/* Estilo para o código binário */
-.binary-line {
-    font-family: 'Share Tech Mono', monospace;
-    background: rgba(0,0,0,0.7);
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    letter-spacing: 2px;
-    text-align: center;
-    margin-bottom: 15px;
-    border: 1px solid #0ff;
-    white-space: nowrap;
-    overflow-x: auto;
-    color: #0ff;
-    text-shadow: 0 0 2px #0ff;
+    border-color: rgba(0, 180, 255, 0.2);
 }
 </style>
 """, unsafe_allow_html=True)
@@ -314,25 +303,25 @@ else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
             <div class="sidebar-title">🛡️ JOHN ACESSOS</div>
-            <p style="color:#0ff; font-size:9px;">CENTRAL TÁTICA</p>
+            <p style="color:#6a8eae; font-size:9px;">CENTRAL TÁTICA</p>
         </div>
     """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚡ ESTADO OPERACIONAL")
+st.sidebar.markdown("### ⚡ ESTADO")
 st.sidebar.markdown('<div class="info-item">🟢 CFTV: ATIVO</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🤖 IA: MONITORANDO</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: 256-BIT</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">🗄️ BANCO DE DADOS: SEGURO</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🗄️ DB: SEGURO</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📡 INFORMAÇÕES")
+st.sidebar.markdown("### 📡 INFO")
 if "perfil" in st.session_state:
     st.sidebar.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 8.7</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 9.0</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -348,31 +337,25 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN ======================
+# ====================== TELA DE LOGIN OTIMIZADA ======================
 if not st.session_state.logado:
-    # Injetar HTML/JS para a linha de código binário
-    binary_html = """
-    <div id="binary-container" style="margin-bottom:15px;"></div>
+    # Linha de código binário (leve, via JS)
+    st.markdown("""
+    <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     <script>
-        function generateRandomBinary(length = 60) {
-            let binary = '';
-            for (let i = 0; i < length; i++) {
-                binary += Math.random() < 0.5 ? '0' : '1';
-            }
-            return binary;
+        function generateBinary(len=50) {
+            let bin = '';
+            for(let i=0;i<len;i++) bin += Math.random()<0.5?'0':'1';
+            return bin;
         }
         function updateBinary() {
-            const container = document.getElementById('binary-container');
-            if (container) {
-                const binaryString = generateRandomBinary(60);
-                container.innerHTML = `<div class="binary-line">${binaryString}</div>`;
-            }
+            const el = document.getElementById('binary-container');
+            if(el) el.innerHTML = `<div style="font-family: 'Share Tech Mono', monospace; background: rgba(0,0,0,0.5); padding:6px; border-radius:8px; font-size:11px; letter-spacing:2px; color:#0cf; border:1px solid #0cf; display:inline-block;">${generateBinary(60)}</div>`;
         }
-        setInterval(updateBinary, 400);
+        setInterval(updateBinary, 500);
         updateBinary();
     </script>
-    """
-    st.markdown(binary_html, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     st.markdown("""
     <style>
@@ -383,21 +366,22 @@ if not st.session_state.logado:
         min-height: 70vh;
     }
     .login-box {
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.55);
         backdrop-filter: blur(10px);
         border-radius: 30px;
         padding: 35px 25px;
-        border: 1px solid #0ff;
-        box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+        border: 1px solid rgba(0, 180, 255, 0.5);
         width: 100%;
-        max-width: 420px;
+        max-width: 400px;
         text-align: center;
+        transition: 0.3s;
+        animation: float 3s ease-in-out infinite;
     }
     .military-shield {
-        width: 90px;
-        height: 90px;
+        width: 80px;
+        height: 80px;
         margin: 0 auto 15px;
-        background: radial-gradient(circle, rgba(0,255,255,0.15), transparent);
+        background: radial-gradient(circle, rgba(0,180,255,0.2), transparent);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -406,35 +390,39 @@ if not st.session_state.logado:
         animation: pulse 2s infinite;
     }
     .military-shield span {
-        font-size: 45px;
-        filter: drop-shadow(0 0 5px #0ff);
+        font-size: 42px;
+        filter: drop-shadow(0 0 4px #0cf);
     }
     .military-shield::before {
         content: "";
         position: absolute;
-        width: 110px;
-        height: 110px;
-        border: 1px solid #0ff;
+        width: 100px;
+        height: 100px;
+        border: 1px solid #0cf;
         border-radius: 50%;
-        animation: rotate 6s linear infinite;
+        animation: spin 6s linear infinite;
+    }
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
     }
     .logo-title {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 900;
-        background: linear-gradient(135deg, #fff, #0ff);
+        background: linear-gradient(135deg, #fff, #0cf);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
     .logo-subtitle {
         font-size: 9px;
-        color: #0ff;
+        color: #0cf;
         letter-spacing: 2px;
     }
     .status-bar {
         margin-top: 20px;
         font-size: 9px;
-        color: #0ff;
-        border-top: 1px solid rgba(0,255,255,0.2);
+        color: #8ab3cf;
+        border-top: 1px solid rgba(0,180,255,0.3);
         padding-top: 10px;
     }
     .status-item {
@@ -476,9 +464,9 @@ if not st.session_state.logado:
     
     st.markdown("""
             <div class="status-bar">
-                <div class="status-item"><span class="blink"></span> CFTV ONLINE</div>
-                <div class="status-item"><span class="blink"></span> IA MONITORANDO</div>
-                <div class="status-item"><span class="blink"></span> CRIPTOGRAFIA ATIVA</div>
+                <div class="status-item"><span class="blink"></span> CFTV</div>
+                <div class="status-item"><span class="blink"></span> IA</div>
+                <div class="status-item"><span class="blink"></span> CRIPTO</div>
             </div>
         </div>
     </div>
@@ -490,12 +478,12 @@ st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #0ff, #0a0); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <span style="font-size: 20px;">🛡️</span>
+                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #0cf, #0a0); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 18px;">🛡️</span>
                 </div>
                 <div>
-                    <h1 style="margin:0; font-size: 16px;">JOHN ACESSOS - CENTRAL TÁTICA</h1>
-                    <p style="margin:0; color: #0ff; font-size: 8px;">INTELIGÊNCIA DE DEFESA</p>
+                    <h1 style="margin:0; font-size: 15px;">JOHN ACESSOS - CENTRAL TÁTICA</h1>
+                    <p style="margin:0; color: #0cf; font-size: 8px;">INTELIGÊNCIA DE DEFESA</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -521,7 +509,7 @@ with col1:
         <div class="admin-card">
             <div style="display:flex; justify-content:space-between;">
                 <div><div class="card-title">📍 PRESENTES</div><div class="card-value">{total_presentes}</div></div>
-                <div style="font-size:24px;">👥</div>
+                <div style="font-size:22px;">👥</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -530,7 +518,7 @@ with col2:
         <div class="admin-card">
             <div style="display:flex; justify-content:space-between;">
                 <div><div class="card-title">📋 CADASTRADOS</div><div class="card-value">{total_colaboradores}</div></div>
-                <div style="font-size:24px;">📊</div>
+                <div style="font-size:22px;">📊</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -539,7 +527,7 @@ with col3:
         <div class="admin-card">
             <div style="display:flex; justify-content:space-between;">
                 <div><div class="card-title">🏥 SETORES</div><div class="card-value">11</div></div>
-                <div style="font-size:24px;">🏛️</div>
+                <div style="font-size:22px;">🏛️</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -548,7 +536,7 @@ with col4:
         <div class="admin-card">
             <div style="display:flex; justify-content:space-between;">
                 <div><div class="card-title">🎥 CFTV</div><div class="card-value">24/7</div></div>
-                <div style="font-size:24px;">📹</div>
+                <div style="font-size:22px;">📹</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -922,7 +910,7 @@ if st.session_state.perfil == "ADMIN":
                     idx = lista.index(selecionado)
                     pessoa = filtrados[idx]
                     st.markdown(f"""
-                        <div style="background:rgba(0,255,255,0.1); border-radius:10px; padding:10px; border-left:3px solid #0ff;">
+                        <div style="background:rgba(0,180,255,0.1); border-radius:10px; padding:10px; border-left:3px solid #0cf;">
                             <b>👤 {pessoa['nome']}</b><br>
                             📄 CPF: {pessoa['cpf']}<br>
                             🏢 Empresa: {pessoa.get('empresa','N/A')}
