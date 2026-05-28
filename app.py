@@ -88,21 +88,30 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÃO PARA GERAR HTML PARA IMPRESSÃO/PDF ======================
+# ====================== FUNÇÃO CORRIGIDA PARA GERAR HTML PARA IMPRESSÃO/PDF ======================
 def gerar_html_impressao(df, titulo):
+    """
+    Gera um HTML completo com os dados do DataFrame para impressão/PDF.
+    Usa df.to_html() para garantir que todas as linhas sejam renderizadas.
+    """
     if df.empty:
         return None
-    colunas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
-    colunas_presentes = [c for c in colunas if c in df.columns]
-    linhas_html = ""
-    for _, row in df.iterrows():
-        linhas_html += "<tr>"
-        for col in colunas_presentes:
-            valor = str(row[col]) if pd.notna(row[col]) else ''
-            valor = valor.replace('<', '&lt;').replace('>', '&gt;')
-            linhas_html += f"70><td{valor}迟"
-        linhas_html += "<tr>"
-    cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
+
+    # Seleciona e ordena as colunas que nos interessam (se existirem no DataFrame)
+    colunas_desejadas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
+    colunas_existentes = [col for col in colunas_desejadas if col in df.columns]
+    
+    # Cria uma cópia do DataFrame apenas com as colunas desejadas
+    df_relatorio = df[colunas_existentes].copy()
+    
+    # Substitui NaN por string vazia para evitar 'nan' no HTML
+    df_relatorio = df_relatorio.fillna('')
+    
+    # Gera a tabela HTML usando pandas, sem escape (para manter caracteres especiais)
+    # Mas com escape para evitar injeção de HTML (safe default)
+    tabela_html = df_relatorio.to_html(escape=True, index=False, classes='dataframe')
+    
+    # Cabeçalho com CSS personalizado e o botão de impressão
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -160,14 +169,7 @@ def gerar_html_impressao(df, titulo):
     <body>
         <h1>JOHN ACESSOS - ACESSO DE DADOS - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        <table>
-            <thead>
-                <tr>{cabecalho_html}</td>
-            </thead>
-            <tbody>
-                {linhas_html}
-            </tbody>
-        </table>
+        {tabela_html}
         <div class="no-print" style="text-align:center; margin-top:30px;">
             <button onclick="window.print();" style="padding:10px 20px; font-size:16px;">🖨️ Imprimir / Salvar como PDF</button>
         </div>
@@ -876,7 +878,6 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
 
-# ALTERAÇÃO: "Terceirizados" → "Terceirizados / Instrumentadores"
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados / Instrumentadores"], horizontal=True)
 
 if tipo == "🏢 Prestador de serviços":
