@@ -11,9 +11,9 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.set_page_config(
-    page_title="ACCESS GATE - SECURITY", 
+    page_title="JOHN ACESSOS - SECURITY", 
     layout="wide", 
-    page_icon="🛡️", 
+    page_icon="🔐", 
     initial_sidebar_state="expanded"
 )
 
@@ -29,7 +29,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</tr>"
+        linhas_html += "</table>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -86,7 +86,7 @@ def gerar_html_impressao(df, titulo):
         </style>
     </head>
     <body>
-        <h1>ACCESS GATE - {titulo}</h1>
+        <h1>JOHN ACESSOS - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
@@ -111,9 +111,14 @@ def carregar_imagem(nome_arquivo, nome_descricao):
     except:
         return None
 
-IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
-IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
-IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
+# === SE VOCÊ TIVER UMA IMAGEM DE LOGO, COLOQUE NA PASTA E DESCOMENTE AS LINHAS ABAIXO ===
+# IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
+# IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
+# IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
+# Caso contrário, usaremos texto estilizado como logo
+IMAGEM_LOGIN = None
+IMAGEM_SIDEBAR = None
+IMAGEM_HEADER = None
 
 # ====================== IMAGEM DE FUNDO ======================
 BACKGROUND_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg"
@@ -299,6 +304,21 @@ st.markdown(f"""
     hr {{
         border-color: rgba(44,125,160,0.3);
     }}
+    
+    /* Logo estilizada */
+    .logo-text {{
+        font-size: 24px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ffffff, #2c7da0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 1px;
+    }}
+    .logo-icon {{
+        font-size: 32px;
+        margin-right: 8px;
+        vertical-align: middle;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -308,7 +328,8 @@ if IMAGEM_SIDEBAR:
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">🛡️ ACCESS GATE</div>
+            <div class="sidebar-title">🔐 JOHN ACESSOS</div>
+            <p style="color:#89c2d9; font-size:12px;">Controle de Acesso</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -371,9 +392,9 @@ if not st.session_state.logado:
                             display: flex; align-items: center; justify-content: center;
                             box-shadow: 0 0 15px #2c7da0;
                         ">
-                            <span style="font-size: 48px;">🛡️</span>
+                            <span style="font-size: 48px;">🔐</span>
                         </div>
-                        <h2 style="color:#e0e0e0;">ACCESS GATE</h2>
+                        <h2 style="color:#e0e0e0;">JOHN ACESSOS</h2>
                         <p style="color:#89c2d9;">Sistema de Controle de Acesso</p>
                     </div>
                 """, unsafe_allow_html=True)
@@ -399,9 +420,9 @@ st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 15px;">
-                <span style="font-size: 36px;">🛡️</span>
+                <span style="font-size: 36px;">🔐</span>
                 <div>
-                    <h1 style="margin:0; font-size: 24px;">PAINEL DE CONTROLE</h1>
+                    <h1 style="margin:0; font-size: 24px;">JOHN ACESSOS - PAINEL DE CONTROLE</h1>
                     <p style="margin:0; color: #89c2d9;">Monitoramento de Acesso</p>
                 </div>
             </div>
@@ -861,7 +882,7 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🛡️ ACCESS GATE - Sistema de Controle de Acesso<br>
+        🔐 JOHN ACESSOS - Sistema de Controle de Acesso<br>
         Monitoramento 24/7 - Segurança Privada
     </div>
 """, unsafe_allow_html=True)
