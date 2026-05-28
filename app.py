@@ -11,9 +11,9 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.set_page_config(
-    page_title="JOHN ACESSOS SECURITY", 
+    page_title="JOHN ACESSOS - CENTRAL TÁTICA", 
     layout="wide", 
-    page_icon="🔐", 
+    page_icon="🛡️", 
     initial_sidebar_state="expanded"
 )
 
@@ -29,7 +29,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "<tr>"
+        linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -86,7 +86,7 @@ def gerar_html_impressao(df, titulo):
         </style>
     </head>
     <body>
-        <h1>JOHN ACESSOS SECURITY - {titulo}</h1>
+        <h1>JOHN ACESSOS - CENTRAL TÁTICA - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
@@ -115,66 +115,106 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN FUTURISTA ESTÁVEL ======================
+# ====================== DESIGN MILITAR FUTURISTA ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
 
-/* ANIMAÇÕES */
-@keyframes pulseNeon {
-    0% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.4); }
-    70% { box-shadow: 0 0 0 15px rgba(0, 191, 255, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0); }
+/* ANIMAÇÕES TÁTICAS */
+@keyframes pulseMil {
+    0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(0, 255, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
 }
-@keyframes glowText {
-    0% { text-shadow: 0 0 2px #00BFFF; }
-    100% { text-shadow: 0 0 10px #00BFFF; }
+@keyframes glowNeon {
+    0% { text-shadow: 0 0 2px #0ff, 0 0 5px #0a0; }
+    100% { text-shadow: 0 0 10px #0ff, 0 0 15px #0f0; }
 }
-@keyframes floatBox {
+@keyframes rotateRadar {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes scanLine {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+}
+@keyframes floatHolo {
     0% { transform: translateY(0px); }
     50% { transform: translateY(-5px); }
     100% { transform: translateY(0px); }
 }
-@keyframes rotateRing {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
 
-/* FUNDO - sem imagens externas, gradiente rápido */
+/* FUNDO TÁTICO COM GRADE E RADAR */
 .stApp {
-    background: radial-gradient(ellipse at center, #030b14 0%, #010101 100%);
+    background: radial-gradient(ellipse at center, #03050b 0%, #010101 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    position: relative;
+}
+/* Grade militar */
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+}
+/* Radar giratório */
+.radar-overlay {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 255, 255, 0.3);
+    background: radial-gradient(circle, transparent 60%, rgba(0,255,255,0.1) 100%);
+    pointer-events: none;
+    z-index: 1;
+    animation: rotateRadar 10s linear infinite;
+}
+.radar-overlay::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 50%;
+    background: #0ff;
+    transform-origin: top;
+    animation: rotateRadar 2s linear infinite;
 }
 
-/* SIDEBAR */
+/* SIDEBAR - CENTRAL DE COMANDO */
 [data-testid="stSidebar"] {
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(12px);
-    border-right: 2px solid #00BFFF;
-    box-shadow: -5px 0 20px rgba(0, 191, 255, 0.2);
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(15px);
+    border-right: 2px solid #0ff;
+    box-shadow: -5px 0 20px rgba(0, 255, 255, 0.2);
 }
 .sidebar-header {
     text-align: center;
     padding: 20px 10px;
-    border-bottom: 2px solid #00BFFF;
+    border-bottom: 2px solid #0ff;
     margin-bottom: 15px;
-    animation: floatBox 3s ease-in-out infinite;
+    animation: floatHolo 3s ease-in-out infinite;
 }
 .sidebar-title {
     font-size: 22px;
     font-weight: 900;
-    background: linear-gradient(135deg, #00BFFF, #0080FF);
+    background: linear-gradient(135deg, #0ff, #0a0);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     letter-spacing: 2px;
 }
-.info-section {
-    padding: 0 15px;
-    margin-top: 20px;
-}
 .info-item {
     margin-bottom: 12px;
-    color: #00BFFF;
+    color: #0ff;
     font-size: 12px;
     display: flex;
     align-items: center;
@@ -185,96 +225,96 @@ st.markdown("""
     min-width: 24px;
 }
 
-/* CABEÇALHO */
+/* CABEÇALHO OPERACIONAL */
 .admin-header {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(10px);
-    border-radius: 20px;
+    border-radius: 15px;
     padding: 12px 20px;
     margin-bottom: 25px;
-    border: 1px solid #00BFFF;
-    box-shadow: 0 0 15px rgba(0, 191, 255, 0.3);
+    border: 1px solid #0ff;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
 }
 .badge-admin {
-    background: linear-gradient(135deg, #00BFFF, #0080FF);
+    background: linear-gradient(135deg, #0ff, #0a0);
     padding: 5px 18px;
     border-radius: 30px;
     font-weight: 800;
     font-size: 12px;
-    color: #000;
+    color: black;
     letter-spacing: 1px;
-    box-shadow: 0 0 10px rgba(0, 191, 255, 0.6);
+    box-shadow: 0 0 10px #0ff;
 }
 
-/* CARDS */
+/* CARDS TÁTICOS */
 .admin-card {
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(10px);
     border-radius: 20px;
     padding: 18px;
-    border: 1px solid #00BFFF;
+    border: 1px solid #0ff;
     transition: 0.3s;
 }
 .admin-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 0 20px rgba(0, 191, 255, 0.4);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
 }
 .card-title {
     font-size: 11px;
     letter-spacing: 2px;
-    color: #00BFFF;
+    color: #0ff;
 }
 .card-value {
     font-size: 34px;
     font-weight: 900;
-    background: linear-gradient(135deg, #fff, #00BFFF);
+    background: linear-gradient(135deg, #fff, #0ff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
-/* BOTÕES */
+/* BOTÕES - CONTROLES MILITARES */
 .stButton > button, .stForm button {
     border-radius: 50px;
     font-weight: 800;
     font-family: 'Orbitron', monospace;
-    background: linear-gradient(90deg, #00BFFF, #0080FF);
+    background: linear-gradient(90deg, #0ff, #0a0);
     color: black;
-    box-shadow: 0 0 12px rgba(0, 191, 255, 0.5);
+    box-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
     border: none;
     transition: 0.3s;
 }
 .stButton > button:hover, .stForm button:hover {
     transform: scale(1.02);
-    box-shadow: 0 0 20px rgba(0, 191, 255, 0.8);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
 }
 .stButton > button[key="sair_final"] {
-    background: linear-gradient(90deg, #ff4444, #cc0000);
+    background: linear-gradient(90deg, #f00, #a00);
     color: white;
 }
 
-/* INPUTS */
+/* INPUTS - TERMINAIS TÁTICOS */
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
 .stNumberInput > div > div > input {
     background: rgba(0, 0, 0, 0.8);
-    border: 2px solid #00BFFF;
+    border: 2px solid #0ff;
     border-radius: 15px;
-    color: #00BFFF;
+    color: #0ff;
     font-family: 'Share Tech Mono', monospace;
     padding: 10px;
 }
 .stTextInput > div > div > input:focus {
-    border-color: #00BFFF;
-    box-shadow: 0 0 15px rgba(0, 191, 255, 0.5);
+    border-color: #0a0;
+    box-shadow: 0 0 15px #0ff;
     color: white;
 }
 
 /* EXPANDER, TABS, CHECKBOX */
 .streamlit-expanderHeader {
     background: rgba(0, 0, 0, 0.8);
-    border: 1px solid #00BFFF;
+    border: 1px solid #0ff;
     border-radius: 15px;
-    color: #00BFFF;
+    color: #0ff;
     font-weight: 700;
 }
 .stTabs [data-baseweb="tab-list"] {
@@ -290,40 +330,41 @@ st.markdown("""
     color: #ccc;
 }
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(135deg, #00BFFF, #0080FF);
-    color: #000;
-    box-shadow: 0 0 10px #00BFFF;
+    background: linear-gradient(135deg, #0ff, #0a0);
+    color: black;
+    box-shadow: 0 0 10px #0ff;
 }
 .stCheckbox label {
-    color: #00BFFF;
+    color: #0ff;
 }
 .stDataFrame {
     background: rgba(0,0,0,0.5);
     border-radius: 15px;
-    border: 1px solid #00BFFF;
+    border: 1px solid #0ff;
 }
 .stAlert {
     background: rgba(0,0,0,0.85);
-    border-left: 4px solid #00BFFF;
-    color: #00BFFF;
+    border-left: 4px solid #0ff;
+    color: #0ff;
 }
 .footer {
     text-align: center;
     padding: 15px;
-    color: #00BFFF;
+    color: #0ff;
     font-size: 10px;
-    border-top: 1px solid rgba(0,191,255,0.3);
+    border-top: 1px solid rgba(0,255,255,0.3);
     margin-top: 30px;
 }
 h1, h2, h3, h4, h5, h6 {
     font-family: 'Orbitron', monospace;
-    color: #00BFFF;
-    text-shadow: 0 0 3px #00BFFF;
+    color: #0ff;
+    text-shadow: 0 0 3px #0ff;
 }
 hr {
-    border-color: rgba(0,191,255,0.3);
+    border-color: rgba(0,255,255,0.3);
 }
 </style>
+<div class="radar-overlay"></div>
 """, unsafe_allow_html=True)
 
 # ====================== SIDEBAR (APENAS INFO) ======================
@@ -332,26 +373,26 @@ if IMAGEM_SIDEBAR:
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">🔐 JOHN ACESSOS</div>
-            <p style="color:#00BFFF; font-size:9px;">SECURITY SYSTEM</p>
+            <div class="sidebar-title">🛡️ JOHN ACESSOS</div>
+            <p style="color:#0ff; font-size:9px;">CENTRAL TÁTICA</p>
         </div>
     """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚡ SISTEMA ONLINE")
+st.sidebar.markdown("### ⚡ ESTADO OPERACIONAL")
 st.sidebar.markdown('<div class="info-item"><span class="info-icon">🟢</span> CFTV: ATIVO</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item"><span class="info-icon">🤖</span> IA: MONITORANDO</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item"><span class="info-icon">🔒</span> CRIPTOGRAFIA: 256-BIT</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item"><span class="info-icon">🗄️</span> BANCO DE DADOS: SEGURO</div>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ℹ️ INFO")
+st.sidebar.markdown("### 📡 INFORMAÇÕES")
 if "perfil" in st.session_state:
     st.sidebar.markdown(f"<div class='info-item'><span class='info-icon'>👑</span> Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
 else:
     st.sidebar.markdown("<div class='info-item'><span class='info-icon'>👑</span> Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item"><span class="info-icon">🟢</span> Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item"><span class="info-icon">📦</span> Versão: 7.0</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item"><span class="info-icon">📦</span> Versão: 8.0</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -367,7 +408,7 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN (SEM FUNDO PRETO EXCESSIVO) ======================
+# ====================== TELA DE LOGIN MILITAR ======================
 if not st.session_state.logado:
     st.markdown("""
     <style>
@@ -379,64 +420,66 @@ if not st.session_state.logado:
         margin: 0 auto;
     }
     .login-box {
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.75);
         backdrop-filter: blur(15px);
         border-radius: 40px;
         padding: 40px 30px;
-        border: 2px solid #00BFFF;
-        box-shadow: 0 0 40px rgba(0, 191, 255, 0.4);
+        border: 2px solid #0ff;
+        box-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
         width: 100%;
-        max-width: 450px;
+        max-width: 480px;
         text-align: center;
-        animation: floatBox 3s ease-in-out infinite;
+        animation: floatHolo 3s ease-in-out infinite;
+        position: relative;
+        z-index: 10;
     }
-    .holo-shield {
-        width: 100px;
-        height: 100px;
+    .military-shield {
+        width: 120px;
+        height: 120px;
         margin: 0 auto 20px;
-        background: radial-gradient(circle, rgba(0,191,255,0.2), transparent);
+        background: radial-gradient(circle, rgba(0,255,255,0.2), transparent);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         position: relative;
-        animation: pulseNeon 2s infinite;
+        animation: pulseMil 2s infinite;
     }
-    .holo-shield span {
-        font-size: 50px;
-        filter: drop-shadow(0 0 8px #00BFFF);
-        animation: glowText 1.5s infinite alternate;
+    .military-shield span {
+        font-size: 55px;
+        filter: drop-shadow(0 0 8px #0ff);
+        animation: glowNeon 1.5s infinite alternate;
     }
-    .holo-shield::after {
+    .military-shield::before {
         content: "";
         position: absolute;
-        width: 120px;
-        height: 120px;
-        border: 1px solid #00BFFF;
+        width: 140px;
+        height: 140px;
+        border: 2px solid #0ff;
         border-radius: 50%;
         top: -10px;
         left: -10px;
-        animation: rotateRing 6s linear infinite;
+        animation: rotateRadar 8s linear infinite;
     }
     .logo-title {
         font-size: 28px;
         font-weight: 900;
-        background: linear-gradient(135deg, #fff, #00BFFF);
+        background: linear-gradient(135deg, #fff, #0ff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         letter-spacing: 2px;
     }
     .logo-subtitle {
         font-size: 10px;
-        color: #00BFFF;
+        color: #0ff;
         letter-spacing: 3px;
         margin-top: 5px;
     }
     .status-bar {
         margin-top: 20px;
         font-size: 9px;
-        color: #00BFFF;
-        border-top: 1px solid rgba(0,191,255,0.3);
+        color: #0ff;
+        border-top: 1px solid rgba(0,255,255,0.3);
         padding-top: 12px;
     }
     .status-item {
@@ -450,19 +493,19 @@ if not st.session_state.logado:
         background: #0f0;
         border-radius: 50%;
         margin-right: 4px;
-        animation: pulseNeon 1s infinite;
+        animation: pulseMil 1s infinite;
     }
     </style>
     <div class="login-container">
         <div class="login-box">
-            <div class="holo-shield"><span>🛡️</span></div>
+            <div class="military-shield"><span>🛡️</span></div>
             <div class="logo-title">JOHN ACESSOS</div>
-            <div class="logo-subtitle">SECURITY SYSTEM</div>
+            <div class="logo-subtitle">CENTRAL TÁTICA</div>
             <div style="height: 20px;"></div>
     """, unsafe_allow_html=True)
     
     with st.form("login_form"):
-        senha = st.text_input("", type="password", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
+        senha = st.text_input("", type="password", placeholder="Credencial de segurança", label_visibility="collapsed")
         submitted = st.form_submit_button("🔓 ACESSAR SISTEMA", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
@@ -487,17 +530,17 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     st.stop()
 
-# ====================== HEADER APÓS LOGIN ======================
+# ====================== HEADER OPERACIONAL ======================
 st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #00BFFF, #0080FF); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px #00BFFF;">
-                    <span style="font-size: 22px;">🔐</span>
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #0ff, #0a0); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px #0ff;">
+                    <span style="font-size: 22px;">🛡️</span>
                 </div>
                 <div>
-                    <h1 style="margin:0; font-size: 18px;">JOHN ACESSOS SECURITY</h1>
-                    <p style="margin:0; color: #00BFFF; font-size: 9px;">INTELLIGENT ACCESS CONTROL</p>
+                    <h1 style="margin:0; font-size: 18px;">JOHN ACESSOS - CENTRAL TÁTICA</h1>
+                    <p style="margin:0; color: #0ff; font-size: 9px;">SISTEMA DE DEFESA INTELIGENTE</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -924,7 +967,7 @@ if st.session_state.perfil == "ADMIN":
                     idx = lista.index(selecionado)
                     pessoa = filtrados[idx]
                     st.markdown(f"""
-                        <div style="background:rgba(0,191,255,0.1); border-radius:12px; padding:12px; border-left:3px solid #00BFFF;">
+                        <div style="background:rgba(0,255,255,0.1); border-radius:12px; padding:12px; border-left:3px solid #0ff;">
                             <b>👤 {pessoa['nome']}</b><br>
                             📄 CPF: {pessoa['cpf']}<br>
                             🏢 Empresa: {pessoa.get('empresa','N/A')}
@@ -953,7 +996,6 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🔒 JOHN ACESSOS SECURITY - Controle de Acesso<br>
-        Monitoramento 24/7 | Criptografia | IA Avançada
+        🛡️ JOHN ACESSOS - CENTRAL TÁTICA | Inteligência Artificial | Defesa Avançada
     </div>
 """, unsafe_allow_html=True)
