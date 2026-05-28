@@ -101,7 +101,7 @@ def gerar_html_impressao(df, titulo):
             valor = str(row[col]) if pd.notna(row[col]) else ''
             valor = valor.replace('<', '&lt;').replace('>', '&gt;')
             linhas_html += f"70><td{valor}迟"
-        linhas_html += "</tr>"
+        linhas_html += "<tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -160,7 +160,7 @@ def gerar_html_impressao(df, titulo):
     <body>
         <h1>JOHN ACESSOS - ACESSO DE DADOS - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        <table>
+        <tr>
             <thead>
                 <tr>{cabecalho_html}</tr>
             </thead>
@@ -209,11 +209,12 @@ st.markdown("""
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 """, unsafe_allow_html=True)
 
-# ====================== DESIGN BASE (CSS) ======================
+# ====================== DESIGN BASE (CSS) COM BOTÕES TECNOLÓGICOS ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
 
+/* ANIMAÇÕES E KEYFRAMES */
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(100, 0, 255, 0.4); }
     70% { box-shadow: 0 0 0 12px rgba(100, 0, 255, 0); }
@@ -228,12 +229,32 @@ st.markdown("""
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
+@keyframes scan {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+@keyframes glowPulse {
+    0% { box-shadow: 0 0 5px #a855f7; }
+    50% { box-shadow: 0 0 20px #a855f7; }
+    100% { box-shadow: 0 0 5px #a855f7; }
+}
+@keyframes buttonGlow {
+    0% { box-shadow: 0 0 5px #0ff; }
+    50% { box-shadow: 0 0 20px #0ff; }
+    100% { box-shadow: 0 0 5px #0ff; }
+}
+@keyframes hologram {
+    0% { text-shadow: 0 0 2px #0ff; opacity: 0.8; }
+    100% { text-shadow: 0 0 10px #0ff; opacity: 1; }
+}
 
+/* FUNDO PRINCIPAL */
 .stApp {
     background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);
     font-family: 'Inter', 'Space Mono', monospace;
 }
 
+/* SIDEBAR */
 [data-testid="stSidebar"] {
     background: rgba(8, 8, 20, 0.85);
     backdrop-filter: blur(12px);
@@ -260,6 +281,7 @@ st.markdown("""
     font-family: 'Space Mono', monospace;
 }
 
+/* CABEÇALHO */
 .admin-header {
     background: rgba(8, 8, 20, 0.7);
     backdrop-filter: blur(8px);
@@ -293,6 +315,7 @@ st.markdown("""
     filter: drop-shadow(0 0 2px #ffaa00);
 }
 
+/* CARDS */
 .admin-card {
     background: rgba(15, 15, 30, 0.6);
     backdrop-filter: blur(4px);
@@ -319,6 +342,7 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
 }
 
+/* BOTÕES TECNOLÓGICOS - ESTILO GLOBAL */
 .stButton > button, .stForm button {
     border-radius: 40px;
     font-weight: 600;
@@ -326,35 +350,106 @@ st.markdown("""
     background: linear-gradient(90deg, #a855f7, #3b82f6);
     color: white;
     border: none;
-    transition: 0.2s;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+/* Efeito de scan futurista no hover */
+.stButton > button::before, .stForm button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+    z-index: -1;
+}
+.stButton > button:hover::before, .stForm button:hover::before {
+    left: 100%;
 }
 .stButton > button:hover, .stForm button:hover {
-    transform: scale(1.01);
-    box-shadow: 0 0 12px #a855f7;
+    transform: scale(1.02);
+    box-shadow: 0 0 20px #a855f7;
+    animation: buttonGlow 0.8s infinite alternate;
 }
-.stButton > button[key="sair_final"], .stButton > button[key="btn_atualizar"] {
-    background: linear-gradient(90deg, #a855f7, #3b82f6);
+/* Botão ATUALIZAR (estilo especial) */
+.stButton > button[key="btn_atualizar"] {
+    background: linear-gradient(90deg, #0ff, #0080ff);
 }
-.stButton > button[key="sair_final"]:hover, .stButton > button[key="btn_atualizar"]:hover {
-    transform: scale(1.01);
-    box-shadow: 0 0 12px #a855f7;
+.stButton > button[key="btn_atualizar"]:hover {
+    box-shadow: 0 0 25px #0ff;
+}
+/* Botão SAIR */
+.stButton > button[key="sair_final"] {
+    background: linear-gradient(90deg, #f44, #a00);
+}
+/* Botão CONFIRMAR CPF */
+.stButton > button[key="confirma_cpf"] {
+    background: linear-gradient(90deg, #f0f, #a0f);
+}
+/* Botão REGISTRAR ENTRADA */
+.stButton > button[key="btn_entrada"] {
+    background: linear-gradient(90deg, #0f0, #0a0);
+}
+/* Botão SALVAR CADASTRO */
+.stButton > button[key="salvar_cadastro"] {
+    background: linear-gradient(90deg, #ffa500, #ff6600);
+}
+/* Botão EXCLUIR, LIMPAR, etc. */
+.stButton > button[key="del_cad"], .stButton > button[key="del_reg"], .stButton > button[key="confirm_delete"] {
+    background: linear-gradient(90deg, #ff3333, #990000);
+}
+/* Botão LIMPAR TUDO */
+.stButton > button[key="clear_all_confirm"] {
+    background: linear-gradient(90deg, #ff0000, #660000);
+}
+/* Botão LIMPAR SELEÇÃO */
+.stButton > button[key="cancel_delete"], .stButton > button[key="cancel_clear_all"] {
+    background: linear-gradient(90deg, #666, #333);
 }
 
+/* INPUTS E SELECTOX (TEXTO DO DESTINO VISÍVEL) */
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
 .stNumberInput > div > div > input {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.8);
     border: 1px solid #a855f7;
     border-radius: 12px;
-    color: #c4b5fd;
+    color: #0ff !important;  /* Força texto azul neon */
     font-family: 'Space Mono', monospace;
     padding: 8px;
 }
-.stTextInput > div > div > input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 8px #a855f7;
+/* As opções do selectbox */
+.stSelectbox > div > div > div {
+    color: #0ff;
+    background: rgba(0,0,0,0.9);
+}
+/* Para garantir que o texto dentro do selectbox seja visível */
+.stSelectbox label {
+    color: #0ff !important;
+}
+.stSelectbox [data-baseweb="select"] {
+    color: #0ff !important;
+}
+/* Dropdown do selectbox (opções) */
+div[data-baseweb="select"] > div {
+    background-color: #0a0a1a;
+}
+div[data-baseweb="select"] ul {
+    background-color: #0a0a1a;
+}
+div[data-baseweb="select"] li {
+    color: #0ff !important;
+}
+div[data-baseweb="select"] li:hover {
+    background-color: #a855f7 !important;
+    color: black !important;
 }
 
+/* EXPANDER, TABS */
 .streamlit-expanderHeader {
     background: rgba(15, 15, 30, 0.8);
     border: 1px solid #a855f7;
@@ -428,7 +523,7 @@ if st.session_state.get("perfil"):
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 12.5 (SECURE)</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 13.0 (TECH)</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO (INICIALIZAÇÃO) ======================
 if "logado" not in st.session_state:
@@ -451,7 +546,7 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = None
 
 # ====================== FUNÇÃO "MANAGE APP" (SOMENTE ADMIN) ======================
-if st.session_state.get("perfil") == "ADMIN":
+if st.session_state.get("perfil") == "ADMIN" and st.session_state.get("logado"):
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
         st.markdown("### 🔧 Ferramentas Administrativas")
@@ -781,7 +876,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
     novo_cpf = col_a.text_input("📄 CPF *", placeholder="000.000.000-00")
     novo_nome = col_b.text_input("👤 Nome Completo *")
     novo_empresa = col_c.text_input("🏢 Empresa")
-    if st.button("💾 Salvar Cadastro", type="primary"):
+    if st.button("💾 Salvar Cadastro", key="salvar_cadastro", type="primary"):
         if novo_cpf and novo_nome:
             if not validar_cpf(novo_cpf):
                 st.error("❌ CPF inválido. Digite um CPF válido (11 dígitos).")
@@ -1198,12 +1293,3 @@ st.markdown("""
         👮‍♂️ JOHN ACESSOS - ACESSO DE DADOS | Segurança e Proteção de Dados | Monitoramento de Sessões
     </div>
 """, unsafe_allow_html=True)
-
-# ====================== ELEMENTO DE CANTO (SOMENTE ADMIN) ======================
-if st.session_state.get("logado") and st.session_state.get("perfil") == "ADMIN":
-    st.markdown("""
-        <div style="position: fixed; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 5px 12px; border-radius: 20px; font-size: 10px; color: #a78bfa; font-family: monospace; z-index: 1000; border: 1px solid #a855f7;">
-            📁 main | johndosanjos162/sistema-portaria/app.py<br>
-            📡 [ UTC ] Logs for sistema-portaria-pw4omefsgftcngw4dyenqk.streamlit.app
-        </div>
-    """, unsafe_allow_html=True)
