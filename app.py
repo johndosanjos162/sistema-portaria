@@ -29,7 +29,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</tr>"
+        linhas_html += "<tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -115,12 +115,12 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN MILITAR FUTURISTA LEVE ======================
+# ====================== DESIGN MILITAR FUTURISTA COM RAIOS BRANCOS ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
 
-/* ANIMAÇÕES SUAVES */
+/* ANIMAÇÕES */
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.4); }
     70% { box-shadow: 0 0 0 10px rgba(0, 255, 255, 0); }
@@ -130,16 +130,83 @@ st.markdown("""
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
-@keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-    100% { transform: translateY(0px); }
+@keyframes fall {
+    0% { background-position: 0 -200px; }
+    100% { background-position: 0 100vh; }
+}
+@keyframes blink {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.8; }
 }
 
-/* FUNDO (gradiente simples, sem imagens externas) */
+/* Fundo principal com raios caindo */
 .stApp {
     background: linear-gradient(145deg, #030712 0%, #0a0f1a 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    position: relative;
+    overflow-x: hidden;
+}
+
+/* Camada de raios tecnológicos brancos */
+.tech-rains {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 30px,
+        rgba(255, 255, 255, 0.15) 30px,
+        rgba(255, 255, 255, 0.3) 32px,
+        transparent 32px,
+        transparent 60px
+    );
+    animation: fall 6s linear infinite;
+}
+
+/* Segundo conjunto de raios, mais finos e rápidos */
+.tech-rains::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        115deg,
+        transparent,
+        transparent 50px,
+        rgba(255, 255, 255, 0.1) 50px,
+        rgba(255, 255, 255, 0.25) 52px,
+        transparent 52px,
+        transparent 80px
+    );
+    animation: fall 4s linear infinite reverse;
+    opacity: 0.6;
+}
+
+/* Raios ocasionais mais brilhantes */
+@keyframes lightning {
+    0% { opacity: 0; }
+    10% { opacity: 0.8; }
+    15% { opacity: 0; }
+    100% { opacity: 0; }
+}
+.tech-rains::after {
+    content: "";
+    position: absolute;
+    top: -10%;
+    left: 20%;
+    width: 2px;
+    height: 80px;
+    background: white;
+    filter: blur(2px);
+    box-shadow: 0 0 8px white;
+    animation: lightning 3s infinite ease-in-out;
 }
 
 /* SIDEBAR */
@@ -147,6 +214,7 @@ st.markdown("""
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(8px);
     border-right: 1px solid #0ff;
+    z-index: 2;
 }
 .sidebar-header {
     text-align: center;
@@ -178,6 +246,7 @@ st.markdown("""
     padding: 12px 20px;
     margin-bottom: 20px;
     border: 1px solid #0ff;
+    z-index: 2;
 }
 .badge-admin {
     background: linear-gradient(135deg, #0ff, #0f0);
@@ -196,6 +265,7 @@ st.markdown("""
     padding: 15px;
     border: 1px solid #0ff;
     transition: 0.2s;
+    z-index: 2;
 }
 .admin-card:hover {
     transform: translateY(-3px);
@@ -223,6 +293,7 @@ st.markdown("""
     color: black;
     border: none;
     transition: 0.2s;
+    z-index: 2;
 }
 .stButton > button:hover, .stForm button:hover {
     transform: scale(1.01);
@@ -243,6 +314,7 @@ st.markdown("""
     color: #0ff;
     font-family: 'Share Tech Mono', monospace;
     padding: 8px;
+    z-index: 2;
 }
 .stTextInput > div > div > input:focus {
     border-color: #0f0;
@@ -287,6 +359,7 @@ st.markdown("""
     font-size: 9px;
     border-top: 1px solid rgba(0,255,255,0.2);
     margin-top: 25px;
+    z-index: 2;
 }
 h1, h2, h3 {
     font-family: 'Orbitron', monospace;
@@ -295,14 +368,35 @@ h1, h2, h3 {
 hr {
     border-color: rgba(0,255,255,0.2);
 }
-</style>
-""", unsafe_allow_html=True)
 
-# ====================== RADAR VISUAL (APENAS ELEMENTO DECORATIVO) ======================
-st.markdown("""
-<div style="position: fixed; bottom: 20px; right: 20px; width: 80px; height: 80px; border-radius: 50%; border: 1px solid rgba(0,255,255,0.3); background: radial-gradient(circle, transparent 60%, rgba(0,255,255,0.05) 100%); z-index: 1; pointer-events: none;">
-    <div style="position: absolute; top: 50%; left: 50%; width: 2px; height: 40px; background: #0ff; transform-origin: top; transform: translateX(-50%) rotate(0deg); animation: rotate 3s linear infinite;"></div>
-</div>
+/* Radar visual decorativo */
+.radar-hud {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,255,255,0.3);
+    background: radial-gradient(circle, transparent 60%, rgba(0,255,255,0.05) 100%);
+    z-index: 2;
+    pointer-events: none;
+}
+.radar-hud::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 40px;
+    background: #0ff;
+    transform-origin: top;
+    transform: translateX(-50%) rotate(0deg);
+    animation: rotate 3s linear infinite;
+}
+</style>
+<div class="tech-rains"></div>
+<div class="radar-hud"></div>
 """, unsafe_allow_html=True)
 
 # ====================== SIDEBAR ======================
@@ -330,7 +424,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 8.1</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 8.2</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -346,7 +440,7 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN LEVE ======================
+# ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
     st.markdown("""
     <style>
@@ -459,7 +553,7 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     st.stop()
 
-# ====================== HEADER ======================
+# ====================== HEADER APÓS LOGIN ======================
 st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
