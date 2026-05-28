@@ -25,7 +25,7 @@ def gerar_html_impressao(df, titulo):
     colunas_presentes = [c for c in colunas if c in df.columns]
     linhas_html = ""
     for _, row in df.iterrows():
-        linhas_html += "<tr>"
+        linhas_html += "</table>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
@@ -90,7 +90,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <tr>{cabecalho_html}<tr>
+                <tr>{cabecalho_html}</tr>
             </thead>
             <tbody>
                 {linhas_html}
@@ -115,12 +115,12 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN MILITAR COM RAIOS LEVES ======================
+# ====================== DESIGN MILITAR FUTURISTA (SEM RAIOS, ESTÁVEL) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
 
-/* ANIMAÇÕES */
+/* ANIMAÇÕES LEVES */
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.3); }
     70% { box-shadow: 0 0 0 10px rgba(0, 255, 255, 0); }
@@ -130,63 +130,18 @@ st.markdown("""
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
-@keyframes fall {
-    0% { background-position: 0 -100px; }
-    100% { background-position: 0 100vh; }
-}
 
-/* Fundo principal - gradiente radial estável */
+/* FUNDO ESTÁVEL - apenas gradiente escuro */
 .stApp {
-    background: radial-gradient(ellipse at center, #04070f 0%, #010101 100%);
+    background: radial-gradient(ellipse at center, #030712 0%, #010101 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
-    position: relative;
 }
 
-/* Camada de raios tecnológicos (apenas duas linhas suaves) */
-.tech-rains {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
-    background: repeating-linear-gradient(
-        to bottom,
-        transparent,
-        transparent 40px,
-        rgba(255, 255, 255, 0.08) 40px,
-        rgba(255, 255, 255, 0.15) 42px,
-        transparent 42px,
-        transparent 80px
-    );
-    animation: fall 8s linear infinite;
-}
-.tech-rains::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: repeating-linear-gradient(
-        115deg,
-        transparent,
-        transparent 60px,
-        rgba(255, 255, 255, 0.05) 60px,
-        rgba(255, 255, 255, 0.1) 62px,
-        transparent 62px,
-        transparent 100px
-    );
-    animation: fall 5s linear infinite reverse;
-}
-
-/* Sidebar */
+/* SIDEBAR */
 [data-testid="stSidebar"] {
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(8px);
     border-right: 1px solid #0ff;
-    z-index: 2;
 }
 .sidebar-header {
     text-align: center;
@@ -208,7 +163,7 @@ st.markdown("""
     gap: 8px;
 }
 
-/* Cabeçalho */
+/* CABEÇALHO */
 .admin-header {
     background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(8px);
@@ -216,7 +171,6 @@ st.markdown("""
     padding: 12px 20px;
     margin-bottom: 20px;
     border: 1px solid #0ff;
-    z-index: 2;
 }
 .badge-admin {
     background: linear-gradient(135deg, #0ff, #0f0);
@@ -227,7 +181,7 @@ st.markdown("""
     color: black;
 }
 
-/* Cards */
+/* CARDS */
 .admin-card {
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(6px);
@@ -253,7 +207,7 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
 }
 
-/* Botões */
+/* BOTÕES */
 .stButton > button, .stForm button {
     border-radius: 40px;
     font-weight: 700;
@@ -261,6 +215,7 @@ st.markdown("""
     background: linear-gradient(90deg, #0ff, #0a0);
     color: black;
     transition: 0.2s;
+    border: none;
 }
 .stButton > button:hover, .stForm button:hover {
     transform: scale(1.01);
@@ -271,7 +226,7 @@ st.markdown("""
     color: white;
 }
 
-/* Inputs */
+/* INPUTS */
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
 .stNumberInput > div > div > input {
@@ -287,7 +242,7 @@ st.markdown("""
     box-shadow: 0 0 8px #0ff;
 }
 
-/* Expander, Tabs */
+/* EXPANDER, TABS */
 .streamlit-expanderHeader {
     background: rgba(0, 0, 0, 0.7);
     border: 1px solid #0ff;
@@ -334,7 +289,7 @@ hr {
     border-color: rgba(0,255,255,0.2);
 }
 
-/* Radar visual */
+/* RADAR DECORATIVO (OPCIONAL) */
 .radar-hud {
     position: fixed;
     bottom: 20px;
@@ -342,7 +297,7 @@ hr {
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    border: 1px solid rgba(0,255,255,0.3);
+    border: 1px solid rgba(0,255,255,0.2);
     background: radial-gradient(circle, transparent 60%, rgba(0,255,255,0.05) 100%);
     z-index: 2;
     pointer-events: none;
@@ -353,14 +308,14 @@ hr {
     top: 50%;
     left: 50%;
     width: 2px;
-    height: 40px;
+    height: 35px;
     background: #0ff;
     transform-origin: top;
     transform: translateX(-50%) rotate(0deg);
     animation: rotate 3s linear infinite;
+    opacity: 0.7;
 }
 </style>
-<div class="tech-rains"></div>
 <div class="radar-hud"></div>
 """, unsafe_allow_html=True)
 
@@ -389,7 +344,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 8.3</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 8.4</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
