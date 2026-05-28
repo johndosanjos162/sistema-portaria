@@ -112,7 +112,7 @@ def carregar_imagem(nome_arquivo, nome_descricao):
         return None
 
 # === SE VOCÊ TIVER UMA IMAGEM DE LOGO, COLOQUE NA PASTA E DESCOMENTE AS LINHAS ABAIXO ===
-# IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
+# IMAGEM_LOGIN = carregar_imagem("https://chatgpt.com/s/m_6a1850702b308191bdb5caf3cf1abe57", "Login")
 # IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 # IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 # Caso contrário, usaremos texto estilizado como logo
@@ -121,7 +121,7 @@ IMAGEM_SIDEBAR = None
 IMAGEM_HEADER = None
 
 # ====================== IMAGEM DE FUNDO ======================
-BACKGROUND_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg"
+BACKGROUND_URL = "https://chatgpt.com/s/m_6a1850702b308191bdb5caf3cf1abe57"
 
 # ====================== DESIGN DE SEGURANÇA PRIVADA ======================
 st.markdown(f"""
