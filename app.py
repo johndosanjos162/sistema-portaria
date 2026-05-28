@@ -32,7 +32,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</tr>"
+        linhas_html += "</table>"
     
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     
@@ -464,7 +464,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
 
 st.markdown("---")
 
-# ====================== REGISTRO DE ENTRADA ======================
+# ====================== REGISTRO DE ENTRADA COM AUTOCOMPLETE DO NOME/EMPRESA ======================
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
 
@@ -473,9 +473,19 @@ if tipo == "🏢 Prestador de serviços":
 else:
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
-c1, c2, c3 = st.columns([2,2,1])
+c1, c2, c3 = st.columns([2, 2, 1])
 cpf_input = c1.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF")
 setor_escolhido = c2.selectbox("📍 Destino:", destinos, key="destino")
+
+# --- EXIBIR NOME E EMPRESA AO DIGITAR O CPF ---
+if cpf_input:
+    pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_input.strip()).execute().data
+    if pessoa:
+        nome_encontrado = pessoa[0]['nome']
+        empresa_encontrada = pessoa[0].get('empresa', 'N/A')
+        st.success(f"✅ **Pessoa encontrada:** 👤 {nome_encontrado} | 🏢 Empresa: {empresa_encontrada}")
+    else:
+        st.error("❌ CPF não cadastrado. Cadastre antes de registrar entrada.")
 
 if c3.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
     if cpf_input:
@@ -561,10 +571,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         # ----- 2. PDFs separados por setor (INDEPENDENTES) -----
         st.markdown("#### 🔹 Relatório por Setor (PDF separado para cada setor)")
         
-        # Setores que devem ter PDF independente
         setores_pdf = ["C.C", "GRSA", "Brasanitas"]
-        
-        # Exibir botões lado a lado
         col1, col2, col3 = st.columns(3)
         with col1:
             setor = "C.C"
