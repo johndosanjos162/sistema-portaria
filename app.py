@@ -115,7 +115,7 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN PRINCIPAL (ESTÁVEL) ======================
+# ====================== DESIGN BASE (ESTÁVEL) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap');
@@ -343,13 +343,12 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN: ENERGIA ELÉTRICA FUTURISTA ======================
+# ====================== TELA DE LOGIN: TECNOLOGIA ELÉTRICA FUTURISTA ======================
 if not st.session_state.logado:
-    # HTML/CSS para os efeitos elétricos
     st.markdown("""
     <style>
-    /* Camada de fundo com grade elétrica */
-    .grid-electric {
+    /* Camada de fundo com cidade futurista (abstrato) */
+    .cyber-city {
         position: fixed;
         top: 0;
         left: 0;
@@ -357,10 +356,9 @@ if not st.session_state.logado:
         height: 100%;
         pointer-events: none;
         z-index: 0;
-        background-image: 
-            linear-gradient(rgba(0,180,255,0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,180,255,0.05) 1px, transparent 1px);
-        background-size: 40px 40px;
+        background: radial-gradient(ellipse at 50% 80%, rgba(0,180,255,0.05) 0%, transparent 70%),
+                    linear-gradient(0deg, rgba(0,180,255,0.1) 1px, transparent 1px);
+        background-size: 100% 100%, 30px 30px;
     }
     /* Raios de energia descendo pelas bordas */
     .electric-bolts {
@@ -404,7 +402,7 @@ if not st.session_state.logado:
         transform: translateX(-50%);
     }
     /* Partículas flutuantes */
-    .particles {
+    .particles-electric {
         position: fixed;
         top: 0;
         left: 0;
@@ -415,7 +413,7 @@ if not st.session_state.logado:
         pointer-events: none;
         z-index: 0;
     }
-    /* Container do login (acima dos efeitos) */
+    /* Container do login */
     .login-container {
         display: flex;
         justify-content: center;
@@ -489,11 +487,7 @@ if not st.session_state.logado:
         letter-spacing: 4px;
         margin-bottom: 25px;
     }
-    /* Campos com efeito elétrico ao foco */
-    .electric-field {
-        position: relative;
-        margin-bottom: 20px;
-    }
+    /* Campos com efeito elétrico */
     .electric-field input {
         width: 100%;
         background: rgba(0, 0, 0, 0.7);
@@ -555,13 +549,13 @@ if not st.session_state.logado:
         animation: pulse 1s infinite;
     }
     </style>
-    <div class="grid-electric"></div>
+    <div class="cyber-city"></div>
     <div class="electric-bolts">
         <div class="bolt-left"></div>
         <div class="bolt-right"></div>
         <div class="bolt-center"></div>
     </div>
-    <div class="particles"></div>
+    <div class="particles-electric"></div>
     <div class="login-container">
         <div class="login-box">
             <div class="energy-shield"><span>⚡🛡️</span></div>
@@ -589,11 +583,8 @@ if not st.session_state.logado:
     
     # Formulário de login
     with st.form("login_form"):
-        # Campo usuário (apenas visual)
         st.text_input("", placeholder="Identificação criptografada", key="electric_user", label_visibility="collapsed")
-        # Campo senha
         senha = st.text_input("", type="password", placeholder="Chave de acesso energizada", label_visibility="collapsed")
-        # Botão com efeito de choque (usando CSS puro)
         submitted = st.form_submit_button("⚡ ACESSAR SISTEMA", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
