@@ -29,7 +29,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "<tr>"
+        linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -120,7 +120,18 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
 
-/* FUNDO - gradiente escuro estável */
+/* ANIMAÇÕES LEVES */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.3); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 255, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }
+}
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* FUNDO */
 .stApp {
     background: linear-gradient(145deg, #030712 0%, #0a0f1a 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
@@ -277,11 +288,10 @@ h1, h2, h3 {
 hr {
     border-color: rgba(0,255,255,0.2);
 }
-/* Efeito de código binário */
+/* Estilo para o código binário */
 .binary-line {
     font-family: 'Share Tech Mono', monospace;
-    color: #0ff;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.7);
     padding: 8px 12px;
     border-radius: 8px;
     font-size: 12px;
@@ -291,6 +301,7 @@ hr {
     border: 1px solid #0ff;
     white-space: nowrap;
     overflow-x: auto;
+    color: #0ff;
     text-shadow: 0 0 2px #0ff;
 }
 </style>
@@ -321,7 +332,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 8.6</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 8.7</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -337,16 +348,39 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN COM CÓDIGO BINÁRIO ======================
+# ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
-    # HTML/JavaScript para a linha de código binário animada
+    # Injetar HTML/JS para a linha de código binário
+    binary_html = """
+    <div id="binary-container" style="margin-bottom:15px;"></div>
+    <script>
+        function generateRandomBinary(length = 60) {
+            let binary = '';
+            for (let i = 0; i < length; i++) {
+                binary += Math.random() < 0.5 ? '0' : '1';
+            }
+            return binary;
+        }
+        function updateBinary() {
+            const container = document.getElementById('binary-container');
+            if (container) {
+                const binaryString = generateRandomBinary(60);
+                container.innerHTML = `<div class="binary-line">${binaryString}</div>`;
+            }
+        }
+        setInterval(updateBinary, 400);
+        updateBinary();
+    </script>
+    """
+    st.markdown(binary_html, unsafe_allow_html=True)
+    
     st.markdown("""
     <style>
     .login-container {
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 85vh;
+        min-height: 70vh;
     }
     .login-box {
         background: rgba(0, 0, 0, 0.7);
@@ -369,10 +403,20 @@ if not st.session_state.logado:
         align-items: center;
         justify-content: center;
         position: relative;
+        animation: pulse 2s infinite;
     }
     .military-shield span {
         font-size: 45px;
         filter: drop-shadow(0 0 5px #0ff);
+    }
+    .military-shield::before {
+        content: "";
+        position: absolute;
+        width: 110px;
+        height: 110px;
+        border: 1px solid #0ff;
+        border-radius: 50%;
+        animation: rotate 6s linear infinite;
     }
     .logo-title {
         font-size: 26px;
@@ -385,20 +429,6 @@ if not st.session_state.logado:
         font-size: 9px;
         color: #0ff;
         letter-spacing: 2px;
-    }
-    .binary-line {
-        font-family: 'Share Tech Mono', monospace;
-        background: rgba(0,0,0,0.6);
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        letter-spacing: 2px;
-        text-align: center;
-        margin-bottom: 15px;
-        border: 1px solid #0ff;
-        white-space: nowrap;
-        overflow-x: auto;
-        text-shadow: 0 0 2px #0ff;
     }
     .status-bar {
         margin-top: 20px;
@@ -418,27 +448,9 @@ if not st.session_state.logado:
         background: #0f0;
         border-radius: 50%;
         margin-right: 4px;
+        animation: pulse 1s infinite;
     }
     </style>
-    <div id="binary-container" style="margin-bottom:15px;"></div>
-    <script>
-        function generateRandomBinary(length = 50) {
-            let binary = '';
-            for (let i = 0; i < length; i++) {
-                binary += Math.random() < 0.5 ? '0' : '1';
-            }
-            return binary;
-        }
-        function updateBinary() {
-            const container = document.getElementById('binary-container');
-            if (container) {
-                const binaryString = generateRandomBinary(60);
-                container.innerHTML = `<div class="binary-line">${binaryString}</div>`;
-            }
-        }
-        setInterval(updateBinary, 300);
-        updateBinary();
-    </script>
     <div class="login-container">
         <div class="login-box">
             <div class="military-shield"><span>🛡️</span></div>
@@ -448,7 +460,6 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     
     with st.form("login_form"):
-        # O campo senha virá depois do binário
         senha = st.text_input("", type="password", placeholder="Credencial de segurança", label_visibility="collapsed")
         submitted = st.form_submit_button("🔓 ACESSAR SISTEMA", use_container_width=True)
         if submitted:
