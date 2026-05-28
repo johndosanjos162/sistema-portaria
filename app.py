@@ -370,13 +370,15 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
 
 st.markdown("---")
 
-# ====================== REGISTRO DE ENTRADA ======================
+# ====================== REGISTRO DE ENTRADA (COM NOMES ALTERADOS) ======================
 st.markdown("### 📋 Registrar Movimentação")
-tipo = st.radio("👥 Tipo de Pessoa:", ["👨‍💼 Colaborador Interno", "🔧 Colaborado Interno"], horizontal=True)
 
-if tipo == "👨‍💼 Colaborador Interno":
+# ALTERAÇÃO AQUI: primeiros nomes conforme solicitado
+tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
+
+if tipo == "🏢 Prestador de serviços":
     destinos = ["🏥 C.C", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "🧪 Laboratório", "💊 Farmacia"]
-else:
+else:  # "🔧 Terceirizados"
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
 c1, c2, c3 = st.columns([2,2,1])
@@ -447,17 +449,13 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
     if todos_dados:
-        # Converter para DataFrame para exibição
         df = pd.DataFrame(todos_dados)
         
-        # Adicionar coluna de seleção com checkbox
         st.markdown("#### Selecione os registros que deseja excluir:")
         
-        # Criar uma lista de IDs selecionados via session_state
         if "selected_ids" not in st.session_state:
             st.session_state.selected_ids = []
         
-        # Exibir tabela com checkboxes
         for idx, row in df.iterrows():
             col_check, col_data = st.columns([0.5, 9.5])
             with col_check:
@@ -475,7 +473,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 </div>
                 """, unsafe_allow_html=True)
         
-        # Botões de ação
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         
         with col_btn1:
@@ -505,7 +502,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     confirm = st.text_input("Digite 'LIMPAR TUDO' para confirmar:", type="password")
                     if confirm == "LIMPAR TUDO":
                         if st.button("🔥 EXCLUIR TUDO PERMANENTEMENTE", key="clear_all_confirm"):
-                            supabase.table("movimentacao").delete().neq("id", 0).execute()  # apaga todos
+                            supabase.table("movimentacao").delete().neq("id", 0).execute()
                             st.success("✅ Todo o histórico foi limpo!")
                             st.session_state.selected_ids = []
                             st.rerun()
