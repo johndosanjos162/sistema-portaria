@@ -7,7 +7,6 @@ import base64
 import re
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
-# Limite de tentativas de login (força bruta)
 MAX_TENTATIVAS_LOGIN = 5
 
 # --- CONFIGURAÇÃO SUPABASE ---
@@ -18,7 +17,7 @@ supabase = create_client(url, key)
 st.set_page_config(
     page_title="JOHN ACESSOS - ACESSO DE DADOS", 
     layout="wide", 
-    page_icon="🛡️", 
+    page_icon="👮‍♂️", 
     initial_sidebar_state="expanded"
 )
 
@@ -30,7 +29,6 @@ def gerar_html_impressao(df, titulo):
     colunas_presentes = [c for c in colunas if c in df.columns]
     linhas_html = ""
     for _, row in df.iterrows():
-        # Sanitização básica dos valores para evitar injeção HTML no PDF gerado
         linhas_html += "<tr>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
@@ -111,21 +109,17 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
-# ====================== FUNÇÃO DE VALIDAÇÃO DE CPF ======================
+# ====================== FUNÇÕES DE VALIDAÇÃO E SANITIZAÇÃO ======================
 def validar_cpf(cpf):
-    """Valida se o CPF tem 11 dígitos numéricos (sem pontuação)"""
     cpf_limpo = re.sub(r'\D', '', cpf)
     return cpf_limpo.isdigit() and len(cpf_limpo) == 11
 
 def sanitizar_cpf(cpf):
-    """Remove tudo que não for dígito e retorna apenas números"""
     return re.sub(r'\D', '', cpf)
 
 def sanitizar_texto(texto):
-    """Remove tags HTML/JS e caracteres perigosos"""
     if not texto:
         return texto
-    # Substitui caracteres especiais por seus equivalentes seguros
     texto = texto.replace('<', '&lt;').replace('>', '&gt;')
     texto = texto.replace('"', '&quot;').replace("'", '&#39;')
     return texto
@@ -141,19 +135,18 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN BASE (com cabeçalhos de segurança) ======================
+# ====================== CABEÇALHOS DE SEGURANÇA ======================
 st.markdown("""
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';">
 <meta http-equiv="X-Frame-Options" content="DENY">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 """, unsafe_allow_html=True)
 
-# O restante do CSS (mantido igual, sem alterações)
+# ====================== DESIGN BASE ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
 
-/* ANIMAÇÕES */
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(100, 0, 255, 0.4); }
     70% { box-shadow: 0 0 0 12px rgba(100, 0, 255, 0); }
@@ -169,13 +162,11 @@ st.markdown("""
     to { transform: rotate(360deg); }
 }
 
-/* FUNDO */
 .stApp {
     background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);
     font-family: 'Inter', 'Space Mono', monospace;
 }
 
-/* SIDEBAR */
 [data-testid="stSidebar"] {
     background: rgba(8, 8, 20, 0.85);
     backdrop-filter: blur(12px);
@@ -202,7 +193,6 @@ st.markdown("""
     font-family: 'Space Mono', monospace;
 }
 
-/* CABEÇALHO */
 .admin-header {
     background: rgba(8, 8, 20, 0.7);
     backdrop-filter: blur(8px);
@@ -220,7 +210,6 @@ st.markdown("""
     color: white;
 }
 
-/* CARDS */
 .admin-card {
     background: rgba(15, 15, 30, 0.6);
     backdrop-filter: blur(4px);
@@ -247,7 +236,6 @@ st.markdown("""
     -webkit-text-fill-color: transparent;
 }
 
-/* BOTÕES */
 .stButton > button, .stForm button {
     border-radius: 40px;
     font-weight: 600;
@@ -265,7 +253,6 @@ st.markdown("""
     background: linear-gradient(90deg, #ef4444, #b91c1c);
 }
 
-/* INPUTS */
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
 .stNumberInput > div > div > input {
@@ -281,7 +268,6 @@ st.markdown("""
     box-shadow: 0 0 8px #a855f7;
 }
 
-/* EXPANDER, TABS */
 .streamlit-expanderHeader {
     background: rgba(15, 15, 30, 0.8);
     border: 1px solid #a855f7;
@@ -336,7 +322,7 @@ if IMAGEM_SIDEBAR:
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">🛡️ JOHN ACESSOS</div>
+            <div class="sidebar-title">👮‍♂️ JOHN ACESSOS</div>
             <p style="color:#a78bfa; font-size:9px;">ACESSO DE DADOS</p>
         </div>
     """, unsafe_allow_html=True)
@@ -375,16 +361,14 @@ if "tentativas_login" not in st.session_state:
 if "bloqueado_ate" not in st.session_state:
     st.session_state.bloqueado_ate = None
 
-# ====================== TELA DE LOGIN COM PROTEÇÃO CONTRA FORÇA BRUTA ======================
+# ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
-    # Verifica se está bloqueado
     if st.session_state.bloqueado_ate and datetime.now() < st.session_state.bloqueado_ate:
         st.error(f"⛔ Muitas tentativas inválidas. Tente novamente após {st.session_state.bloqueado_ate.strftime('%H:%M:%S')}")
         st.stop()
 
     st.markdown("""
     <style>
-    /* Fundo com dados fluindo */
     .data-stream {
         position: fixed;
         top: 0;
@@ -396,7 +380,6 @@ if not st.session_state.logado:
         background: repeating-linear-gradient(90deg, rgba(168,85,247,0.05) 0px, rgba(168,85,247,0.05) 2px, transparent 2px, transparent 10px);
         background-size: 20px 100%;
     }
-    /* Camada de rede neural */
     .neural-bg {
         position: fixed;
         top: 0;
@@ -428,7 +411,7 @@ if not st.session_state.logado:
         animation: float 3s ease-in-out infinite;
         box-shadow: 0 0 30px rgba(168,85,247,0.2);
     }
-    .shield-core {
+    .guard-logo {
         width: 110px;
         height: 110px;
         margin: 0 auto 20px;
@@ -440,11 +423,11 @@ if not st.session_state.logado:
         position: relative;
         animation: pulse 2s infinite;
     }
-    .shield-core span {
-        font-size: 55px;
+    .guard-logo span {
+        font-size: 60px;
         filter: drop-shadow(0 0 10px #a855f7);
     }
-    .shield-core::before {
+    .guard-logo::before {
         content: "";
         position: absolute;
         width: 140px;
@@ -454,7 +437,7 @@ if not st.session_state.logado:
         animation: spinSlow 8s linear infinite;
         opacity: 0.6;
     }
-    .shield-core::after {
+    .guard-logo::after {
         content: "⚡";
         position: absolute;
         font-size: 20px;
@@ -532,12 +515,11 @@ if not st.session_state.logado:
     <div class="neural-bg"></div>
     <div class="login-container">
         <div class="login-box">
-            <div class="shield-core"><span>🛡️⚡</span></div>
+            <div class="guard-logo"><span>👮‍♂️🔒</span></div>
             <div class="logo-title">JOHN ACESSOS</div>
             <div class="logo-subtitle">ACESSO DE DADOS</div>
     """, unsafe_allow_html=True)
     
-    # Código binário animado (simula fluxo de dados)
     st.markdown("""
     <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     <script>
@@ -556,10 +538,9 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     
     with st.form("login_form"):
-        # Campo identificação (apenas visual, não usado)
         st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
         senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
-        submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
+        submitted = st.form_submit_button("👮‍♂️ ACESSAR SISTEMA", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
@@ -575,7 +556,6 @@ if not st.session_state.logado:
                 st.session_state.tentativas_login += 1
                 restantes = MAX_TENTATIVAS_LOGIN - st.session_state.tentativas_login
                 if st.session_state.tentativas_login >= MAX_TENTATIVAS_LOGIN:
-                    # Bloqueia por 5 minutos
                     st.session_state.bloqueado_ate = datetime.now() + pd.Timedelta(minutes=5)
                     st.error("⛔ Muitas tentativas inválidas. Acesso bloqueado por 5 minutos.")
                 else:
@@ -598,11 +578,11 @@ st.markdown(f"""
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #a855f7, #3b82f6); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <span style="font-size: 20px;">🛡️</span>
+                    <span style="font-size: 20px;">👮‍♂️</span>
                 </div>
                 <div>
                     <h1 style="margin:0; font-size: 16px;">JOHN ACESSOS - ACESSO DE DADOS</h1>
-                    <p style="margin:0; color: #a78bfa; font-size: 8px;">PROTEÇÃO DE DADOS</p>
+                    <p style="margin:0; color: #a78bfa; font-size: 8px;">SEGURANÇA E PROTEÇÃO</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -670,7 +650,6 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
     novo_empresa = col_c.text_input("🏢 Empresa")
     if st.button("💾 Salvar Cadastro", type="primary"):
         if novo_cpf and novo_nome:
-            # Validação de CPF
             if not validar_cpf(novo_cpf):
                 st.error("❌ CPF inválido. Digite um CPF válido (11 dígitos).")
             else:
@@ -1083,6 +1062,6 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🛡️ JOHN ACESSOS - ACESSO DE DADOS | Proteção de Dados | Segurança Quântica
+        👮‍♂️ JOHN ACESSOS - ACESSO DE DADOS | Segurança e Proteção de Dados
     </div>
 """, unsafe_allow_html=True)
