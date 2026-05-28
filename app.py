@@ -90,7 +90,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <tr>{cabecalho_html}</table>
+                <tr>{cabecalho_html}</tr>
             </thead>
             <tbody>
                 {linhas_html}
@@ -104,7 +104,7 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
-# ====================== CARREGAR IMAGENS (opcional) ======================
+# ====================== CARREGAR IMAGENS ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
         return Image.open(nome_arquivo)
@@ -115,125 +115,58 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN FUTURISTA EXTREMO ======================
+# ====================== DESIGN FUTURISTA SEGURO ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
 
-/* ========== ANIMAÇÕES AVANÇADAS ========== */
+/* ANIMAÇÕES */
 @keyframes pulseNeon {
-    0% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.7); }
-    70% { box-shadow: 0 0 0 20px rgba(0, 191, 255, 0); }
+    0% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(0, 191, 255, 0); }
     100% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0); }
 }
 @keyframes glowText {
-    0% { text-shadow: 0 0 5px #00BFFF, 0 0 10px #00BFFF; }
-    100% { text-shadow: 0 0 15px #00BFFF, 0 0 25px #00BFFF; }
+    0% { text-shadow: 0 0 2px #00BFFF; }
+    100% { text-shadow: 0 0 10px #00BFFF; }
 }
 @keyframes floatBox {
     0% { transform: translateY(0px); }
-    50% { transform: translateY(-8px); }
+    50% { transform: translateY(-5px); }
     100% { transform: translateY(0px); }
 }
-@keyframes rotateEnergy {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-@keyframes scanHorizontal {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
-@keyframes particleFloating {
-    0% { transform: translateY(0px) scale(1); opacity: 0; }
-    50% { opacity: 1; }
-    100% { transform: translateY(-30px) scale(0.5); opacity: 0; }
-}
-@keyframes gridMove {
-    0% { background-position: 0 0; }
-    100% { background-position: 50px 50px; }
-}
-@keyframes hologramPulse {
-    0% { border-color: rgba(0,191,255,0.3); box-shadow: 0 0 15px rgba(0,191,255,0.2); }
-    50% { border-color: rgba(0,191,255,0.8); box-shadow: 0 0 30px rgba(0,191,255,0.6); }
-    100% { border-color: rgba(0,191,255,0.3); box-shadow: 0 0 15px rgba(0,191,255,0.2); }
-}
-@keyframes biometricScan {
-    0% { background-position: 0% 0%; }
-    100% { background-position: 100% 100%; }
+@keyframes rotateRing {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* ========== BASE COM FUNDO CIBERNÉTICO ========== */
+/* BASE */
 .stApp {
-    background: radial-gradient(ellipse at center, #03050b 0%, #010101 100%);
+    background: radial-gradient(ellipse at center, #030b14 0%, #010101 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
-    position: relative;
-    overflow-x: hidden;
-}
-/* Grade de fundo futurista */
-.stApp::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: 
-        linear-gradient(rgba(0,191,255,0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,191,255,0.05) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    animation: gridMove 20s linear infinite;
-}
-/* Partículas digitais flutuantes */
-.stApp::after {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle at 20% 40%, rgba(0,191,255,0.1) 1px, transparent 1px),
-                radial-gradient(circle at 80% 70%, rgba(0,191,255,0.08) 1px, transparent 1px);
-    background-size: 45px 45px, 60px 60px;
-    pointer-events: none;
-    animation: particleFloating 6s infinite;
-    opacity: 0.5;
-}
-/* Linhas holográficas de energia circulando */
-.holo-energy {
-    position: fixed;
-    top: 20%;
-    left: 0;
-    width: 100%;
-    height: 60%;
-    background: repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(0,191,255,0.03) 50px, rgba(0,191,255,0.08) 80px);
-    pointer-events: none;
-    animation: scanHorizontal 12s linear infinite;
-    z-index: 1;
 }
 
-/* ========== SIDEBAR AINDA MAIS TEC ========== */
+/* SIDEBAR */
 [data-testid="stSidebar"] {
     background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(20px);
-    border-right: 1px solid #00BFFF;
-    box-shadow: -10px 0 30px rgba(0, 191, 255, 0.3);
+    backdrop-filter: blur(15px);
+    border-right: 2px solid #00BFFF;
+    box-shadow: -5px 0 20px rgba(0, 191, 255, 0.2);
 }
 .sidebar-header {
     text-align: center;
-    padding: 25px 15px;
+    padding: 20px 10px;
     border-bottom: 2px solid #00BFFF;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     animation: floatBox 3s ease-in-out infinite;
 }
 .sidebar-title {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 900;
     background: linear-gradient(135deg, #00BFFF, #0080FF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    letter-spacing: 3px;
-    text-transform: uppercase;
+    letter-spacing: 2px;
 }
 .nav-link {
     display: block;
@@ -243,184 +176,156 @@ st.markdown("""
     text-decoration: none;
     color: #00BFFF;
     font-weight: 600;
-    transition: all 0.3s;
-    cursor: pointer;
+    transition: 0.3s;
 }
 .nav-link:hover {
     background: rgba(0, 191, 255, 0.2);
     transform: translateX(5px);
-    box-shadow: 0 0 8px #00BFFF;
+    box-shadow: 0 0 5px #00BFFF;
 }
 
-/* ========== CABEÇALHO PREMIUM ========== */
+/* CABEÇALHO */
 .admin-header {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(15px);
-    border-radius: 20px;
-    padding: 15px 25px;
-    margin-bottom: 25px;
-    border: 1px solid #00BFFF;
-    box-shadow: 0 0 20px rgba(0, 191, 255, 0.3);
-    animation: floatBox 3s ease-in-out infinite;
-}
-.badge-admin {
-    background: linear-gradient(135deg, #00BFFF, #0080FF);
-    padding: 6px 20px;
-    border-radius: 30px;
-    font-weight: 800;
-    font-size: 13px;
-    color: #000;
-    letter-spacing: 1px;
-    box-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
-    text-transform: uppercase;
-}
-
-/* ========== CARDS ========== */
-.admin-card {
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(12px);
     border-radius: 20px;
-    padding: 20px;
+    padding: 12px 20px;
+    margin-bottom: 25px;
     border: 1px solid #00BFFF;
-    transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(0, 191, 255, 0.3);
+}
+.badge-admin {
+    background: linear-gradient(135deg, #00BFFF, #0080FF);
+    padding: 5px 18px;
+    border-radius: 30px;
+    font-weight: 800;
+    font-size: 12px;
+    color: #000;
+    letter-spacing: 1px;
+    box-shadow: 0 0 10px rgba(0, 191, 255, 0.6);
+}
+
+/* CARDS */
+.admin-card {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 18px;
+    border: 1px solid #00BFFF;
+    transition: 0.3s;
 }
 .admin-card:hover {
-    transform: translateY(-8px) scale(1.02);
-    border-color: #00BFFF;
-    box-shadow: 0 0 30px rgba(0, 191, 255, 0.4);
+    transform: translateY(-5px);
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.4);
 }
 .card-title {
     font-size: 11px;
-    text-transform: uppercase;
     letter-spacing: 2px;
     color: #00BFFF;
-    margin-bottom: 8px;
-    font-weight: 700;
 }
 .card-value {
-    font-size: 38px;
+    font-size: 34px;
     font-weight: 900;
-    background: linear-gradient(135deg, #ffffff, #00BFFF);
+    background: linear-gradient(135deg, #fff, #00BFFF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
-/* ========== BOTÕES ========== */
+/* BOTÕES */
 .stButton > button, .stForm button {
     border-radius: 50px;
     font-weight: 800;
     font-family: 'Orbitron', monospace;
-    transition: all 0.3s ease;
-    border: none;
     background: linear-gradient(90deg, #00BFFF, #0080FF);
-    color: #000;
-    box-shadow: 0 0 15px rgba(0, 191, 255, 0.5);
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    color: black;
+    box-shadow: 0 0 12px rgba(0, 191, 255, 0.5);
+    border: none;
+    transition: 0.3s;
 }
 .stButton > button:hover, .stForm button:hover {
-    transform: scale(1.03);
-    box-shadow: 0 0 25px rgba(0, 191, 255, 0.9);
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(0, 191, 255, 0.8);
 }
 .stButton > button[key="sair_final"] {
     background: linear-gradient(90deg, #ff4444, #cc0000);
     color: white;
 }
 
-/* ========== INPUTS ========== */
+/* INPUTS */
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
 .stNumberInput > div > div > input {
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.8);
     border: 2px solid #00BFFF;
     border-radius: 15px;
     color: #00BFFF;
     font-family: 'Share Tech Mono', monospace;
-    padding: 12px;
+    padding: 10px;
 }
 .stTextInput > div > div > input:focus {
     border-color: #00BFFF;
-    box-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
-    color: #fff;
+    box-shadow: 0 0 15px rgba(0, 191, 255, 0.5);
+    color: white;
 }
 
-/* ========== EXPANDER ========== */
+/* EXPANDER, TABS, CHECKBOX */
 .streamlit-expanderHeader {
     background: rgba(0, 0, 0, 0.8);
-    border-radius: 15px;
     border: 1px solid #00BFFF;
-    font-weight: 800;
-    font-family: 'Orbitron', monospace;
+    border-radius: 15px;
     color: #00BFFF;
+    font-weight: 700;
 }
-
-/* ========== TABS ========== */
 .stTabs [data-baseweb="tab-list"] {
     gap: 8px;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0,0,0,0.5);
     padding: 6px;
-    border-radius: 50px;
-    border: 1px solid #00BFFF;
+    border-radius: 40px;
 }
 .stTabs [data-baseweb="tab"] {
-    border-radius: 40px;
-    padding: 8px 25px;
-    font-weight: 700;
-    font-family: 'Orbitron', monospace;
+    border-radius: 30px;
+    padding: 6px 20px;
+    font-weight: 600;
     color: #ccc;
 }
 .stTabs [aria-selected="true"] {
     background: linear-gradient(135deg, #00BFFF, #0080FF);
     color: #000;
-    box-shadow: 0 0 15px #00BFFF;
+    box-shadow: 0 0 10px #00BFFF;
 }
-
-/* ========== CHECKBOX ========== */
 .stCheckbox label {
     color: #00BFFF;
-    font-weight: 500;
 }
-
-/* ========== DATAFRAME ========== */
 .stDataFrame {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0,0,0,0.5);
     border-radius: 15px;
     border: 1px solid #00BFFF;
 }
-
-/* ========== ALERTAS ========== */
 .stAlert {
-    background: rgba(0, 0, 0, 0.85);
-    border-left: 5px solid #00BFFF;
-    border-radius: 12px;
+    background: rgba(0,0,0,0.85);
+    border-left: 4px solid #00BFFF;
     color: #00BFFF;
 }
-
-/* ========== FOOTER ========== */
 .footer {
     text-align: center;
-    padding: 20px;
+    padding: 15px;
     color: #00BFFF;
     font-size: 10px;
-    border-top: 1px solid rgba(0, 191, 255, 0.3);
+    border-top: 1px solid rgba(0,191,255,0.3);
     margin-top: 30px;
-    font-family: 'Orbitron', monospace;
 }
-
-/* ========== TÍTULOS ========== */
 h1, h2, h3, h4, h5, h6 {
     font-family: 'Orbitron', monospace;
     color: #00BFFF;
-    text-shadow: 0 0 5px #00BFFF;
+    text-shadow: 0 0 3px #00BFFF;
 }
 hr {
-    border-color: rgba(0, 191, 255, 0.3);
+    border-color: rgba(0,191,255,0.3);
 }
 html {
     scroll-behavior: smooth;
 }
 </style>
-<div class="holo-energy"></div>
 """, unsafe_allow_html=True)
 
 # ====================== SIDEBAR ======================
@@ -430,7 +335,7 @@ else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
             <div class="sidebar-title">🔐 JOHN ACESSOS</div>
-            <p style="color:#00BFFF; font-size:10px; margin-top:8px;">SECURITY SYSTEM</p>
+            <p style="color:#00BFFF; font-size:9px;">SECURITY SYSTEM</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -456,7 +361,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("• 👑 **Perfil:** ---")
 st.sidebar.markdown("• 🟢 **Status:** Online")
-st.sidebar.markdown("• 📦 **Versão:** 6.0.0")
+st.sidebar.markdown("• 📦 **Versão:** 7.0")
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -472,7 +377,7 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN FUTURISTA EXTREMA ======================
+# ====================== TELA DE LOGIN FUTURISTA ======================
 if not st.session_state.logado:
     st.markdown("""
     <style>
@@ -481,184 +386,93 @@ if not st.session_state.logado:
         justify-content: center;
         align-items: center;
         min-height: 85vh;
-        position: relative;
-        z-index: 10;
+        margin: 0 auto;
     }
     .login-box {
-        background: rgba(0, 0, 0, 0.65);
-        backdrop-filter: blur(20px);
-        border-radius: 50px;
-        padding: 50px 40px;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(15px);
+        border-radius: 40px;
+        padding: 40px 30px;
         border: 2px solid #00BFFF;
-        box-shadow: 0 0 70px rgba(0, 191, 255, 0.4), inset 0 0 30px rgba(0,191,255,0.1);
-        animation: floatBox 4s ease-in-out infinite, hologramPulse 3s infinite;
+        box-shadow: 0 0 40px rgba(0, 191, 255, 0.4);
         width: 100%;
-        max-width: 550px;
-        margin: 0 auto;
+        max-width: 450px;
         text-align: center;
+        animation: floatBox 3s ease-in-out infinite;
     }
-    /* Escudo holográfico animado */
     .holo-shield {
-        position: relative;
-        width: 120px;
-        height: 120px;
-        margin: 0 auto 30px auto;
-        background: radial-gradient(circle, rgba(0,191,255,0.2), rgba(0,191,255,0));
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 20px;
+        background: radial-gradient(circle, rgba(0,191,255,0.2), transparent);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
         animation: pulseNeon 2s infinite;
     }
-    .holo-shield::before {
-        content: "🛡️";
-        font-size: 70px;
-        position: absolute;
-        text-shadow: 0 0 20px #00BFFF;
+    .holo-shield span {
+        font-size: 50px;
+        filter: drop-shadow(0 0 8px #00BFFF);
         animation: glowText 1.5s infinite alternate;
     }
     .holo-shield::after {
         content: "";
         position: absolute;
-        width: 140px;
-        height: 140px;
+        width: 120px;
+        height: 120px;
+        border: 1px solid #00BFFF;
         border-radius: 50%;
-        border: 2px solid rgba(0,191,255,0.6);
         top: -10px;
         left: -10px;
-        animation: rotateEnergy 6s linear infinite;
-    }
-    .energy-ring {
-        position: absolute;
-        width: 160px;
-        height: 160px;
-        border-radius: 50%;
-        border: 1px solid rgba(0,191,255,0.4);
-        top: -20px;
-        left: -20px;
-        animation: rotateEnergy 8s linear infinite reverse;
-    }
-    .network-neural {
-        position: absolute;
-        width: 200px;
-        height: 200px;
-        top: -40px;
-        left: -40px;
-        background: radial-gradient(circle, transparent 60%, rgba(0,191,255,0.1) 100%);
-        pointer-events: none;
-        animation: pulseNeon 3s infinite;
+        animation: rotateRing 6s linear infinite;
     }
     .logo-title {
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 900;
-        background: linear-gradient(135deg, #ffffff, #00BFFF);
+        background: linear-gradient(135deg, #fff, #00BFFF);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-top: 10px;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        animation: glowText 2s infinite alternate;
+        letter-spacing: 2px;
     }
     .logo-subtitle {
-        font-size: 12px;
+        font-size: 10px;
         color: #00BFFF;
-        letter-spacing: 4px;
+        letter-spacing: 3px;
         margin-top: 5px;
     }
-    /* Biometria lateral */
-    .biometric-side {
-        position: fixed;
-        right: 30px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 180px;
-        background: rgba(0,0,0,0.5);
-        backdrop-filter: blur(10px);
-        border-radius: 30px;
-        padding: 20px;
-        border: 1px solid #00BFFF;
-        text-align: center;
-        z-index: 20;
-        box-shadow: 0 0 20px rgba(0,191,255,0.3);
-        animation: floatBox 5s infinite;
-    }
-    .biometric-title {
-        font-size: 10px;
-        letter-spacing: 2px;
-        margin-bottom: 15px;
-        color: #0ff;
-    }
-    .biometric-face {
-        width: 80px;
-        height: 80px;
-        margin: 0 auto;
-        background: radial-gradient(circle at 30% 30%, #0ff, #0055aa);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 40px;
-        animation: pulseNeon 1.5s infinite;
-    }
-    .biometric-scan {
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #0ff, transparent);
-        margin-top: 15px;
-        animation: scanHorizontal 2s infinite;
-    }
-    .biometric-text {
-        font-size: 9px;
-        margin-top: 10px;
-        color: #0ff;
-    }
     .status-bar {
-        margin-top: 25px;
-        text-align: center;
-        font-size: 10px;
+        margin-top: 20px;
+        font-size: 9px;
         color: #00BFFF;
         border-top: 1px solid rgba(0,191,255,0.3);
-        padding-top: 15px;
+        padding-top: 12px;
     }
     .status-item {
         display: inline-block;
-        margin: 0 8px;
+        margin: 0 5px;
     }
     .blink {
         display: inline-block;
         width: 8px;
         height: 8px;
-        background: #00FF00;
+        background: #0f0;
         border-radius: 50%;
-        margin-right: 5px;
-        box-shadow: 0 0 5px #00FF00;
+        margin-right: 4px;
         animation: pulseNeon 1s infinite;
     }
-    @media (max-width: 1200px) {
-        .biometric-side { display: none; }
-    }
     </style>
-    <div class="biometric-side">
-        <div class="biometric-title">🔬 SCANNER BIOMÉTRICO</div>
-        <div class="biometric-face">👤</div>
-        <div class="biometric-scan"></div>
-        <div class="biometric-text">ANÁLISE FACIAL 3D</div>
-        <div class="biometric-text">LEITURA OCULAR</div>
-        <div class="biometric-text" style="font-size:8px; opacity:0.7;">INTELIGÊNCIA ATIVA</div>
-    </div>
     <div class="login-container">
         <div class="login-box">
-            <div class="holo-shield">
-                <div class="energy-ring"></div>
-                <div class="network-neural"></div>
-            </div>
+            <div class="holo-shield"><span>🛡️</span></div>
             <div class="logo-title">JOHN ACESSOS</div>
             <div class="logo-subtitle">SECURITY SYSTEM</div>
             <div style="height: 20px;"></div>
     """, unsafe_allow_html=True)
     
-    # Formulário de login
     with st.form("login_form"):
-        senha = st.text_input("", type="password", key="senha_login", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
+        senha = st.text_input("", type="password", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
         submitted = st.form_submit_button("🔓 ACESSAR SISTEMA", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
@@ -670,7 +484,7 @@ if not st.session_state.logado:
                 st.session_state.perfil = "VIGILANTE"
                 st.rerun()
             else:
-                st.error("❌ ACESSO NEGADO - Credenciais inválidas")
+                st.error("❌ ACESSO NEGADO")
     
     st.markdown("""
             <div class="status-bar">
@@ -688,12 +502,12 @@ st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #00BFFF, #0080FF); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px #00BFFF;">
-                    <span style="font-size: 24px;">🔐</span>
+                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #00BFFF, #0080FF); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px #00BFFF;">
+                    <span style="font-size: 22px;">🔐</span>
                 </div>
                 <div>
-                    <h1 style="margin:0; font-size: 20px;">JOHN ACESSOS SECURITY</h1>
-                    <p style="margin:0; color: #00BFFF; font-size: 10px;">INTELLIGENT ACCESS CONTROL</p>
+                    <h1 style="margin:0; font-size: 18px;">JOHN ACESSOS SECURITY</h1>
+                    <p style="margin:0; color: #00BFFF; font-size: 9px;">INTELLIGENT ACCESS CONTROL</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -707,7 +521,7 @@ with col3:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== DASHBOARD (seção com âncora) ======================
+# ====================== DASHBOARD ======================
 st.markdown('<span id="dashboard"></span>', unsafe_allow_html=True)
 st.markdown("---")
 pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
@@ -720,7 +534,7 @@ with col1:
         <div class="admin-card">
             <div style="display:flex; justify-content:space-between;">
                 <div><div class="card-title">📍 PRESENTES</div><div class="card-value">{total_presentes}</div></div>
-                <div style="font-size:32px;">👥</div>
+                <div style="font-size:28px;">👥</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -729,7 +543,7 @@ with col2:
         <div class="admin-card">
             <div style="display:flex; justify-content:space-between;">
                 <div><div class="card-title">📋 CADASTRADOS</div><div class="card-value">{total_colaboradores}</div></div>
-                <div style="font-size:32px;">📊</div>
+                <div style="font-size:28px;">📊</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -738,7 +552,7 @@ with col3:
         <div class="admin-card">
             <div style="display:flex; justify-content:space-between;">
                 <div><div class="card-title">🏥 SETORES</div><div class="card-value">11</div></div>
-                <div style="font-size:32px;">🏛️</div>
+                <div style="font-size:28px;">🏛️</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -747,7 +561,7 @@ with col4:
         <div class="admin-card">
             <div style="display:flex; justify-content:space-between;">
                 <div><div class="card-title">🎥 CFTV</div><div class="card-value">24/7</div></div>
-                <div style="font-size:32px;">📹</div>
+                <div style="font-size:28px;">📹</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -777,7 +591,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
         else:
             st.error("❌ CPF e Nome são obrigatórios.")
 
-# ====================== REGISTRO DE ENTRADA (PRESTADORES) ======================
+# ====================== REGISTRO DE ENTRADA ======================
 st.markdown('<span id="prestadores"></span>', unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
@@ -1102,7 +916,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     else:
         st.info("📭 Nenhum registro encontrado no histórico.")
 
-# ====================== GESTÃO DE CADASTROS (ADMIN) ======================
+# ====================== GESTÃO DE CADASTROS ======================
 st.markdown('<span id="configuracoes"></span>', unsafe_allow_html=True)
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
@@ -1151,11 +965,10 @@ if st.session_state.perfil == "ADMIN":
         else:
             st.info("Nenhum cadastro encontrado")
 
-# ====================== FOOTER ======================
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🔒 JOHN ACESSOS SECURITY - Sistema de Controle de Acesso de Alta Tecnologia<br>
-        Monitoramento 24/7 | Criptografia Avançada | IA de Vigilância
+        🔒 JOHN ACESSOS SECURITY - Controle de Acesso<br>
+        Monitoramento 24/7 | Criptografia | IA Avançada
     </div>
 """, unsafe_allow_html=True)
