@@ -464,7 +464,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
 
 st.markdown("---")
 
-# ====================== REGISTRO DE ENTRADA COM BOTÃO CONFIRMAR CPF ======================
+# ====================== REGISTRO DE ENTRADA ======================
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
 
@@ -473,18 +473,14 @@ if tipo == "🏢 Prestador de serviços":
 else:
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
-# Layout: campo CPF + botão confirmar
 col_cpf, col_btn_confirma = st.columns([3, 1])
 with col_cpf:
     cpf_input = st.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF")
 with col_btn_confirma:
-    # Botão "Confirmar CPF" só aparece se houver texto no campo
     if cpf_input and len(cpf_input.strip()) > 0:
         if st.button("✅ CONFIRMAR CPF", key="confirma_cpf"):
-            # Busca a pessoa no banco
             pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_input.strip()).execute().data
             if pessoa:
-                # Armazena os dados no session_state para uso posterior
                 st.session_state.pessoa_confirmada = {
                     "cpf": cpf_input.strip(),
                     "nome": pessoa[0]['nome'],
@@ -492,16 +488,13 @@ with col_btn_confirma:
                 }
                 st.success(f"✅ **Pessoa confirmada:** 👤 {pessoa[0]['nome']} | 🏢 Empresa: {pessoa[0].get('empresa', 'N/A')}")
             else:
-                st.error("❌ CPF não cadastrado. Cadastre antes de registrar entrada.")
+                st.error("❌ CPF não cadastrado")
                 st.session_state.pessoa_confirmada = None
     else:
-        # Botão desabilitado visualmente (ou simplesmente não exibe)
         st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
 
-# Escolha do setor
 setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
 
-# Botão de registrar entrada (só permite se houver pessoa confirmada)
 if st.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
     if 'pessoa_confirmada' in st.session_state and st.session_state.pessoa_confirmada:
         pessoa = st.session_state.pessoa_confirmada
@@ -514,7 +507,6 @@ if st.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
             "data_saida": ""
         }).execute()
         st.success(f"✅ Entrada registrada para **{setor_escolhido}**!")
-        # Limpa a confirmação
         st.session_state.pessoa_confirmada = None
         st.rerun()
     else:
@@ -522,11 +514,61 @@ if st.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
 
 st.markdown("---")
 
-# ====================== PESSOAS PRESENTES ======================
+# ====================== PESSOAS PRESENTES (com lupa de pesquisa por CPF) ======================
 st.markdown("### 📍 Pessoas Presentes no Hospital")
+
+# Buscar dados atuais
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
 if dados:
+    # --- BARRA DE PESQUISA POR CPF (LUPA) ---
+    st.markdown("#### 🔍 Pesquisar por CPF para registrar saída")
+    col_pesquisa, col_botao = st.columns([3, 1])
+    with col_pesquisa:
+        cpf_pesquisa = st.text_input("CPF:", key="cpf_saida", placeholder="Digite o CPF da pessoa")
+    with col_botao:
+        if st.button("🔎 Buscar", key="buscar_saida"):
+            if cpf_pesquisa:
+                # Procura nos dados presentes
+                pessoa_encontrada = None
+                for p in dados:
+                    if p['cpf'] == cpf_pesquisa.strip():
+                        pessoa_encontrada = p
+                        break
+                if pessoa_encontrada:
+                    st.session_state.pessoa_saida = pessoa_encontrada
+                    st.success(f"✅ Pessoa encontrada: **{pessoa_encontrada['nome']}** (CPF: {pessoa_encontrada['cpf']})")
+                else:
+                    st.error("❌ CPF não encontrado entre as pessoas presentes.")
+                    st.session_state.pessoa_saida = None
+            else:
+                st.warning("Digite um CPF para buscar.")
+    
+    # Se uma pessoa foi encontrada na busca, exibir botão de saída
+    if 'pessoa_saida' in st.session_state and st.session_state.pessoa_saida:
+        with st.container():
+            st.markdown("---")
+            st.markdown("#### 🚪 Registrar Saída da pessoa encontrada:")
+            col_info, col_sair = st.columns([4, 1])
+            with col_info:
+                p = st.session_state.pessoa_saida
+                st.write(f"**👤 Nome:** {p['nome']}")
+                st.write(f"**📄 CPF:** {p['cpf']}")
+                st.write(f"**🏢 Empresa:** {p.get('empresa', 'N/A')}")
+                st.write(f"**📍 Setor:** {p['setor_destino']}")
+                st.write(f"**🕒 Entrada:** {p['data_entrada']}")
+            with col_sair:
+                if st.button("🚪 Registrar Saída", key="sair_pesquisado"):
+                    supabase.table("movimentacao").update({
+                        "data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+                    }).eq("id", p['id']).execute()
+                    st.success(f"✅ Saída registrada para {p['nome']}")
+                    st.session_state.pessoa_saida = None
+                    st.rerun()
+            st.markdown("---")
+    
+    # --- ABAS EXISTENTES (sem alterações) ---
+    st.markdown("#### 📋 Lista completa de presentes")
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
     with tabs[0]:
@@ -560,7 +602,7 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO COM PDFs SEPARADOS POR SETOR ======================
+# ====================== HISTÓRICO COM PDFs ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
@@ -570,7 +612,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.markdown("### 📄 Gerar Relatório para Impressão/PDF")
         st.info("💡 Clique no botão, depois use **Ctrl+P** (ou **Cmd+P**) e escolha **'Salvar como PDF'**.")
         
-        # ----- 1. Relatório completo -----
+        # Relatório completo
         st.markdown("#### 🔹 Histórico Geral")
         if st.button("📑 Abrir relatório completo", key="html_all"):
             html = gerar_html_impressao(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
@@ -582,9 +624,8 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # ----- 2. PDFs separados por setor (INDEPENDENTES) -----
-        st.markdown("#### 🔹 Relatório por Setor (PDF separado para cada setor)")
-        
+        # PDFs por setor
+        st.markdown("#### 🔹 Relatório por Setor (PDF separado)")
         setores_pdf = ["C.C", "GRSA", "Brasanitas"]
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -628,7 +669,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # ----- 3. Relatório por Empresa (Prestadores de Serviço) - inalterado -----
+        # Relatório por empresa (Prestadores)
         st.markdown("#### 🔹 Relatório por Empresa (Prestadores de Serviço)")
         empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
         todas_empresas = df['empresa'].dropna().unique()
@@ -659,7 +700,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # ========== SEÇÃO DE EXCLUSÃO (mantida) ==========
+        # Seção de exclusão (mantida)
         st.markdown("### 🗑️ Exclusão de Registros")
         st.markdown("#### Selecione os registros que deseja excluir:")
         
