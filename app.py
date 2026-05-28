@@ -151,7 +151,7 @@ tipo = st.radio("Tipo de Pessoa:", ["Colaborador Interno", "Prestador de Serviç
 if tipo == "Colaborador Interno":
     destinos = ["C.C", "Hemodinâmica", "OPME", "CME", "Endoscopia", "Manutenção", "Laboratório", "Farmacia"]
 else:
-    destinos = ["C.C", "GRSA", "Brasanitas"]
+    destinos = ["C.C", "GRSA", "Brasanitas", "Prestador de Serviço"]
 
 c1, c2, c3 = st.columns([2, 2, 1])
 cpf_input = c1.text_input("CPF:", key="cpf_entrada")
