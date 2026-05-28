@@ -17,7 +17,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== FUNÇÃO PARA GERAR HTML PARA IMPRESSÃO ======================
+# ====================== FUNÇÃO PARA GERAR HTML PARA IMPRESSÃO/PDF ======================
 def gerar_html_impressao(df, titulo):
     """Gera um HTML formatado para impressão/salvar como PDF."""
     if df.empty:
@@ -95,7 +95,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <td>{cabecalho_html}</tr>
+                <tr>{cabecalho_html}</tr>
             </thead>
             <tbody>
                 {linhas_html}
@@ -536,7 +536,7 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO COM HTML/PDF ======================
+# ====================== HISTÓRICO COM PDFs SEPARADOS POR SETOR ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
@@ -556,31 +556,64 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 st.markdown(href, unsafe_allow_html=True)
                 st.caption("Após abrir, pressione Ctrl+P e escolha 'Salvar como PDF'.")
         
-        # ----- 2. Relatório por setor (C.C, GRSA, Brasanitas) -----
-        st.markdown("#### 🔹 Relatório por Setor")
-        setores = ["C.C", "GRSA", "Brasanitas"]
-        cols_setores = st.columns(len(setores))
-        for idx, setor in enumerate(setores):
-            with cols_setores[idx]:
-                df_setor = df[df['setor_destino'] == setor]
-                if not df_setor.empty:
-                    if st.button(f"🏥 {setor} ({len(df_setor)} registros)", key=f"html_setor_{setor}"):
-                        html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor}")
-                        if html:
-                            b64 = base64.b64encode(html.encode()).decode()
-                            href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor}</a>'
-                            st.markdown(href, unsafe_allow_html=True)
-                else:
-                    st.button(f"🏥 {setor} (vazio)", disabled=True, key=f"btn_{setor}_html")
+        st.markdown("---")
         
-        # ----- 3. Relatório por Empresa (Prestadores de Serviço) -----
+        # ----- 2. PDFs separados por setor (INDEPENDENTES) -----
+        st.markdown("#### 🔹 Relatório por Setor (PDF separado para cada setor)")
+        
+        # Setores que devem ter PDF independente
+        setores_pdf = ["C.C", "GRSA", "Brasanitas"]
+        
+        # Exibir botões lado a lado
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            setor = "C.C"
+            df_setor = df[df['setor_destino'] == setor]
+            if not df_setor.empty:
+                if st.button(f"🏥 {setor} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor}"):
+                    html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor}")
+                    if html:
+                        b64 = base64.b64encode(html.encode()).decode()
+                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor}</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+            else:
+                st.button(f"🏥 {setor} (vazio)", disabled=True, key=f"btn_{setor}_pdf")
+        
+        with col2:
+            setor = "GRSA"
+            df_setor = df[df['setor_destino'] == setor]
+            if not df_setor.empty:
+                if st.button(f"🔧 {setor} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor}"):
+                    html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor}")
+                    if html:
+                        b64 = base64.b64encode(html.encode()).decode()
+                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor}</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+            else:
+                st.button(f"🔧 {setor} (vazio)", disabled=True, key=f"btn_{setor}_pdf")
+        
+        with col3:
+            setor = "Brasanitas"
+            df_setor = df[df['setor_destino'] == setor]
+            if not df_setor.empty:
+                if st.button(f"🏭 {setor} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor}"):
+                    html = gerar_html_impressao(df_setor, f"RELATÓRIO - SETOR {setor}")
+                    if html:
+                        b64 = base64.b64encode(html.encode()).decode()
+                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF do setor {setor}</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+            else:
+                st.button(f"🏭 {setor} (vazio)", disabled=True, key=f"btn_{setor}_pdf")
+        
+        st.markdown("---")
+        
+        # ----- 3. Relatório por Empresa (Prestadores de Serviço) - inalterado -----
         st.markdown("#### 🔹 Relatório por Empresa (Prestadores de Serviço)")
         empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
         todas_empresas = df['empresa'].dropna().unique()
         empresas_filtradas = [emp for emp in todas_empresas if emp.upper() not in [e.upper() for e in empresas_excluir]]
         
         if empresas_filtradas:
-            # Opção: gerar PDF consolidado de TODOS os prestadores (todas as empresas filtradas juntas)
             if st.button("📑 Gerar PDF para TODOS os Prestadores de Serviço (todas as empresas)", key="html_todos_prestadores"):
                 df_prestadores = df[df['empresa'].isin(empresas_filtradas)]
                 if not df_prestadores.empty:
@@ -589,10 +622,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                         b64 = base64.b64encode(html.encode()).decode()
                         href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF de TODOS os Prestadores</a>'
                         st.markdown(href, unsafe_allow_html=True)
-                else:
-                    st.warning("Nenhum registro de prestadores de serviço encontrado.")
             
-            # Lista individual de empresas
             empresa_selecionada = st.selectbox("Ou selecione uma empresa específica:", sorted(empresas_filtradas), key="select_empresa_html")
             if empresa_selecionada:
                 df_empresa = df[df['empresa'] == empresa_selecionada]
