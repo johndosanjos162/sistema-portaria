@@ -78,6 +78,17 @@ def limpar_sessoes_expiradas():
     except Exception as e:
         print(f"Erro ao limpar sessões: {e}")
 
+def encerrar_outras_sessoes():
+    """Remove todas as outras sessões ativas, mantendo apenas a sessão atual."""
+    if "session_id" in st.session_state and st.session_state.session_id:
+        try:
+            supabase.table("sessoes_ativas").delete().neq("id", st.session_state.session_id).execute()
+            return True
+        except Exception as e:
+            print(f"Erro ao encerrar outras sessões: {e}")
+            return False
+    return False
+
 # ====================== FUNÇÃO PARA GERAR HTML PARA IMPRESSÃO/PDF ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
@@ -86,12 +97,12 @@ def gerar_html_impressao(df, titulo):
     colunas_presentes = [c for c in colunas if c in df.columns]
     linhas_html = ""
     for _, row in df.iterrows():
-        linhas_html += "</td>"
+        linhas_html += "<tr>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             valor = valor.replace('<', '&lt;').replace('>', '&gt;')
             linhas_html += f"70><td{valor}迟"
-        linhas_html += "</tr>"
+        linhas_html += "<tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -152,7 +163,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <tr>{cabecalho_html}<tr>
+                <tr>{cabecalho_html}</td>
             </thead>
             <tbody>
                 {linhas_html}
@@ -418,7 +429,34 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 12.4 (SECURE)</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 12.5 (SECURE)</div>', unsafe_allow_html=True)
+
+# ====================== FUNÇÃO "MANAGE APP" (SOMENTE ADMIN) ======================
+if st.session_state.perfil == "ADMIN":
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
+        st.markdown("### 🔧 Ferramentas Administrativas")
+        
+        # Mostrar número de sessões ativas
+        total_ativas = contar_sessoes_ativas()
+        st.metric("👥 Sessões ativas", total_ativas)
+        
+        # Botão para encerrar outras sessões
+        if st.button("🔒 Encerrar outras sessões", use_container_width=True):
+            if encerrar_outras_sessoes():
+                st.success("✅ Todas as outras sessões foram encerradas!")
+                st.rerun()
+            else:
+                st.error("❌ Erro ao encerrar outras sessões.")
+        
+        # Botão para limpar cache de sessões expiradas (já é feito automaticamente)
+        if st.button("🧹 Limpar sessões expiradas", use_container_width=True):
+            limpar_sessoes_expiradas()
+            st.success("✅ Sessões expiradas removidas!")
+            st.rerun()
+        
+        st.markdown("---")
+        st.caption("Ações disponíveis apenas para o administrador.")
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -688,11 +726,11 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Botões: Atualizar e Sair (lado a lado)
+# Botões: Atualizar e Sair
 col1, col2, col3, col4 = st.columns([6, 1, 1, 1])
 with col3:
     if st.button("🔄 ATUALIZAR", key="btn_atualizar", use_container_width=True):
-        st.rerun()   # Apenas recarrega a página, mantém logado
+        st.rerun()
 with col4:
     if st.button("🚪 SAIR", key="sair_final", use_container_width=True):
         remover_sessao()
