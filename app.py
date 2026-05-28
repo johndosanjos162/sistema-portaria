@@ -25,11 +25,11 @@ def gerar_html_impressao(df, titulo):
     colunas_presentes = [c for c in colunas if c in df.columns]
     linhas_html = ""
     for _, row in df.iterrows():
-        linhas_html += "<table>"
+        linhas_html += "<tr>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</table>"
+        linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -90,7 +90,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <td>{cabecalho_html}</tr>
+                <tr>{cabecalho_html}</table>
             </thead>
             <tbody>
                 {linhas_html}
@@ -104,7 +104,7 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
-# ====================== CARREGAR IMAGENS ======================
+# ====================== CARREGAR IMAGENS (opcional) ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
         return Image.open(nome_arquivo)
@@ -115,43 +115,110 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== FUNDO (gradiente escuro rápido, sem scanner) ======================
+# ====================== DESIGN FUTURISTA EXTREMO ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
 
-/* ========== ANIMAÇÕES ========== */
+/* ========== ANIMAÇÕES AVANÇADAS ========== */
 @keyframes pulseNeon {
     0% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.7); }
     70% { box-shadow: 0 0 0 20px rgba(0, 191, 255, 0); }
     100% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0); }
 }
-
 @keyframes glowText {
     0% { text-shadow: 0 0 5px #00BFFF, 0 0 10px #00BFFF; }
     100% { text-shadow: 0 0 15px #00BFFF, 0 0 25px #00BFFF; }
 }
-
 @keyframes floatBox {
     0% { transform: translateY(0px); }
     50% { transform: translateY(-8px); }
     100% { transform: translateY(0px); }
 }
+@keyframes rotateEnergy {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+@keyframes scanHorizontal {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+@keyframes particleFloating {
+    0% { transform: translateY(0px) scale(1); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(-30px) scale(0.5); opacity: 0; }
+}
+@keyframes gridMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 50px 50px; }
+}
+@keyframes hologramPulse {
+    0% { border-color: rgba(0,191,255,0.3); box-shadow: 0 0 15px rgba(0,191,255,0.2); }
+    50% { border-color: rgba(0,191,255,0.8); box-shadow: 0 0 30px rgba(0,191,255,0.6); }
+    100% { border-color: rgba(0,191,255,0.3); box-shadow: 0 0 15px rgba(0,191,255,0.2); }
+}
+@keyframes biometricScan {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 100% 100%; }
+}
 
-/* ========== BASE ========== */
+/* ========== BASE COM FUNDO CIBERNÉTICO ========== */
 .stApp {
-    background: radial-gradient(ellipse at center, #0a0f1a 0%, #050a14 100%);
+    background: radial-gradient(ellipse at center, #03050b 0%, #010101 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
+    position: relative;
+    overflow-x: hidden;
+}
+/* Grade de fundo futurista */
+.stApp::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(0,191,255,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,191,255,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    animation: gridMove 20s linear infinite;
+}
+/* Partículas digitais flutuantes */
+.stApp::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 20% 40%, rgba(0,191,255,0.1) 1px, transparent 1px),
+                radial-gradient(circle at 80% 70%, rgba(0,191,255,0.08) 1px, transparent 1px);
+    background-size: 45px 45px, 60px 60px;
+    pointer-events: none;
+    animation: particleFloating 6s infinite;
+    opacity: 0.5;
+}
+/* Linhas holográficas de energia circulando */
+.holo-energy {
+    position: fixed;
+    top: 20%;
+    left: 0;
+    width: 100%;
+    height: 60%;
+    background: repeating-linear-gradient(90deg, transparent, transparent 50px, rgba(0,191,255,0.03) 50px, rgba(0,191,255,0.08) 80px);
+    pointer-events: none;
+    animation: scanHorizontal 12s linear infinite;
+    z-index: 1;
 }
 
-/* ========== SIDEBAR ========== */
+/* ========== SIDEBAR AINDA MAIS TEC ========== */
 [data-testid="stSidebar"] {
-    background: linear-gradient(135deg, rgba(5, 10, 20, 0.95), rgba(0, 5, 15, 0.98));
-    backdrop-filter: blur(15px);
-    border-right: 2px solid #00BFFF;
-    box-shadow: -10px 0 30px rgba(0, 191, 255, 0.2);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid #00BFFF;
+    box-shadow: -10px 0 30px rgba(0, 191, 255, 0.3);
 }
-
 .sidebar-header {
     text-align: center;
     padding: 25px 15px;
@@ -159,7 +226,6 @@ st.markdown("""
     margin-bottom: 20px;
     animation: floatBox 3s ease-in-out infinite;
 }
-
 .sidebar-title {
     font-size: 24px;
     font-weight: 900;
@@ -169,8 +235,6 @@ st.markdown("""
     letter-spacing: 3px;
     text-transform: uppercase;
 }
-
-/* Menu interativo */
 .nav-link {
     display: block;
     padding: 8px 12px;
@@ -185,11 +249,12 @@ st.markdown("""
 .nav-link:hover {
     background: rgba(0, 191, 255, 0.2);
     transform: translateX(5px);
+    box-shadow: 0 0 8px #00BFFF;
 }
 
-/* ========== CABEÇALHO ========== */
+/* ========== CABEÇALHO PREMIUM ========== */
 .admin-header {
-    background: rgba(5, 15, 25, 0.75);
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(15px);
     border-radius: 20px;
     padding: 15px 25px;
@@ -198,7 +263,6 @@ st.markdown("""
     box-shadow: 0 0 20px rgba(0, 191, 255, 0.3);
     animation: floatBox 3s ease-in-out infinite;
 }
-
 .badge-admin {
     background: linear-gradient(135deg, #00BFFF, #0080FF);
     padding: 6px 20px;
@@ -213,20 +277,18 @@ st.markdown("""
 
 /* ========== CARDS ========== */
 .admin-card {
-    background: rgba(5, 15, 25, 0.7);
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(12px);
     border-radius: 20px;
     padding: 20px;
     border: 1px solid #00BFFF;
     transition: all 0.3s ease;
 }
-
 .admin-card:hover {
     transform: translateY(-8px) scale(1.02);
     border-color: #00BFFF;
     box-shadow: 0 0 30px rgba(0, 191, 255, 0.4);
 }
-
 .card-title {
     font-size: 11px;
     text-transform: uppercase;
@@ -235,7 +297,6 @@ st.markdown("""
     margin-bottom: 8px;
     font-weight: 700;
 }
-
 .card-value {
     font-size: 38px;
     font-weight: 900;
@@ -257,12 +318,10 @@ st.markdown("""
     text-transform: uppercase;
     letter-spacing: 1px;
 }
-
 .stButton > button:hover, .stForm button:hover {
     transform: scale(1.03);
     box-shadow: 0 0 25px rgba(0, 191, 255, 0.9);
 }
-
 .stButton > button[key="sair_final"] {
     background: linear-gradient(90deg, #ff4444, #cc0000);
     color: white;
@@ -272,14 +331,13 @@ st.markdown("""
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
 .stNumberInput > div > div > input {
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
     border: 2px solid #00BFFF;
     border-radius: 15px;
     color: #00BFFF;
     font-family: 'Share Tech Mono', monospace;
     padding: 12px;
 }
-
 .stTextInput > div > div > input:focus {
     border-color: #00BFFF;
     box-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
@@ -288,7 +346,7 @@ st.markdown("""
 
 /* ========== EXPANDER ========== */
 .streamlit-expanderHeader {
-    background: rgba(5, 15, 25, 0.9);
+    background: rgba(0, 0, 0, 0.8);
     border-radius: 15px;
     border: 1px solid #00BFFF;
     font-weight: 800;
@@ -304,7 +362,6 @@ st.markdown("""
     border-radius: 50px;
     border: 1px solid #00BFFF;
 }
-
 .stTabs [data-baseweb="tab"] {
     border-radius: 40px;
     padding: 8px 25px;
@@ -312,7 +369,6 @@ st.markdown("""
     font-family: 'Orbitron', monospace;
     color: #ccc;
 }
-
 .stTabs [aria-selected="true"] {
     background: linear-gradient(135deg, #00BFFF, #0080FF);
     color: #000;
@@ -357,19 +413,17 @@ h1, h2, h3, h4, h5, h6 {
     color: #00BFFF;
     text-shadow: 0 0 5px #00BFFF;
 }
-
 hr {
     border-color: rgba(0, 191, 255, 0.3);
 }
-
-/* Rolar suave */
 html {
     scroll-behavior: smooth;
 }
 </style>
+<div class="holo-energy"></div>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR COM MENU INTERATIVO ======================
+# ====================== SIDEBAR ======================
 if IMAGEM_SIDEBAR:
     st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
 else:
@@ -389,7 +443,6 @@ st.sidebar.markdown("• 🗄️ **BANCO DE DADOS:** SEGURO")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📋 MENU")
-# Menu interativo com links âncora
 st.sidebar.markdown('<a href="#dashboard" class="nav-link">🏠 Dashboard</a>', unsafe_allow_html=True)
 st.sidebar.markdown('<a href="#cadastro" class="nav-link">👤 Colaboradores</a>', unsafe_allow_html=True)
 st.sidebar.markdown('<a href="#prestadores" class="nav-link">🔧 Prestadores</a>', unsafe_allow_html=True)
@@ -403,7 +456,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("• 👑 **Perfil:** ---")
 st.sidebar.markdown("• 🟢 **Status:** Online")
-st.sidebar.markdown("• 📦 **Versão:** 5.0.0")
+st.sidebar.markdown("• 📦 **Versão:** 6.0.0")
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -419,7 +472,7 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN (com Enter) ======================
+# ====================== TELA DE LOGIN FUTURISTA EXTREMA ======================
 if not st.session_state.logado:
     st.markdown("""
     <style>
@@ -428,55 +481,135 @@ if not st.session_state.logado:
         justify-content: center;
         align-items: center;
         min-height: 85vh;
+        position: relative;
+        z-index: 10;
     }
     .login-box {
-        background: rgba(10, 20, 35, 0.85);
-        backdrop-filter: blur(15px);
-        border-radius: 32px;
-        padding: 45px 40px;
+        background: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(20px);
+        border-radius: 50px;
+        padding: 50px 40px;
         border: 2px solid #00BFFF;
-        box-shadow: 0 0 50px rgba(0, 191, 255, 0.4);
-        animation: floatBox 3s ease-in-out infinite;
+        box-shadow: 0 0 70px rgba(0, 191, 255, 0.4), inset 0 0 30px rgba(0,191,255,0.1);
+        animation: floatBox 4s ease-in-out infinite, hologramPulse 3s infinite;
         width: 100%;
-        max-width: 500px;
+        max-width: 550px;
         margin: 0 auto;
-    }
-    .logo-animated {
         text-align: center;
-        margin-bottom: 30px;
     }
-    .logo-icon {
+    /* Escudo holográfico animado */
+    .holo-shield {
+        position: relative;
         width: 120px;
         height: 120px;
-        margin: 0 auto;
-        background: linear-gradient(135deg, #0a1a2a, #0d2b3e);
+        margin: 0 auto 30px auto;
+        background: radial-gradient(circle, rgba(0,191,255,0.2), rgba(0,191,255,0));
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 3px solid #00BFFF;
-        box-shadow: 0 0 30px #00BFFF;
         animation: pulseNeon 2s infinite;
     }
-    .logo-icon span {
-        font-size: 60px;
+    .holo-shield::before {
+        content: "🛡️";
+        font-size: 70px;
+        position: absolute;
+        text-shadow: 0 0 20px #00BFFF;
+        animation: glowText 1.5s infinite alternate;
+    }
+    .holo-shield::after {
+        content: "";
+        position: absolute;
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        border: 2px solid rgba(0,191,255,0.6);
+        top: -10px;
+        left: -10px;
+        animation: rotateEnergy 6s linear infinite;
+    }
+    .energy-ring {
+        position: absolute;
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        border: 1px solid rgba(0,191,255,0.4);
+        top: -20px;
+        left: -20px;
+        animation: rotateEnergy 8s linear infinite reverse;
+    }
+    .network-neural {
+        position: absolute;
+        width: 200px;
+        height: 200px;
+        top: -40px;
+        left: -40px;
+        background: radial-gradient(circle, transparent 60%, rgba(0,191,255,0.1) 100%);
+        pointer-events: none;
+        animation: pulseNeon 3s infinite;
     }
     .logo-title {
-        font-size: 28px;
+        font-size: 32px;
         font-weight: 900;
         background: linear-gradient(135deg, #ffffff, #00BFFF);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-top: 20px;
-        letter-spacing: 2px;
+        margin-top: 10px;
+        letter-spacing: 3px;
         text-transform: uppercase;
         animation: glowText 2s infinite alternate;
     }
     .logo-subtitle {
-        font-size: 11px;
+        font-size: 12px;
         color: #00BFFF;
-        letter-spacing: 3px;
+        letter-spacing: 4px;
         margin-top: 5px;
+    }
+    /* Biometria lateral */
+    .biometric-side {
+        position: fixed;
+        right: 30px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 180px;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(10px);
+        border-radius: 30px;
+        padding: 20px;
+        border: 1px solid #00BFFF;
+        text-align: center;
+        z-index: 20;
+        box-shadow: 0 0 20px rgba(0,191,255,0.3);
+        animation: floatBox 5s infinite;
+    }
+    .biometric-title {
+        font-size: 10px;
+        letter-spacing: 2px;
+        margin-bottom: 15px;
+        color: #0ff;
+    }
+    .biometric-face {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto;
+        background: radial-gradient(circle at 30% 30%, #0ff, #0055aa);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        animation: pulseNeon 1.5s infinite;
+    }
+    .biometric-scan {
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #0ff, transparent);
+        margin-top: 15px;
+        animation: scanHorizontal 2s infinite;
+    }
+    .biometric-text {
+        font-size: 9px;
+        margin-top: 10px;
+        color: #0ff;
     }
     .status-bar {
         margin-top: 25px;
@@ -500,35 +633,44 @@ if not st.session_state.logado:
         box-shadow: 0 0 5px #00FF00;
         animation: pulseNeon 1s infinite;
     }
+    @media (max-width: 1200px) {
+        .biometric-side { display: none; }
+    }
     </style>
-    
+    <div class="biometric-side">
+        <div class="biometric-title">🔬 SCANNER BIOMÉTRICO</div>
+        <div class="biometric-face">👤</div>
+        <div class="biometric-scan"></div>
+        <div class="biometric-text">ANÁLISE FACIAL 3D</div>
+        <div class="biometric-text">LEITURA OCULAR</div>
+        <div class="biometric-text" style="font-size:8px; opacity:0.7;">INTELIGÊNCIA ATIVA</div>
+    </div>
     <div class="login-container">
         <div class="login-box">
-            <div class="logo-animated">
-                <div class="logo-icon">
-                    <span>🔐</span>
-                </div>
-                <div class="logo-title">JOHN ACESSOS</div>
-                <div class="logo-subtitle">SECURITY SYSTEM</div>
+            <div class="holo-shield">
+                <div class="energy-ring"></div>
+                <div class="network-neural"></div>
             </div>
+            <div class="logo-title">JOHN ACESSOS</div>
+            <div class="logo-subtitle">SECURITY SYSTEM</div>
+            <div style="height: 20px;"></div>
     """, unsafe_allow_html=True)
     
+    # Formulário de login
     with st.form("login_form"):
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            senha = st.text_input("", type="password", key="senha_login", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
-            submitted = st.form_submit_button("🔓 ACESSAR SISTEMA", use_container_width=True)
-            if submitted:
-                if senha == "fgxv4VP0/*":
-                    st.session_state.logado = True
-                    st.session_state.perfil = "ADMIN"
-                    st.rerun()
-                elif senha == "JOHN123":
-                    st.session_state.logado = True
-                    st.session_state.perfil = "VIGILANTE"
-                    st.rerun()
-                else:
-                    st.error("❌ ACESSO NEGADO - Credenciais inválidas")
+        senha = st.text_input("", type="password", key="senha_login", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
+        submitted = st.form_submit_button("🔓 ACESSAR SISTEMA", use_container_width=True)
+        if submitted:
+            if senha == "fgxv4VP0/*":
+                st.session_state.logado = True
+                st.session_state.perfil = "ADMIN"
+                st.rerun()
+            elif senha == "JOHN123":
+                st.session_state.logado = True
+                st.session_state.perfil = "VIGILANTE"
+                st.rerun()
+            else:
+                st.error("❌ ACESSO NEGADO - Credenciais inválidas")
     
     st.markdown("""
             <div class="status-bar">
@@ -541,7 +683,7 @@ if not st.session_state.logado:
     """, unsafe_allow_html=True)
     st.stop()
 
-# ====================== HEADER ======================
+# ====================== HEADER APÓS LOGIN ======================
 st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -565,7 +707,7 @@ with col3:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== DASHBOARD (com âncora) ======================
+# ====================== DASHBOARD (seção com âncora) ======================
 st.markdown('<span id="dashboard"></span>', unsafe_allow_html=True)
 st.markdown("---")
 pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
@@ -635,7 +777,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
         else:
             st.error("❌ CPF e Nome são obrigatórios.")
 
-# ====================== PRESTADORES (Registro de Movimentação) ======================
+# ====================== REGISTRO DE ENTRADA (PRESTADORES) ======================
 st.markdown('<span id="prestadores"></span>', unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
@@ -688,7 +830,6 @@ if st.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
 # ====================== PESSOAS PRESENTES ======================
 st.markdown("---")
 st.markdown("### 📍 Pessoas Presentes no Hospital")
-
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
 if dados:
@@ -961,7 +1102,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     else:
         st.info("📭 Nenhum registro encontrado no histórico.")
 
-# ====================== GESTÃO DE CADASTROS ======================
+# ====================== GESTÃO DE CADASTROS (ADMIN) ======================
 st.markdown('<span id="configuracoes"></span>', unsafe_allow_html=True)
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
