@@ -3,6 +3,8 @@ from supabase import create_client
 from datetime import datetime
 import pandas as pd
 from PIL import Image
+import io
+import base64
 
 # --- CONFIGURAÇÃO ---
 url = st.secrets["SUPABASE_URL"]
@@ -229,8 +231,8 @@ if "perfil" not in st.session_state:
     st.session_state.perfil = ""
 if "search_term_exclusao" not in st.session_state:
     st.session_state.search_term_exclusao = ""
-if "historico_ids_para_excluir" not in st.session_state:
-    st.session_state.historico_ids_para_excluir = []
+if "selected_ids" not in st.session_state:
+    st.session_state.selected_ids = []
 
 # ====================== LOGIN ======================
 if not st.session_state.logado:
@@ -370,15 +372,13 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
 
 st.markdown("---")
 
-# ====================== REGISTRO DE ENTRADA (COM NOMES ALTERADOS) ======================
+# ====================== REGISTRO DE ENTRADA ======================
 st.markdown("### 📋 Registrar Movimentação")
-
-# ALTERAÇÃO AQUI: primeiros nomes conforme solicitado
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados"], horizontal=True)
 
 if tipo == "🏢 Prestador de serviços":
     destinos = ["🏥 C.C", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "🧪 Laboratório", "💊 Farmacia"]
-else:  # "🔧 Terceirizados"
+else:
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
 c1, c2, c3 = st.columns([2,2,1])
@@ -444,18 +444,65 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO COM SELEÇÃO MÚLTIPLA E LIMPEZA TOTAL ======================
+# ====================== HISTÓRICO COM IMPRESSÃO/EXPORTAÇÃO ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
     if todos_dados:
         df = pd.DataFrame(todos_dados)
         
+        # ========== NOVAS OPÇÕES DE IMPRESSÃO / RELATÓRIOS ==========
+        st.markdown("### 📄 Opções de Relatório / Impressão")
+        
+        # Função para converter DataFrame para CSV e gerar link de download
+        def get_csv_download_link(df, filename="historico.csv"):
+            csv = df.to_csv(index=False, encoding='utf-8-sig')
+            b64 = base64.b64encode(csv.encode()).decode()
+            href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">📥 Clique aqui para baixar o arquivo CSV</a>'
+            return href
+        
+        # 1. Exportar histórico completo
+        st.markdown("#### 🔹 Histórico Geral")
+        if st.button("📊 Exportar todo o histórico", key="export_all"):
+            st.markdown(get_csv_download_link(df, "historico_completo.csv"), unsafe_allow_html=True)
+        
+        # 2. Exportar por setor (C.C, GRSA, Brasanitas)
+        st.markdown("#### 🔹 Relatório por Setor")
+        setores = ["C.C", "GRSA", "Brasanitas"]
+        cols_setores = st.columns(len(setores))
+        for idx, setor in enumerate(setores):
+            with cols_setores[idx]:
+                df_setor = df[df['setor_destino'] == setor]
+                if not df_setor.empty:
+                    if st.button(f"🏥 {setor} ({len(df_setor)} registros)", key=f"export_setor_{setor}"):
+                        st.markdown(get_csv_download_link(df_setor, f"historico_{setor}.csv"), unsafe_allow_html=True)
+                else:
+                    st.button(f"🏥 {setor} (vazio)", disabled=True, key=f"btn_{setor}")
+        
+        # 3. Exportar por empresa (excluindo BRASANITAS, GRSA, C.C)
+        st.markdown("#### 🔹 Relatório por Empresa (Prestadores de Serviço)")
+        # Lista de empresas exclusivas do campo 'empresa', ignorando nulos e as três especiais
+        empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
+        todas_empresas = df['empresa'].dropna().unique()
+        empresas_filtradas = [emp for emp in todas_empresas if emp.upper() not in [e.upper() for e in empresas_excluir]]
+        
+        if empresas_filtradas:
+            empresa_selecionada = st.selectbox("Selecione a empresa:", sorted(empresas_filtradas), key="select_empresa_relatorio")
+            if empresa_selecionada:
+                df_empresa = df[df['empresa'] == empresa_selecionada]
+                st.write(f"📌 **{len(df_empresa)} registros** para a empresa **{empresa_selecionada}**")
+                if st.button(f"📥 Exportar {empresa_selecionada}", key="export_empresa"):
+                    st.markdown(get_csv_download_link(df_empresa, f"historico_{empresa_selecionada}.csv"), unsafe_allow_html=True)
+        else:
+            st.info("Nenhuma empresa cadastrada (além das fixas: BRASANITAS, GRSA, C.C).")
+        
+        st.markdown("---")
+        
+        # ========== SEÇÃO DE EXCLUSÃO (mantida igual) ==========
+        st.markdown("### 🗑️ Exclusão de Registros")
         st.markdown("#### Selecione os registros que deseja excluir:")
         
-        if "selected_ids" not in st.session_state:
-            st.session_state.selected_ids = []
-        
+        # Exibir checkboxes para seleção individual
         for idx, row in df.iterrows():
             col_check, col_data = st.columns([0.5, 9.5])
             with col_check:
