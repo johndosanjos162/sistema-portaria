@@ -495,34 +495,190 @@ with st.expander("🕒 Histórico Completo"):
             st.success("✅ Registro excluído com sucesso!")
             st.rerun()
 
-# ====================== GESTÃO ======================
+# ====================== GESTÃO DE CADASTROS ======================
 if st.session_state.perfil == "ADMIN":
 
-    with st.expander("⚙️ Gestão de Cadastros"):
+    with st.expander("⚙️ Gestão de Cadastros", expanded=False):
 
+        st.markdown("""
+        <style>
+        .titulo-gestao {
+            font-size: 24px;
+            font-weight: 700;
+            color: #67e8f9;
+            margin-bottom: 15px;
+        }
+
+        .caixa-info {
+            background: rgba(15, 23, 42, 0.75);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #67e8f9;
+            margin-top: 10px;
+            box-shadow: 0 0 15px rgba(0,255,255,0.2);
+        }
+
+        .texto-info {
+            font-size: 17px;
+            color: white;
+            margin-bottom: 10px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        st.markdown(
+            "<div class='titulo-gestao'>🔎 Pesquisa Inteligente de Cadastros</div>",
+            unsafe_allow_html=True
+        )
+
+        # ====================== CAMPO DE PESQUISA ======================
+        pesquisa_nome = st.text_input(
+            "Pesquisar por Nome ou CPF:",
+            placeholder="Digite o nome do colaborador...",
+            key="pesquisa_cadastro"
+        )
+
+        # ====================== CONSULTA ======================
         todos_colaboradores = supabase.table("Pessoas") \
-            .select("nome, cpf") \
+            .select("*") \
+            .order("nome") \
             .execute().data
 
-        if todos_colaboradores:
+        # ====================== FILTRO ======================
+        if pesquisa_nome:
+
+            filtrados = [
+                p for p in todos_colaboradores
+                if pesquisa_nome.lower() in p["nome"].lower()
+                or pesquisa_nome in p["cpf"]
+            ]
+
+        else:
+            filtrados = todos_colaboradores
+
+        # ====================== RESULTADOS ======================
+        if filtrados:
 
             lista_nomes = [
                 f"{p['nome']} (CPF: {p['cpf']})"
-                for p in todos_colaboradores
+                for p in filtrados
             ]
 
             selecionado = st.selectbox(
-                "Selecionar para excluir:",
-                lista_nomes
+                "Selecione o cadastro:",
+                lista_nomes,
+                key="select_cadastro"
             )
 
-            if st.button("🗑️ Excluir Cadastro", key="del_cad"):
+            # ====================== CPF SELECIONADO ======================
+            cpf_selecionado = selecionado.split("(CPF: ")[1].replace(")", "")
 
-                cpf_excluir = selecionado.split("(CPF: ")[1].replace(")", "")
+            # ====================== BUSCAR DADOS ======================
+            pessoa = next(
+                (
+                    p for p in filtrados
+                    if p["cpf"] == cpf_selecionado
+                ),
+                None
+            )
 
-                supabase.table("Pessoas") \
-                    .delete() \
-                    .eq("cpf", cpf_excluir) \
-                    .execute()
+            if pessoa:
 
-                st.rerun()
+                st.markdown("""
+                <div class='caixa-info'>
+                """, unsafe_allow_html=True)
+
+                st.markdown(
+                    f"<div class='texto-info'><b>👤 Nome Atual:</b> {pessoa['nome']}</div>",
+                    unsafe_allow_html=True
+                )
+
+                st.markdown(
+                    f"<div class='texto-info'><b>🆔 CPF:</b> {pessoa['cpf']}</div>",
+                    unsafe_allow_html=True
+                )
+
+                st.markdown(
+                    f"<div class='texto-info'><b>🏢 Empresa:</b> {pessoa.get('empresa', 'N/A')}</div>",
+                    unsafe_allow_html=True
+                )
+
+                st.markdown("</div>", unsafe_allow_html=True)
+
+                st.markdown("---")
+
+                st.markdown("## ✏️ Editar Cadastro")
+
+                # ====================== CAMPOS DE EDIÇÃO ======================
+                novo_nome_edit = st.text_input(
+                    "Nome Completo",
+                    value=pessoa["nome"],
+                    key="edit_nome"
+                )
+
+                novo_cpf_edit = st.text_input(
+                    "CPF",
+                    value=pessoa["cpf"],
+                    key="edit_cpf"
+                )
+
+                nova_empresa_edit = st.text_input(
+                    "Empresa",
+                    value=pessoa.get("empresa", ""),
+                    key="edit_empresa"
+                )
+
+                st.markdown("")
+
+                col_edit1, col_edit2 = st.columns(2)
+
+                # ====================== SALVAR ALTERAÇÕES ======================
+                with col_edit1:
+
+                    if st.button(
+                        "💾 Salvar Alterações",
+                        key="salvar_edit",
+                        use_container_width=True
+                    ):
+
+                        try:
+
+                            supabase.table("Pessoas").update({
+                                "nome": novo_nome_edit.strip(),
+                                "cpf": novo_cpf_edit.strip(),
+                                "empresa": nova_empresa_edit.strip()
+                            }).eq("cpf", cpf_selecionado).execute()
+
+                            st.success("✅ Cadastro atualizado com sucesso!")
+
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"❌ Erro ao atualizar: {e}")
+
+                # ====================== EXCLUIR CADASTRO ======================
+                with col_edit2:
+
+                    if st.button(
+                        "🗑️ Excluir Cadastro",
+                        key="del_cad",
+                        use_container_width=True
+                    ):
+
+                        try:
+
+                            supabase.table("Pessoas") \
+                                .delete() \
+                                .eq("cpf", cpf_selecionado) \
+                                .execute()
+
+                            st.success("✅ Cadastro excluído com sucesso!")
+
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"❌ Erro ao excluir: {e}")
+
+        else:
+
+            st.warning("⚠️ Nenhum cadastro encontrado.")
