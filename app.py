@@ -31,7 +31,7 @@ def gerar_html_impressao(df, titulo):
         linhas_html += "<tr>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
-            linhas_html += f"</td>{valor}</td>"
+            linhas_html += f"<tr>{valor}</td>"
         linhas_html += "</tr>"
     
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
@@ -110,7 +110,7 @@ def gerar_html_impressao(df, titulo):
     """
     return html
 
-# ====================== CARREGAR IMAGENS (OPCIONAL) ======================
+# ====================== CARREGAR IMAGENS ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
     try:
         return Image.open(nome_arquivo)
@@ -520,7 +520,6 @@ st.markdown("### 📍 Pessoas Presentes no Hospital")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
 if dados:
-    # Barra de pesquisa por CPF para saída
     st.markdown("#### 🔍 Pesquisar por CPF para registrar saída")
     col_pesquisa, col_botao = st.columns([3, 1])
     with col_pesquisa:
@@ -564,7 +563,6 @@ if dados:
                     st.rerun()
             st.markdown("---")
     
-    # Abas existentes
     st.markdown("#### 📋 Lista completa de presentes")
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
@@ -581,7 +579,6 @@ if dados:
 
     for i, setor in enumerate(["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"], 1):
         with tabs[i]:
-            # Normaliza o nome do setor para comparação: remove emojis e espaços extras
             setor_normalizado = setor.split()[-1] if ' ' in setor else setor
             pessoas_setor = [r for r in dados if setor_normalizado in r['setor_destino']]
             if pessoas_setor:
@@ -611,7 +608,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.markdown("### 📄 Gerar Relatório para Impressão/PDF")
         st.info("💡 Clique no botão, depois use **Ctrl+P** (ou **Cmd+P**) e escolha **'Salvar como PDF'**.")
         
-        # --- Relatório completo ---
         st.markdown("#### 🔹 Histórico Geral")
         if st.button("📑 Abrir relatório completo", key="html_all"):
             html = gerar_html_impressao(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
@@ -623,10 +619,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # --- PDFs separados por setor (CORRIGIDO) ---
         st.markdown("#### 🔹 Relatório por Setor (PDF separado para cada setor)")
-        
-        # Identificar os valores reais do campo setor_destino
         setores_unicos = df['setor_destino'].unique()
         setores_desejados = ["C.C", "GRSA", "Brasanitas"]
         mapa_setores = {}
@@ -638,10 +631,9 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     encontrado = True
                     break
             if not encontrado:
-                mapa_setores[setor] = setor  # fallback
+                mapa_setores[setor] = setor
         
         col1, col2, col3 = st.columns(3)
-        
         with col1:
             setor_nome = "C.C"
             valor_real = mapa_setores[setor_nome]
@@ -655,7 +647,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                         st.markdown(href, unsafe_allow_html=True)
             else:
                 st.button(f"🏥 {setor_nome} (vazio)", disabled=True, key=f"btn_{setor_nome}_pdf")
-        
         with col2:
             setor_nome = "GRSA"
             valor_real = mapa_setores[setor_nome]
@@ -669,7 +660,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                         st.markdown(href, unsafe_allow_html=True)
             else:
                 st.button(f"🔧 {setor_nome} (vazio)", disabled=True, key=f"btn_{setor_nome}_pdf")
-        
         with col3:
             setor_nome = "Brasanitas"
             valor_real = mapa_setores[setor_nome]
@@ -686,7 +676,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # --- Relatório por Empresa (Prestadores de Serviço) ---
         st.markdown("#### 🔹 Relatório por Empresa (Prestadores de Serviço)")
         empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
         todas_empresas = df['empresa'].dropna().unique()
@@ -717,7 +706,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # ========== SEÇÃO DE EXCLUSÃO (totalmente funcional) ==========
+        # ========== SEÇÃO DE EXCLUSÃO CORRIGIDA ==========
         st.markdown("### 🗑️ Exclusão de Registros")
         st.markdown("#### Selecione os registros que deseja excluir:")
         
@@ -752,6 +741,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                         st.error(f"Você selecionou {len(st.session_state.selected_ids)} registro(s). Esta ação é irreversível!")
                         if st.button("✅ SIM, EXCLUIR PERMANENTEMENTE", key="confirm_selected"):
                             try:
+                                # Excluir cada ID individualmente
                                 for id_excluir in st.session_state.selected_ids:
                                     supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
                                 st.success(f"{len(st.session_state.selected_ids)} registro(s) excluído(s)!")
@@ -788,7 +778,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     else:
         st.info("📭 Nenhum registro encontrado no histórico.")
 
-# ====================== GESTÃO DE CADASTROS (COM LUPA) ======================
+# ====================== GESTÃO DE CADASTROS ======================
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
         todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
