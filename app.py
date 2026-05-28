@@ -23,7 +23,6 @@ def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
     
-    # Prepara as linhas da tabela
     colunas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
     colunas_presentes = [c for c in colunas if c in df.columns]
     
@@ -35,10 +34,8 @@ def gerar_html_impressao(df, titulo):
             linhas_html += f"<td>{valor}</td>"
         linhas_html += "</tr>"
     
-    # Cabeçalho da tabela
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     
-    # HTML completo com CSS para impressão
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -98,7 +95,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <tr>{cabecalho_html}</tr>
+                <td>{cabecalho_html}</tr>
             </thead>
             <tbody>
                 {linhas_html}
@@ -106,12 +103,8 @@ def gerar_html_impressao(df, titulo):
         </table>
         <div class="no-print" style="text-align:center; margin-top:30px;">
             <button onclick="window.print();" style="padding:10px 20px; font-size:16px;">🖨️ Imprimir / Salvar como PDF</button>
-            <p style="font-size:12px; color:#666;">Clique no botão e escolha "Salvar como PDF" no destino da impressão.</p>
+            <p style="font-size:12px; color:#666;">Clique no botão ou pressione Ctrl+P e escolha "Salvar como PDF".</p>
         </div>
-        <script>
-            // Auto-abrir impressão (opcional, descomente se quiser abrir automaticamente)
-            // window.print();
-        </script>
     </body>
     </html>
     """
@@ -543,18 +536,17 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO COM GERAÇÃO DE HTML PARA PDF ======================
+# ====================== HISTÓRICO COM HTML/PDF ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
     if todos_dados:
         df = pd.DataFrame(todos_dados)
         
-        # ========== OPÇÕES DE RELATÓRIO (HTML → Imprimir/PDF) ==========
         st.markdown("### 📄 Gerar Relatório para Impressão/PDF")
         st.info("💡 Clique no botão, depois use **Ctrl+P** (ou **Cmd+P**) e escolha **'Salvar como PDF'**.")
         
-        # 1. Relatório completo
+        # ----- 1. Relatório completo -----
         st.markdown("#### 🔹 Histórico Geral")
         if st.button("📑 Abrir relatório completo", key="html_all"):
             html = gerar_html_impressao(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
@@ -563,10 +555,8 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Clique aqui para abrir o relatório (nova aba)</a>'
                 st.markdown(href, unsafe_allow_html=True)
                 st.caption("Após abrir, pressione Ctrl+P e escolha 'Salvar como PDF'.")
-            else:
-                st.warning("Nenhum dado para gerar relatório.")
         
-        # 2. Relatório por setor
+        # ----- 2. Relatório por setor (C.C, GRSA, Brasanitas) -----
         st.markdown("#### 🔹 Relatório por Setor")
         setores = ["C.C", "GRSA", "Brasanitas"]
         cols_setores = st.columns(len(setores))
@@ -583,18 +573,31 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 else:
                     st.button(f"🏥 {setor} (vazio)", disabled=True, key=f"btn_{setor}_html")
         
-        # 3. Relatório por empresa (excluindo BRASANITAS, GRSA, C.C)
+        # ----- 3. Relatório por Empresa (Prestadores de Serviço) -----
         st.markdown("#### 🔹 Relatório por Empresa (Prestadores de Serviço)")
         empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
         todas_empresas = df['empresa'].dropna().unique()
         empresas_filtradas = [emp for emp in todas_empresas if emp.upper() not in [e.upper() for e in empresas_excluir]]
         
         if empresas_filtradas:
-            empresa_selecionada = st.selectbox("Selecione a empresa:", sorted(empresas_filtradas), key="select_empresa_html")
+            # Opção: gerar PDF consolidado de TODOS os prestadores (todas as empresas filtradas juntas)
+            if st.button("📑 Gerar PDF para TODOS os Prestadores de Serviço (todas as empresas)", key="html_todos_prestadores"):
+                df_prestadores = df[df['empresa'].isin(empresas_filtradas)]
+                if not df_prestadores.empty:
+                    html = gerar_html_impressao(df_prestadores, "PRESTADORES DE SERVIÇO (TODAS AS EMPRESAS)")
+                    if html:
+                        b64 = base64.b64encode(html.encode()).decode()
+                        href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir PDF de TODOS os Prestadores</a>'
+                        st.markdown(href, unsafe_allow_html=True)
+                else:
+                    st.warning("Nenhum registro de prestadores de serviço encontrado.")
+            
+            # Lista individual de empresas
+            empresa_selecionada = st.selectbox("Ou selecione uma empresa específica:", sorted(empresas_filtradas), key="select_empresa_html")
             if empresa_selecionada:
                 df_empresa = df[df['empresa'] == empresa_selecionada]
                 st.write(f"📌 **{len(df_empresa)} registros** para a empresa **{empresa_selecionada}**")
-                if st.button(f"📑 Abrir relatório da {empresa_selecionada}", key="html_empresa"):
+                if st.button(f"📑 Gerar PDF para {empresa_selecionada}", key="html_empresa"):
                     html = gerar_html_impressao(df_empresa, f"RELATÓRIO - EMPRESA {empresa_selecionada}")
                     if html:
                         b64 = base64.b64encode(html.encode()).decode()
