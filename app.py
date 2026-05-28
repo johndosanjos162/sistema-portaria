@@ -11,9 +11,9 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.set_page_config(
-    page_title="ACCESS GATE - ADMIN", 
+    page_title="ACCESS GATE - SECURITY", 
     layout="wide", 
-    page_icon="🏛️", 
+    page_icon="🔮", 
     initial_sidebar_state="expanded"
 )
 
@@ -32,7 +32,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</table>"
+        linhas_html += "</tr>"
     
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     
@@ -93,7 +93,7 @@ def gerar_html_impressao(df, titulo):
     <body>
         <h1>ACCESS GATE - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        </table>
+        <table>
             <thead>
                 <tr>{cabecalho_html}</tr>
             </thead>
@@ -121,170 +121,238 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== IMAGEM DE FUNDO ======================
+# ====================== IMAGEM DE FUNDO (FUTURISTA) ======================
 BACKGROUND_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg"
 
-# ====================== DESIGN ADMIN ======================
+# ====================== DESIGN FUTURISTA ======================
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
     
+    /* ========== BASE ========== */
     .stApp {{
-        background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.8)), url("{BACKGROUND_URL}");
+        background: radial-gradient(circle at 20% 50%, rgba(0, 10, 20, 0.95), rgba(0, 0, 0, 0.98)), url("{BACKGROUND_URL}");
         background-size: cover;
         background-position: center 30%;
         background-attachment: fixed;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Orbitron', 'Inter', monospace;
     }}
     
+    /* ========== SIDEBAR NEON ========== */
     [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, rgba(0, 20, 40, 0.92), rgba(0, 10, 25, 0.96));
-        backdrop-filter: blur(12px);
-        border-right: 1px solid rgba(0, 212, 255, 0.2);
+        background: linear-gradient(135deg, rgba(0, 5, 15, 0.95), rgba(0, 0, 0, 0.98));
+        backdrop-filter: blur(15px);
+        border-right: 2px solid rgba(0, 255, 255, 0.4);
+        box-shadow: -5px 0 20px rgba(0, 255, 255, 0.2);
     }}
     
     .sidebar-header {{
         text-align: center;
         padding: 20px;
-        border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+        border-bottom: 2px solid #0ff;
+        box-shadow: 0 0 10px #0ff;
         margin-bottom: 20px;
     }}
     
     .sidebar-title {{
-        font-size: 24px;
-        font-weight: 800;
-        background: linear-gradient(135deg, #00d4ff, #667eea);
+        font-size: 28px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #0ff, #f0f);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        letter-spacing: 1px;
+        letter-spacing: 3px;
+        text-shadow: 0 0 5px #0ff;
     }}
     
+    /* ========== CABEÇALHO ========== */
     .admin-header {{
-        background: linear-gradient(135deg, rgba(0, 20, 40, 0.85), rgba(0, 10, 25, 0.9));
-        backdrop-filter: blur(12px);
-        border-radius: 20px;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(15px);
+        border-radius: 15px;
         padding: 15px 25px;
         margin-bottom: 25px;
-        border: 1px solid rgba(0, 212, 255, 0.3);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(0, 255, 255, 0.6);
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        animation: glow 2s ease-in-out infinite alternate;
+    }}
+    
+    @keyframes glow {{
+        from {{ box-shadow: 0 0 10px rgba(0, 255, 255, 0.3); }}
+        to {{ box-shadow: 0 0 25px rgba(0, 255, 255, 0.6); }}
     }}
     
     .badge-admin {{
-        background: linear-gradient(135deg, #00d4ff, #667eea);
+        background: linear-gradient(135deg, #0ff, #f0f);
         padding: 8px 24px;
         border-radius: 40px;
-        font-weight: 700;
+        font-weight: 800;
         font-size: 14px;
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+        color: #000;
+        text-transform: uppercase;
     }}
     
+    /* ========== CARDS ========== */
     .admin-card {{
-        background: rgba(0, 20, 40, 0.75);
+        background: rgba(0, 5, 15, 0.75);
         backdrop-filter: blur(12px);
         border-radius: 20px;
         padding: 20px;
-        border: 1px solid rgba(0, 212, 255, 0.25);
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        transition: all 0.3s ease;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
     }}
     
     .admin-card:hover {{
-        transform: translateY(-5px);
-        box-shadow: 0 12px 28px rgba(0, 212, 255, 0.2);
-        border-color: rgba(0, 212, 255, 0.5);
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        border-color: #0ff;
     }}
     
     .card-title {{
         font-size: 13px;
         text-transform: uppercase;
-        letter-spacing: 2px;
-        color: #a0c4ff;
+        letter-spacing: 3px;
+        color: #0ff;
+        font-weight: 600;
     }}
     
     .card-value {{
-        font-size: 36px;
-        font-weight: 800;
-        background: linear-gradient(135deg, #ffffff, #90e0ff);
+        font-size: 42px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #ffffff, #0ff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
     }}
     
+    /* ========== BOTÕES ========== */
     .stButton > button {{
-        border-radius: 40px;
-        font-weight: 600;
-        transition: all 0.2s;
+        border-radius: 50px;
+        font-weight: 700;
+        transition: all 0.3s ease;
         border: none;
+        font-family: 'Orbitron', monospace;
+        letter-spacing: 1px;
     }}
     
     .stButton > button:not([key="sair_final"]):not([key="login_btn"]) {{
-        background: linear-gradient(90deg, #00d4ff, #667eea);
-        color: white;
-        box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
+        background: linear-gradient(90deg, #0ff, #00aaff);
+        color: #000;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
     }}
     
     .stButton > button:not([key="sair_final"]):not([key="login_btn"]):hover {{
-        transform: scale(1.02);
-        box-shadow: 0 4px 16px rgba(0, 212, 255, 0.5);
+        transform: scale(1.03);
+        box-shadow: 0 0 25px rgba(0, 255, 255, 0.8);
+        background: linear-gradient(90deg, #00aaff, #0ff);
     }}
     
-    .stCheckbox label {{
-        color: #e2e8f0;
+    .stButton > button[key="sair_final"] {{
+        background: linear-gradient(90deg, #f00, #ff4444);
+        color: white;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
     }}
     
+    /* ========== INPUTS ========== */
     .stTextInput > div > div > input,
     .stSelectbox > div > div,
     .stNumberInput > div > div > input {{
-        background: rgba(0, 0, 0, 0.6);
-        border: 1px solid rgba(0, 212, 255, 0.4);
-        border-radius: 16px;
-        color: #f0f0f0;
+        background: rgba(0, 0, 0, 0.8);
+        border: 2px solid #0ff;
+        border-radius: 20px;
+        color: #0ff;
+        font-family: 'Orbitron', monospace;
+        box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
     }}
     
     .stTextInput > div > div > input:focus {{
-        border-color: #00d4ff;
-        box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.3);
+        border-color: #f0f;
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        color: #fff;
     }}
     
+    /* ========== EXPANDER ========== */
     .streamlit-expanderHeader {{
-        background: rgba(0, 20, 40, 0.85);
+        background: rgba(0, 0, 0, 0.7);
         backdrop-filter: blur(8px);
-        border-radius: 16px;
-        border: 1px solid rgba(0, 212, 255, 0.3);
+        border-radius: 20px;
+        border: 1px solid #0ff;
+        font-weight: 700;
+        font-family: 'Orbitron', monospace;
+        color: #0ff;
     }}
     
+    /* ========== TABS ========== */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 8px;
-        background: rgba(0, 0, 0, 0.4);
-        padding: 6px;
-        border-radius: 40px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 8px;
+        border-radius: 50px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
     }}
     
     .stTabs [data-baseweb="tab"] {{
-        border-radius: 32px;
-        padding: 6px 20px;
+        border-radius: 40px;
+        padding: 8px 25px;
         font-weight: 600;
-        color: #cbd5e1;
+        color: #ccc;
+        font-family: 'Orbitron', monospace;
+        transition: all 0.3s;
     }}
     
     .stTabs [aria-selected="true"] {{
-        background: linear-gradient(135deg, #00d4ff, #667eea);
-        color: white;
+        background: linear-gradient(135deg, #0ff, #f0f);
+        color: #000;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
     }}
     
-    .results-count {{
-        background: rgba(0, 212, 255, 0.1);
-        border-radius: 16px;
-        padding: 8px 12px;
-        font-size: 13px;
-        color: #b0e0ff;
+    /* ========== CHECKBOX ========== */
+    .stCheckbox label {{
+        color: #0ff;
+        font-weight: 500;
     }}
     
+    /* ========== DATAFRAME ========== */
+    .stDataFrame {{
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 15px;
+        border: 1px solid #0ff;
+    }}
+    
+    /* ========== ALERTAS ========== */
+    .stAlert {{
+        background: rgba(0, 0, 0, 0.8);
+        border-left: 4px solid #0ff;
+        border-radius: 10px;
+        color: #0ff;
+    }}
+    
+    /* ========== FOOTER ========== */
     .footer {{
         text-align: center;
         padding: 20px;
-        color: #64748b;
-        font-size: 12px;
-        border-top: 1px solid rgba(0, 212, 255, 0.2);
+        color: #0ff;
+        font-size: 11px;
+        border-top: 1px solid rgba(0, 255, 255, 0.3);
         margin-top: 30px;
+        font-family: 'Orbitron', monospace;
+        text-shadow: 0 0 5px #0ff;
+    }}
+    
+    /* ========== TÍTULOS ========== */
+    h1, h2, h3, h4, h5, h6 {{
+        font-family: 'Orbitron', monospace;
+        color: #0ff;
+        text-shadow: 0 0 5px #0ff;
+    }}
+    
+    /* ========== POPOVER ========== */
+    div[role="dialog"] {{
+        background: rgba(0, 0, 0, 0.95);
+        border: 2px solid #0ff;
+        border-radius: 20px;
+        color: #0ff;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -295,12 +363,12 @@ if IMAGEM_SIDEBAR:
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">🔐 ACCESS GATE</div>
+            <div class="sidebar-title">🔮 ACCESS GATE</div>
         </div>
     """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📋 MENU")
+st.sidebar.markdown("### ⚡ MENU")
 st.sidebar.markdown("• 🏠 **Dashboard**")
 st.sidebar.markdown("• 👤 **Colaboradores**")
 st.sidebar.markdown("• 🔧 **Prestadores**")
@@ -314,7 +382,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("• 👑 **Perfil:** ---")
 st.sidebar.markdown("• 🟢 **Status:** Online 24/7")
-st.sidebar.markdown("• 📦 **Versão:** 2.0.0")
+st.sidebar.markdown("• 📦 **Versão:** 3.0.0")
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -338,12 +406,12 @@ if not st.session_state.logado:
         with st.container():
             st.markdown("""
                 <div style="
-                    background: rgba(0, 20, 40, 0.85);
+                    background: rgba(0, 0, 0, 0.85);
                     backdrop-filter: blur(20px);
-                    border-radius: 32px;
-                    padding: 40px 30px;
-                    border: 1px solid rgba(0, 212, 255, 0.4);
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+                    border-radius: 40px;
+                    padding: 50px 40px;
+                    border: 2px solid #0ff;
+                    box-shadow: 0 0 50px rgba(0, 255, 255, 0.5);
                 ">
             """, unsafe_allow_html=True)
             if IMAGEM_LOGIN:
@@ -352,15 +420,20 @@ if not st.session_state.logado:
                 st.markdown("""
                     <div style='text-align:center; margin-bottom: 20px;'>
                         <div style="
-                            width: 100px; height: 100px; background: linear-gradient(135deg, #00d4ff, #667eea);
-                            border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                            <span style="font-size: 48px;">🛡️</span>
+                            width: 120px; height: 120px; margin: 0 auto;
+                            background: linear-gradient(135deg, #0ff, #f0f);
+                            border-radius: 50%;
+                            display: flex; align-items: center; justify-content: center;
+                            box-shadow: 0 0 30px #0ff;
+                        ">
+                            <span style="font-size: 60px;">🔮</span>
                         </div>
-                        <h2>ACCESS GATE</h2>
-                        <p style="color:#94a3b8;">Controle de Acesso com Tecnologia</p>
+                        <h2 style="color:#0ff;">ACCESS GATE</h2>
+                        <p style="color:#0ff;">Sistema de Segurança Futurista</p>
                     </div>
                 """, unsafe_allow_html=True)
-            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown("<hr style='border-color:#0ff;'>", unsafe_allow_html=True)
+            st.markdown("<h3 style='text-align:center; color:#0ff;'>🔐 ACESSO AUTORIZADO</h3>", unsafe_allow_html=True)
             senha = st.text_input("Senha de acesso:", type="password", key="senha_login", placeholder="••••••••")
             if st.button("🔓 ENTRAR", key="login_btn", use_container_width=True):
                 if senha == "fgxv4VP0/*":
@@ -381,10 +454,10 @@ st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 15px;">
-                <span style="font-size: 40px;">🛡️</span>
+                <span style="font-size: 45px;">🔮</span>
                 <div>
                     <h1 style="margin:0; font-size: 26px;">PAINEL ADMINISTRATIVO</h1>
-                    <p style="margin:0; color: #00d4ff;">Monitoramento Inteligente de Acesso</p>
+                    <p style="margin:0; color: #0ff;">Monitoramento Inteligente de Acesso</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -524,7 +597,6 @@ st.markdown("### 📍 Pessoas Presentes no Hospital")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
 if dados:
-    # Barra de pesquisa por CPF para saída
     st.markdown("#### 🔍 Pesquisar por CPF para registrar saída")
     col_pesquisa, col_botao = st.columns([3, 1])
     with col_pesquisa:
@@ -568,7 +640,6 @@ if dados:
                     st.rerun()
             st.markdown("---")
     
-    # Abas existentes
     st.markdown("#### 📋 Lista completa de presentes")
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
@@ -614,7 +685,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.markdown("### 📄 Gerar Relatório para Impressão/PDF")
         st.info("💡 Clique no botão, depois use **Ctrl+P** (ou **Cmd+P**) e escolha **'Salvar como PDF'**.")
         
-        # --- Relatório completo ---
         st.markdown("#### 🔹 Histórico Geral")
         if st.button("📑 Abrir relatório completo", key="html_all"):
             html = gerar_html_impressao(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
@@ -626,9 +696,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # --- PDFs separados por setor ---
         st.markdown("#### 🔹 Relatório por Setor (PDF separado para cada setor)")
-        
         setores_unicos = df['setor_destino'].unique()
         setores_desejados = ["C.C", "GRSA", "Brasanitas"]
         mapa_setores = {}
@@ -643,7 +711,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 mapa_setores[setor] = setor
         
         col1, col2, col3 = st.columns(3)
-        
         with col1:
             setor_nome = "C.C"
             valor_real = mapa_setores[setor_nome]
@@ -688,7 +755,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # --- Relatório por Empresa (Prestadores de Serviço) ---
         st.markdown("#### 🔹 Relatório por Empresa (Prestadores de Serviço)")
         empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
         todas_empresas = df['empresa'].dropna().unique()
@@ -719,19 +785,14 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # ========== SEÇÃO DE EXCLUSÃO CORRIGIDA ==========
+        # SEÇÃO DE EXCLUSÃO (mantida exatamente igual)
         st.markdown("### 🗑️ Exclusão de Registros")
         st.markdown("#### Selecione os registros que deseja excluir:")
         
-        # Exibir checkboxes para cada registro
         for idx, row in df.iterrows():
             col_check, col_data = st.columns([0.5, 9.5])
             with col_check:
-                is_checked = st.checkbox(
-                    "", 
-                    key=f"chk_{row['id']}", 
-                    value=row['id'] in st.session_state.selected_ids
-                )
+                is_checked = st.checkbox("", key=f"chk_{row['id']}", value=row['id'] in st.session_state.selected_ids)
                 if is_checked and row['id'] not in st.session_state.selected_ids:
                     st.session_state.selected_ids.append(row['id'])
                 elif not is_checked and row['id'] in st.session_state.selected_ids:
@@ -744,9 +805,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 </div>
                 """, unsafe_allow_html=True)
         
-        # Botões de ação
         col_btn1, col_btn2, col_btn3 = st.columns(3)
-        
         with col_btn1:
             if st.button("🗑️ Excluir Selecionados", use_container_width=True):
                 if st.session_state.selected_ids:
@@ -754,20 +813,17 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     st.rerun()
                 else:
                     st.warning("Nenhum registro selecionado.")
-        
         with col_btn2:
             if st.button("📋 Limpar Seleção", use_container_width=True):
                 st.session_state.selected_ids = []
                 st.session_state.pending_delete_ids = []
                 st.session_state.pending_clear_all = False
                 st.rerun()
-        
         with col_btn3:
             if st.button("⚠️ LIMPAR TODO O HISTÓRICO", use_container_width=True):
                 st.session_state.pending_clear_all = True
                 st.rerun()
         
-        # Processar exclusão pendente (se houver)
         if st.session_state.pending_delete_ids:
             st.markdown("---")
             st.error(f"⚠️ **Confirmação necessária:** você está prestes a excluir {len(st.session_state.pending_delete_ids)} registro(s).")
@@ -790,7 +846,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     st.session_state.pending_delete_ids = []
                     st.rerun()
         
-        # Processar limpeza total pendente
         if st.session_state.pending_clear_all:
             st.markdown("---")
             st.error("🚨 **ATENÇÃO – LIMPEZA TOTAL DO HISTÓRICO**")
@@ -841,7 +896,7 @@ if st.session_state.perfil == "ADMIN":
                     idx = lista.index(selecionado)
                     pessoa = filtrados[idx]
                     st.markdown(f"""
-                        <div style="background:rgba(0,212,255,0.1); border-radius:12px; padding:12px; border-left:3px solid #00d4ff;">
+                        <div style="background:rgba(0,212,255,0.1); border-radius:12px; padding:12px; border-left:3px solid #0ff;">
                             <b>👤 {pessoa['nome']}</b><br>
                             📄 CPF: {pessoa['cpf']}<br>
                             🏢 Empresa: {pessoa.get('empresa','N/A')}
@@ -871,7 +926,7 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🛡️ ACCESS GATE - Segurança e Tecnologia em Controle de Acesso<br>
-        Monitoramento 24/7 - Sistema com CFTV Integrado
+        🔮 ACCESS GATE - Segurança e Tecnologia Futurista<br>
+        Monitoramento 24/7 - Sistema com Inteligência Artificial
     </div>
 """, unsafe_allow_html=True)
