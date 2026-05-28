@@ -5,6 +5,9 @@ import pandas as pd
 from PIL import Image
 import io
 import base64
+from fpdf import FPDF
+import tempfile
+import os
 
 # --- CONFIGURAÇÃO ---
 url = st.secrets["SUPABASE_URL"]
@@ -17,6 +20,70 @@ st.set_page_config(
     page_icon="🏛️", 
     initial_sidebar_state="expanded"
 )
+
+# ====================== FUNÇÃO PARA GERAR PDF ======================
+class PDF(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.cell(0, 10, 'ACCESS GATE - Relatório de Movimentações', 0, 1, 'C')
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 5, f'Gerado em: {datetime.now().strftime("%d/%m/%Y %H:%M:%S")}', 0, 1, 'C')
+        self.ln(5)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
+
+def gerar_pdf(df, titulo):
+    """
+    Gera um PDF a partir de um DataFrame com o título especificado.
+    Retorna o caminho do arquivo temporário para download.
+    """
+    if df.empty:
+        return None
+    
+    pdf = PDF()
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 10)
+    pdf.cell(0, 10, titulo, 0, 1, 'L')
+    pdf.ln(5)
+    
+    # Cabeçalho da tabela
+    colunas = list(df.columns)
+    # Remover colunas que não são necessárias no relatório
+    colunas_uteis = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
+    colunas_exibidas = [c for c in colunas_uteis if c in df.columns]
+    
+    # Larguras proporcionais
+    larguras = [15, 50, 35, 35, 35, 50, 50]
+    # Ajustar larguras conforme colunas existentes
+    larguras_ajustadas = [larguras[i] for i in range(len(colunas_exibidas))]
+    
+    pdf.set_font('Arial', 'B', 8)
+    for i, col in enumerate(colunas_exibidas):
+        pdf.cell(larguras_ajustadas[i], 8, col.upper(), 1, 0, 'C')
+    pdf.ln()
+    
+    pdf.set_font('Arial', '', 7)
+    for _, row in df.iterrows():
+        for i, col in enumerate(colunas_exibidas):
+            valor = str(row[col]) if pd.notna(row[col]) else ''
+            pdf.cell(larguras_ajustadas[i], 6, valor, 1, 0, 'L')
+        pdf.ln()
+        if pdf.get_y() > 270:
+            pdf.add_page()
+            # Recriar cabeçalho
+            pdf.set_font('Arial', 'B', 8)
+            for i, col in enumerate(colunas_exibidas):
+                pdf.cell(larguras_ajustadas[i], 8, col.upper(), 1, 0, 'C')
+            pdf.ln()
+            pdf.set_font('Arial', '', 7)
+    
+    # Salvar em arquivo temporário
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+        pdf.output(tmp.name)
+        return tmp.name
 
 # ====================== CARREGAR IMAGENS ======================
 def carregar_imagem(nome_arquivo, nome_descricao):
@@ -444,29 +511,34 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO COM IMPRESSÃO/EXPORTAÇÃO ======================
+# ====================== HISTÓRICO COM PDF ======================
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
     
     if todos_dados:
         df = pd.DataFrame(todos_dados)
         
-        # ========== NOVAS OPÇÕES DE IMPRESSÃO / RELATÓRIOS ==========
-        st.markdown("### 📄 Opções de Relatório / Impressão")
+        # ========== OPÇÕES DE RELATÓRIO EM PDF ==========
+        st.markdown("### 📄 Gerar Relatório PDF")
         
-        # Função para converter DataFrame para CSV e gerar link de download
-        def get_csv_download_link(df, filename="historico.csv"):
-            csv = df.to_csv(index=False, encoding='utf-8-sig')
-            b64 = base64.b64encode(csv.encode()).decode()
-            href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">📥 Clique aqui para baixar o arquivo CSV</a>'
-            return href
-        
-        # 1. Exportar histórico completo
+        # 1. PDF completo
         st.markdown("#### 🔹 Histórico Geral")
-        if st.button("📊 Exportar todo o histórico", key="export_all"):
-            st.markdown(get_csv_download_link(df, "historico_completo.csv"), unsafe_allow_html=True)
+        if st.button("📑 Gerar PDF do Histórico Completo", key="pdf_all"):
+            caminho_pdf = gerar_pdf(df, "RELATÓRIO COMPLETO DE MOVIMENTAÇÕES")
+            if caminho_pdf:
+                with open(caminho_pdf, "rb") as f:
+                    pdf_data = f.read()
+                st.download_button(
+                    label="📥 Baixar PDF Completo",
+                    data=pdf_data,
+                    file_name="historico_completo.pdf",
+                    mime="application/pdf"
+                )
+                os.unlink(caminho_pdf)
+            else:
+                st.warning("Nenhum dado para gerar PDF.")
         
-        # 2. Exportar por setor (C.C, GRSA, Brasanitas)
+        # 2. PDF por setor (C.C, GRSA, Brasanitas)
         st.markdown("#### 🔹 Relatório por Setor")
         setores = ["C.C", "GRSA", "Brasanitas"]
         cols_setores = st.columns(len(setores))
@@ -474,35 +546,53 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             with cols_setores[idx]:
                 df_setor = df[df['setor_destino'] == setor]
                 if not df_setor.empty:
-                    if st.button(f"🏥 {setor} ({len(df_setor)} registros)", key=f"export_setor_{setor}"):
-                        st.markdown(get_csv_download_link(df_setor, f"historico_{setor}.csv"), unsafe_allow_html=True)
+                    if st.button(f"🏥 {setor} ({len(df_setor)} registros) - PDF", key=f"pdf_setor_{setor}"):
+                        caminho_pdf = gerar_pdf(df_setor, f"RELATÓRIO - SETOR {setor}")
+                        if caminho_pdf:
+                            with open(caminho_pdf, "rb") as f:
+                                pdf_data = f.read()
+                            st.download_button(
+                                label=f"📥 Baixar PDF {setor}",
+                                data=pdf_data,
+                                file_name=f"historico_{setor}.pdf",
+                                mime="application/pdf"
+                            )
+                            os.unlink(caminho_pdf)
                 else:
-                    st.button(f"🏥 {setor} (vazio)", disabled=True, key=f"btn_{setor}")
+                    st.button(f"🏥 {setor} (vazio)", disabled=True, key=f"btn_{setor}_pdf")
         
-        # 3. Exportar por empresa (excluindo BRASANITAS, GRSA, C.C)
+        # 3. PDF por empresa (excluindo BRASANITAS, GRSA, C.C)
         st.markdown("#### 🔹 Relatório por Empresa (Prestadores de Serviço)")
-        # Lista de empresas exclusivas do campo 'empresa', ignorando nulos e as três especiais
         empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
         todas_empresas = df['empresa'].dropna().unique()
         empresas_filtradas = [emp for emp in todas_empresas if emp.upper() not in [e.upper() for e in empresas_excluir]]
         
         if empresas_filtradas:
-            empresa_selecionada = st.selectbox("Selecione a empresa:", sorted(empresas_filtradas), key="select_empresa_relatorio")
+            empresa_selecionada = st.selectbox("Selecione a empresa:", sorted(empresas_filtradas), key="select_empresa_pdf")
             if empresa_selecionada:
                 df_empresa = df[df['empresa'] == empresa_selecionada]
                 st.write(f"📌 **{len(df_empresa)} registros** para a empresa **{empresa_selecionada}**")
-                if st.button(f"📥 Exportar {empresa_selecionada}", key="export_empresa"):
-                    st.markdown(get_csv_download_link(df_empresa, f"historico_{empresa_selecionada}.csv"), unsafe_allow_html=True)
+                if st.button(f"📑 Gerar PDF para {empresa_selecionada}", key="pdf_empresa"):
+                    caminho_pdf = gerar_pdf(df_empresa, f"RELATÓRIO - EMPRESA {empresa_selecionada}")
+                    if caminho_pdf:
+                        with open(caminho_pdf, "rb") as f:
+                            pdf_data = f.read()
+                        st.download_button(
+                            label=f"📥 Baixar PDF {empresa_selecionada}",
+                            data=pdf_data,
+                            file_name=f"historico_{empresa_selecionada}.pdf",
+                            mime="application/pdf"
+                        )
+                        os.unlink(caminho_pdf)
         else:
             st.info("Nenhuma empresa cadastrada (além das fixas: BRASANITAS, GRSA, C.C).")
         
         st.markdown("---")
         
-        # ========== SEÇÃO DE EXCLUSÃO (mantida igual) ==========
+        # ========== SEÇÃO DE EXCLUSÃO (mantida) ==========
         st.markdown("### 🗑️ Exclusão de Registros")
         st.markdown("#### Selecione os registros que deseja excluir:")
         
-        # Exibir checkboxes para seleção individual
         for idx, row in df.iterrows():
             col_check, col_data = st.columns([0.5, 9.5])
             with col_check:
