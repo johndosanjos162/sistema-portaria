@@ -11,9 +11,9 @@ key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
 st.set_page_config(
-    page_title="JOHN ACESSOS - DEFESA CIBERNÉTICA", 
+    page_title="JOHN ACESSOS - CENTRAL ELÉTRICA", 
     layout="wide", 
-    page_icon="🛡️", 
+    page_icon="⚡", 
     initial_sidebar_state="expanded"
 )
 
@@ -86,7 +86,7 @@ def gerar_html_impressao(df, titulo):
         </style>
     </head>
     <body>
-        <h1>JOHN ACESSOS - DEFESA CIBERNÉTICA - {titulo}</h1>
+        <h1>JOHN ACESSOS - CENTRAL ELÉTRICA - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
@@ -115,12 +115,12 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN PRINCIPAL (MANTIDO) ======================
+# ====================== DESIGN PRINCIPAL (ESTÁVEL) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap');
 
-/* ANIMAÇÕES LEVES */
+/* ANIMAÇÕES BÁSICAS */
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(0, 180, 255, 0.4); }
     70% { box-shadow: 0 0 0 10px rgba(0, 180, 255, 0); }
@@ -131,22 +131,20 @@ st.markdown("""
     50% { transform: translateY(-5px); }
     100% { transform: translateY(0px); }
 }
-@keyframes scan {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-}
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
 }
-@keyframes blink {
-    0%,100% { opacity: 0.4; }
-    50% { opacity: 1; }
+@keyframes electricBolt {
+    0% { background-position: 0 0; opacity: 0; }
+    10% { opacity: 0.8; }
+    20% { opacity: 0; }
+    100% { background-position: 0 100px; opacity: 0; }
 }
 
 /* FUNDO PRINCIPAL */
 .stApp {
-    background: linear-gradient(135deg, #030a14 0%, #061020 100%);
+    background: linear-gradient(135deg, #030b14 0%, #07121f 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
 }
 
@@ -194,7 +192,7 @@ st.markdown("""
     color: #000;
 }
 
-/* CARDS (MANTIDOS) */
+/* CARDS */
 .admin-card {
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
@@ -310,8 +308,8 @@ if IMAGEM_SIDEBAR:
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">🛡️ JOHN ACESSOS</div>
-            <p style="color:#6a8eae; font-size:9px;">DEFESA CIBERNÉTICA</p>
+            <div class="sidebar-title">⚡ JOHN ACESSOS</div>
+            <p style="color:#6a8eae; font-size:9px;">CENTRAL ELÉTRICA</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -329,7 +327,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 10.0</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 11.0</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -345,13 +343,13 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN: DEFESA CIBERNÉTICA GLOBAL ======================
+# ====================== TELA DE LOGIN: ENERGIA ELÉTRICA FUTURISTA ======================
 if not st.session_state.logado:
-    # HTML para mapa mundial abstrato (via CSS e pequenas divs)
+    # HTML/CSS para os efeitos elétricos
     st.markdown("""
     <style>
-    /* Camada de fundo com linhas de conexão e grades */
-    .global-grid {
+    /* Camada de fundo com grade elétrica */
+    .grid-electric {
         position: fixed;
         top: 0;
         left: 0;
@@ -360,22 +358,64 @@ if not st.session_state.logado:
         pointer-events: none;
         z-index: 0;
         background-image: 
-            radial-gradient(circle at 30% 40%, rgba(0,180,255,0.08) 2px, transparent 2px),
-            radial-gradient(circle at 70% 60%, rgba(0,180,255,0.06) 2px, transparent 2px);
-        background-size: 50px 50px, 80px 80px;
+            linear-gradient(rgba(0,180,255,0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,180,255,0.05) 1px, transparent 1px);
+        background-size: 40px 40px;
     }
-    /* Linhas digitais (representando comunicação global) */
-    .digital-lines {
+    /* Raios de energia descendo pelas bordas */
+    .electric-bolts {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
         pointer-events: none;
-        background: repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(0,180,255,0.05) 30px, rgba(0,180,255,0.1) 32px);
+        z-index: 1;
+    }
+    .bolt-left {
+        position: absolute;
+        left: 5%;
+        top: -10%;
+        width: 2px;
+        height: 120%;
+        background: repeating-linear-gradient(180deg, transparent, #0cf, transparent);
+        opacity: 0.3;
+        animation: electricBolt 3s infinite;
+    }
+    .bolt-right {
+        position: absolute;
+        right: 5%;
+        top: -10%;
+        width: 2px;
+        height: 120%;
+        background: repeating-linear-gradient(180deg, transparent, #0cf, transparent);
+        opacity: 0.3;
+        animation: electricBolt 4s infinite;
+    }
+    .bolt-center {
+        position: absolute;
+        left: 50%;
+        top: -10%;
+        width: 1px;
+        height: 120%;
+        background: linear-gradient(180deg, transparent, #0cf, transparent);
+        opacity: 0.2;
+        animation: electricBolt 2.5s infinite;
+        transform: translateX(-50%);
+    }
+    /* Partículas flutuantes */
+    .particles {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 30% 40%, rgba(0,180,255,0.1) 1px, transparent 1px);
+        background-size: 60px 60px;
+        pointer-events: none;
         z-index: 0;
     }
-    /* Contêiner do login (acima do fundo) */
+    /* Container do login (acima dos efeitos) */
     .login-container {
         display: flex;
         justify-content: center;
@@ -385,24 +425,24 @@ if not st.session_state.logado:
         z-index: 2;
     }
     .login-box {
-        background: rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(12px);
-        border-radius: 30px;
-        padding: 35px 30px;
-        border: 1px solid rgba(0, 180, 255, 0.6);
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(15px);
+        border-radius: 40px;
+        padding: 40px 30px;
+        border: 2px solid rgba(0, 180, 255, 0.8);
         width: 100%;
-        max-width: 450px;
+        max-width: 460px;
         text-align: center;
         transition: 0.3s;
         animation: float 3s ease-in-out infinite;
-        box-shadow: 0 0 20px rgba(0,180,255,0.2);
+        box-shadow: 0 0 30px rgba(0,180,255,0.3);
     }
-    /* Escudo cyber holográfico */
-    .cyber-shield {
-        width: 100px;
-        height: 100px;
+    /* Escudo energético */
+    .energy-shield {
+        width: 110px;
+        height: 110px;
         margin: 0 auto 20px;
-        background: radial-gradient(circle, rgba(0,180,255,0.2), transparent);
+        background: radial-gradient(circle, rgba(0,180,255,0.25), transparent);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -410,59 +450,88 @@ if not st.session_state.logado:
         position: relative;
         animation: pulse 2s infinite;
     }
-    .cyber-shield span {
-        font-size: 50px;
-        filter: drop-shadow(0 0 5px #0cf);
+    .energy-shield span {
+        font-size: 55px;
+        filter: drop-shadow(0 0 8px #0cf);
     }
-    .cyber-shield::before {
+    .energy-shield::before {
         content: "";
         position: absolute;
-        width: 120px;
-        height: 120px;
+        width: 130px;
+        height: 130px;
         border: 2px solid #0cf;
         border-radius: 50%;
-        animation: spin 8s linear infinite;
-        opacity: 0.6;
+        animation: spin 6s linear infinite;
+        opacity: 0.7;
     }
-    .cyber-shield::after {
+    .energy-shield::after {
         content: "";
         position: absolute;
         width: 100%;
         height: 100%;
-        background: repeating-conic-gradient(from 0deg, #0cf 0deg 10deg, transparent 10deg 20deg);
+        background: repeating-conic-gradient(from 0deg, #0cf 0deg 15deg, transparent 15deg 30deg);
         border-radius: 50%;
-        opacity: 0.15;
-        animation: spin 12s linear infinite reverse;
+        opacity: 0.2;
+        animation: spin 8s linear infinite reverse;
     }
     .logo-title {
-        font-size: 28px;
+        font-size: 32px;
         font-weight: 900;
         background: linear-gradient(135deg, #fff, #0cf);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         letter-spacing: 2px;
+        text-transform: uppercase;
     }
     .logo-subtitle {
-        font-size: 10px;
+        font-size: 11px;
         color: #0cf;
-        letter-spacing: 3px;
+        letter-spacing: 4px;
+        margin-bottom: 25px;
+    }
+    /* Campos com efeito elétrico ao foco */
+    .electric-field {
+        position: relative;
         margin-bottom: 20px;
     }
-    /* Scanner animado para os campos */
-    .field-scanner {
-        position: relative;
-    }
-    .field-scanner::after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        left: 0;
+    .electric-field input {
         width: 100%;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #0cf, transparent);
-        animation: scan 2s infinite;
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid #0cf;
+        border-radius: 30px;
+        padding: 12px 20px;
+        color: #0cf;
+        font-family: 'Share Tech Mono', monospace;
+        transition: 0.2s;
     }
-    .status-bar {
+    .electric-field input:focus {
+        outline: none;
+        border-color: #0f0;
+        box-shadow: 0 0 12px #0cf;
+    }
+    /* Botão com efeito de choque */
+    .shock-button {
+        background: linear-gradient(90deg, #0cf, #00aaff);
+        border: none;
+        border-radius: 50px;
+        padding: 12px;
+        font-weight: 800;
+        font-family: 'Orbitron', monospace;
+        color: #000;
+        width: 100%;
+        cursor: pointer;
+        transition: 0.2s;
+        margin-top: 10px;
+        font-size: 16px;
+        letter-spacing: 2px;
+    }
+    .shock-button:hover {
+        transform: scale(1.02);
+        box-shadow: 0 0 20px #0cf;
+        background: linear-gradient(90deg, #00aaff, #0cf);
+    }
+    /* Status bar */
+    .status-bar-electric {
         margin-top: 25px;
         font-size: 9px;
         color: #8ab3cf;
@@ -472,12 +541,12 @@ if not st.session_state.logado:
         justify-content: center;
         gap: 15px;
     }
-    .status-item {
+    .status-item-electric {
         display: flex;
         align-items: center;
         gap: 5px;
     }
-    .blink {
+    .blink-electric {
         display: inline-block;
         width: 8px;
         height: 8px;
@@ -486,20 +555,25 @@ if not st.session_state.logado:
         animation: pulse 1s infinite;
     }
     </style>
-    <div class="global-grid"></div>
-    <div class="digital-lines"></div>
+    <div class="grid-electric"></div>
+    <div class="electric-bolts">
+        <div class="bolt-left"></div>
+        <div class="bolt-right"></div>
+        <div class="bolt-center"></div>
+    </div>
+    <div class="particles"></div>
     <div class="login-container">
         <div class="login-box">
-            <div class="cyber-shield"><span>🛡️</span></div>
+            <div class="energy-shield"><span>⚡🛡️</span></div>
             <div class="logo-title">JOHN ACESSOS</div>
-            <div class="logo-subtitle">DEFESA CIBERNÉTICA GLOBAL</div>
+            <div class="logo-subtitle">CENTRAL ELÉTRICA</div>
     """, unsafe_allow_html=True)
     
-    # Código binário acima do formulário (opcional, mantido leve)
+    # Código binário animado (opcional)
     st.markdown("""
     <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     <script>
-        function generateBinary(len=55) {
+        function generateBinary(len=60) {
             let bin = '';
             for(let i=0;i<len;i++) bin += Math.random()<0.5?'0':'1';
             return bin;
@@ -513,11 +587,14 @@ if not st.session_state.logado:
     </script>
     """, unsafe_allow_html=True)
     
+    # Formulário de login
     with st.form("login_form"):
-        # Campo Usuário (não utilizado na autenticação, mas mantido visualmente)
-        st.text_input("", placeholder="Identificação criptografada", key="login_user", label_visibility="collapsed")
-        senha = st.text_input("", type="password", placeholder="Chave de acesso", label_visibility="collapsed")
-        submitted = st.form_submit_button("🔓 ENTRAR NA CENTRAL", use_container_width=True)
+        # Campo usuário (apenas visual)
+        st.text_input("", placeholder="Identificação criptografada", key="electric_user", label_visibility="collapsed")
+        # Campo senha
+        senha = st.text_input("", type="password", placeholder="Chave de acesso energizada", label_visibility="collapsed")
+        # Botão com efeito de choque (usando CSS puro)
+        submitted = st.form_submit_button("⚡ ACESSAR SISTEMA", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
@@ -528,13 +605,13 @@ if not st.session_state.logado:
                 st.session_state.perfil = "VIGILANTE"
                 st.rerun()
             else:
-                st.error("❌ ACESSO NEGADO")
+                st.error("❌ ACESSO NEGADO - Choque de segurança ativado")
     
     st.markdown("""
-            <div class="status-bar">
-                <div class="status-item"><span class="blink"></span> FIREWALL ATIVO</div>
-                <div class="status-item"><span class="blink"></span> IA GLOBAL</div>
-                <div class="status-item"><span class="blink"></span> CRIPTOGRAFIA MILITAR</div>
+            <div class="status-bar-electric">
+                <div class="status-item-electric"><span class="blink-electric"></span> FIREWALL ATIVO</div>
+                <div class="status-item-electric"><span class="blink-electric"></span> IA ENERGÉTICA</div>
+                <div class="status-item-electric"><span class="blink-electric"></span> CRIPTOGRAFIA MILITAR</div>
             </div>
         </div>
     </div>
@@ -547,11 +624,11 @@ st.markdown(f"""
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #0cf, #0a0); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <span style="font-size: 18px;">🛡️</span>
+                    <span style="font-size: 18px;">⚡</span>
                 </div>
                 <div>
-                    <h1 style="margin:0; font-size: 15px;">JOHN ACESSOS - DEFESA CIBERNÉTICA</h1>
-                    <p style="margin:0; color: #0cf; font-size: 8px;">INTELIGÊNCIA GLOBAL</p>
+                    <h1 style="margin:0; font-size: 15px;">JOHN ACESSOS - CENTRAL ELÉTRICA</h1>
+                    <p style="margin:0; color: #0cf; font-size: 8px;">INTELIGÊNCIA ENERGÉTICA</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -764,7 +841,7 @@ if dados:
 else:
     st.info("🏢 Nenhuma pessoa presente no momento")
 
-# ====================== HISTÓRICO (com PDFs) ======================
+# ====================== HISTÓRICO ======================
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
@@ -1007,6 +1084,6 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🛡️ JOHN ACESSOS - DEFESA CIBERNÉTICA GLOBAL | IA | FIREWALL ATIVO
+        ⚡ JOHN ACESSOS - CENTRAL ELÉTRICA | IA | FIREWALL ENERGÉTICO
     </div>
 """, unsafe_allow_html=True)
