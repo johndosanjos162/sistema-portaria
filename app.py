@@ -364,15 +364,13 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
 
 st.markdown("---")
 
-# ====================== REGISTRO DE ENTRADA (COM NOME ALTERADO) ======================
+# ====================== REGISTRO DE ENTRADA ======================
 st.markdown("### 📋 Registrar Movimentação")
-
-# ALTERAÇÃO AQUI: "Prestador de Serviço" foi substituído por "Colaborado Interno"
 tipo = st.radio("👥 Tipo de Pessoa:", ["👨‍💼 Colaborador Interno", "🔧 Colaborado Interno"], horizontal=True)
 
 if tipo == "👨‍💼 Colaborador Interno":
     destinos = ["🏥 C.C", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "🧪 Laboratório", "💊 Farmacia"]
-else:  # agora "Colaborado Interno" (antigo Prestador de Serviço) – mesmos destinos
+else:
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
 c1, c2, c3 = st.columns([2,2,1])
@@ -400,11 +398,14 @@ if c3.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
 
 st.markdown("---")
 
-# ====================== PESSOAS PRESENTES ======================
+# ====================== PESSOAS PRESENTES (COM NOME ALTERADO) ======================
 st.markdown("### 📍 Pessoas Presentes no Hospital")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
+
 if dados:
-    tabs = st.tabs(["📊 Todos", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
+    # ALTERAÇÃO AQUI: "Todos" foi substituído por "Prestador de Serviço"
+    tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
+    
     with tabs[0]:
         for p in dados:
             col1, col2, col3, col4 = st.columns([4,3,2,2])
@@ -415,6 +416,7 @@ if dados:
                 supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
                 st.rerun()
             st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+
     for i, setor in enumerate(["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"], 1):
         with tabs[i]:
             pessoas_setor = [r for r in dados if r['setor_destino'] == setor]
