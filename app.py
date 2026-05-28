@@ -132,6 +132,10 @@ st.markdown(f"""
         box-shadow: 0 4px 16px rgba(0, 212, 255, 0.5);
     }}
     
+    .stCheckbox label {{
+        color: #e2e8f0;
+    }}
+    
     .stTextInput > div > div > input,
     .stSelectbox > div > div,
     .stNumberInput > div > div > input {{
@@ -225,6 +229,8 @@ if "perfil" not in st.session_state:
     st.session_state.perfil = ""
 if "search_term_exclusao" not in st.session_state:
     st.session_state.search_term_exclusao = ""
+if "historico_ids_para_excluir" not in st.session_state:
+    st.session_state.historico_ids_para_excluir = []
 
 # ====================== LOGIN ======================
 if not st.session_state.logado:
@@ -398,12 +404,11 @@ if c3.button("✅ Registrar Entrada", type="primary", key="btn_entrada"):
 
 st.markdown("---")
 
-# ====================== PESSOAS PRESENTES (COM NOME ALTERADO) ======================
+# ====================== PESSOAS PRESENTES ======================
 st.markdown("### 📍 Pessoas Presentes no Hospital")
 dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 
 if dados:
-    # ALTERAÇÃO AQUI: "Todos" foi substituído por "Prestador de Serviço"
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
     with tabs[0]:
@@ -437,22 +442,77 @@ else:
 
 st.markdown("---")
 
-# ====================== HISTÓRICO ======================
-with st.expander("🕒 Histórico Completo de Movimentações"):
+# ====================== HISTÓRICO COM SELEÇÃO MÚLTIPLA E LIMPEZA TOTAL ======================
+with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     todos_dados = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
+    
     if todos_dados:
+        # Converter para DataFrame para exibição
         df = pd.DataFrame(todos_dados)
-        st.dataframe(df, use_container_width=True, height=400)
-        id_excluir = st.number_input("ID para excluir:", min_value=1, step=1)
-        if st.button("🗑️ Excluir Registro"):
-            try:
-                supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
-                st.success(f"Registro {id_excluir} excluído!")
+        
+        # Adicionar coluna de seleção com checkbox
+        st.markdown("#### Selecione os registros que deseja excluir:")
+        
+        # Criar uma lista de IDs selecionados via session_state
+        if "selected_ids" not in st.session_state:
+            st.session_state.selected_ids = []
+        
+        # Exibir tabela com checkboxes
+        for idx, row in df.iterrows():
+            col_check, col_data = st.columns([0.5, 9.5])
+            with col_check:
+                is_checked = st.checkbox("", key=f"chk_{row['id']}", 
+                                         value=row['id'] in st.session_state.selected_ids)
+                if is_checked and row['id'] not in st.session_state.selected_ids:
+                    st.session_state.selected_ids.append(row['id'])
+                elif not is_checked and row['id'] in st.session_state.selected_ids:
+                    st.session_state.selected_ids.remove(row['id'])
+            with col_data:
+                st.markdown(f"""
+                <div style="background: rgba(0,20,40,0.4); border-radius: 8px; padding: 5px 10px; margin-bottom: 5px;">
+                    <b>ID {row['id']}</b> - {row['nome']} | CPF: {row['cpf']} | Empresa: {row.get('empresa','N/A')} | 
+                    Entrada: {row['data_entrada']} | Saída: {row['data_saida'] if row['data_saida'] else 'Ainda presente'}
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Botões de ação
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
+        
+        with col_btn1:
+            if st.button("🗑️ Excluir Selecionados", use_container_width=True):
+                if st.session_state.selected_ids:
+                    with st.popover("⚠️ CONFIRMAR EXCLUSÃO DOS SELECIONADOS", use_container_width=True):
+                        st.error(f"Você selecionou {len(st.session_state.selected_ids)} registro(s). Esta ação é irreversível!")
+                        if st.button("✅ SIM, EXCLUIR PERMANENTEMENTE", key="confirm_selected"):
+                            for id_excluir in st.session_state.selected_ids:
+                                supabase.table("movimentacao").delete().eq("id", id_excluir).execute()
+                            st.success(f"{len(st.session_state.selected_ids)} registro(s) excluído(s)!")
+                            st.session_state.selected_ids = []
+                            st.rerun()
+                else:
+                    st.warning("Nenhum registro selecionado.")
+        
+        with col_btn2:
+            if st.button("📋 Limpar Seleção", use_container_width=True):
+                st.session_state.selected_ids = []
                 st.rerun()
-            except:
-                st.error("Erro ao excluir")
+        
+        with col_btn3:
+            if st.button("⚠️ LIMPAR TODO O HISTÓRICO", use_container_width=True):
+                with st.popover("🚨 ATENÇÃO - LIMPEZA TOTAL", use_container_width=True):
+                    st.error("Isso vai APAGAR TODOS os registros de movimentação. Esta ação é IRREVERSÍVEL!")
+                    st.write(f"Total de registros: {len(todos_dados)}")
+                    confirm = st.text_input("Digite 'LIMPAR TUDO' para confirmar:", type="password")
+                    if confirm == "LIMPAR TUDO":
+                        if st.button("🔥 EXCLUIR TUDO PERMANENTEMENTE", key="clear_all_confirm"):
+                            supabase.table("movimentacao").delete().neq("id", 0).execute()  # apaga todos
+                            st.success("✅ Todo o histórico foi limpo!")
+                            st.session_state.selected_ids = []
+                            st.rerun()
+                    elif confirm:
+                        st.error("Confirmação incorreta. Digite exatamente 'LIMPAR TUDO'")
     else:
-        st.info("Nenhum registro encontrado")
+        st.info("📭 Nenhum registro encontrado no histórico.")
 
 # ====================== GESTÃO DE CADASTROS (COM LUPA) ======================
 if st.session_state.perfil == "ADMIN":
