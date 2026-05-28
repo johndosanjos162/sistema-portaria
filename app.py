@@ -28,175 +28,207 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== DESIGN ADMIN ======================
-st.markdown("""
+# ====================== IMAGEM DE FUNDO ======================
+# URL da imagem de vigilante e tecnologia (Pexels - Imagem gratuita)
+# Esta imagem mostra um profissional de segurança com tablets e telas de monitoramento
+BACKGROUND_IMAGE_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg?auto=compress&cs=tinysrgb&w=1600"
+
+# Opções alternativas de imagens de vigilante/tecnologia:
+# Opção 2: "https://images.pexels.com/photos/8867464/security-system-control-room-2020-03-20-09-13-31-utc.jpg"
+# Opção 3: "https://images.pexels.com/photos/3998504/security-professional-looking-at-tablet-in-surveillance-room.jpg"
+
+# ====================== DESIGN ADMIN COM FUNDO ======================
+st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
     
-    /* ========== BASE ========== */
-    .stApp {
-        background: linear-gradient(135deg, #0a0e1a 0%, #0f1525 100%);
+    /* ========== BASE COM IMAGEM DE FUNDO ========== */
+    .stApp {{
+        background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.85)), url("{BACKGROUND_IMAGE_URL}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
         font-family: 'Inter', sans-serif;
-    }
+    }}
     
     /* ========== SIDEBAR ADMIN ========== */
-    [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0a0e1a 0%, #0d1117 100%);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
-    }
+    [data-testid="stSidebar"] {{
+        background: linear-gradient(180deg, rgba(10, 14, 26, 0.95), rgba(13, 17, 23, 0.98));
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }}
     
-    .sidebar-header {
+    .sidebar-header {{
         text-align: center;
         padding: 20px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         margin-bottom: 20px;
-    }
+    }}
     
-    .sidebar-title {
+    .sidebar-title {{
         font-size: 22px;
         font-weight: 800;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00d4ff 0%, #667eea 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         letter-spacing: 1px;
-    }
+    }}
     
     /* ========== CABEÇALHO ========== */
-    .admin-header {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(13, 17, 23, 0.95));
+    .admin-header {{
+        background: linear-gradient(135deg, rgba(0, 20, 40, 0.85), rgba(0, 10, 25, 0.9));
         backdrop-filter: blur(10px);
         border-radius: 15px;
         padding: 15px 25px;
         margin-bottom: 25px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    }
+        border: 1px solid rgba(0, 212, 255, 0.2);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }}
     
-    .badge-admin {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+    .badge-admin {{
+        background: linear-gradient(135deg, #00d4ff, #667eea);
         padding: 8px 20px;
         border-radius: 30px;
         display: inline-block;
         font-weight: 700;
         font-size: 14px;
-        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
-    }
+        box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+    }}
     
     /* ========== CARDS ========== */
-    .admin-card {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(13, 17, 23, 0.8));
+    .admin-card {{
+        background: linear-gradient(135deg, rgba(0, 20, 40, 0.85), rgba(0, 10, 25, 0.9));
         backdrop-filter: blur(10px);
         border-radius: 15px;
         padding: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(0, 212, 255, 0.15);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
+    }}
     
-    .admin-card:hover {
+    .admin-card:hover {{
         transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    }
+        box-shadow: 0 10px 30px rgba(0, 212, 255, 0.2);
+        border-color: rgba(0, 212, 255, 0.3);
+    }}
     
-    .card-title {
+    .card-title {{
         font-size: 13px;
         text-transform: uppercase;
         letter-spacing: 1.5px;
-        color: #64748b;
+        color: #94a3b8;
         margin-bottom: 10px;
-    }
+    }}
     
-    .card-value {
+    .card-value {{
         font-size: 32px;
         font-weight: 800;
-        background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+        background: linear-gradient(135deg, #00d4ff, #a78bfa);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-    }
+    }}
     
     /* ========== BOTÕES ========== */
-    .stButton > button {
+    .stButton > button {{
         border-radius: 10px;
         font-weight: 600;
         transition: all 0.3s ease;
         border: none;
-    }
+    }}
     
-    .stButton > button:not([key="sair_final"]):not([key="login_btn"]) {
-        background: linear-gradient(90deg, #667eea, #764ba2);
+    .stButton > button:not([key="sair_final"]):not([key="login_btn"]) {{
+        background: linear-gradient(90deg, #00d4ff, #667eea);
         color: white;
-    }
+    }}
     
-    .stButton > button:not([key="sair_final"]):not([key="login_btn"]):hover {
+    .stButton > button:not([key="sair_final"]):not([key="login_btn"]):hover {{
         transform: translateY(-2px);
-        box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-    }
+        box-shadow: 0 5px 20px rgba(0, 212, 255, 0.4);
+    }}
     
-    .stButton > button[key="sair_final"] {
+    .stButton > button[key="sair_final"] {{
         background: linear-gradient(90deg, #ef4444, #dc2626);
         color: white;
-    }
+    }}
     
     /* ========== INPUTS ========== */
     .stTextInput > div > div > input,
     .stSelectbox > div > div,
-    .stNumberInput > div > div > input {
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    .stNumberInput > div > div > input {{
+        background: rgba(0, 20, 40, 0.85);
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(0, 212, 255, 0.3);
         border-radius: 10px;
         color: #e2e8f0;
-    }
+    }}
     
-    .stTextInput > div > div > input:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
-    }
+    .stTextInput > div > div > input:focus {{
+        border-color: #00d4ff;
+        box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
+    }}
     
     /* ========== EXPANDER ========== */
-    .streamlit-expanderHeader {
-        background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(13, 17, 23, 0.9));
+    .streamlit-expanderHeader {{
+        background: linear-gradient(135deg, rgba(0, 20, 40, 0.9), rgba(0, 10, 25, 0.95));
+        backdrop-filter: blur(5px);
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(0, 212, 255, 0.2);
         font-weight: 600;
-    }
+    }}
     
     /* ========== TABS ========== */
-    .stTabs [data-baseweb="tab-list"] {
+    .stTabs [data-baseweb="tab-list"] {{
         gap: 8px;
-        background: rgba(15, 23, 42, 0.5);
+        background: rgba(0, 20, 40, 0.6);
+        backdrop-filter: blur(5px);
         padding: 5px;
         border-radius: 12px;
-    }
+    }}
     
-    .stTabs [data-baseweb="tab"] {
+    .stTabs [data-baseweb="tab"] {{
         border-radius: 8px;
         padding: 8px 20px;
         font-weight: 600;
         color: #94a3b8;
-    }
+    }}
     
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+    .stTabs [aria-selected="true"] {{
+        background: linear-gradient(135deg, #00d4ff, #667eea);
         color: white;
-    }
+    }}
     
     /* ========== SEARCH CONTAINER ========== */
-    .search-container {
-        background: rgba(15, 23, 42, 0.6);
+    .search-container {{
+        background: rgba(0, 20, 40, 0.7);
+        backdrop-filter: blur(5px);
         border-radius: 12px;
         padding: 15px;
         margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-    }
+        border: 1px solid rgba(0, 212, 255, 0.2);
+    }}
     
     /* ========== RESULTADOS ========== */
-    .results-count {
-        background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+    .results-count {{
+        background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(102, 126, 234, 0.1));
         border-radius: 8px;
         padding: 8px 12px;
         font-size: 13px;
         color: #94a3b8;
         margin-bottom: 15px;
-    }
+    }}
+    
+    /* ========== ALERTAS ========== */
+    .stAlert {{
+        background: rgba(0, 20, 40, 0.9);
+        backdrop-filter: blur(5px);
+        border-radius: 10px;
+    }}
+    
+    /* ========== DATAFRAME ========== */
+    .stDataFrame {{
+        background: rgba(0, 20, 40, 0.7);
+        backdrop-filter: blur(5px);
+        border-radius: 12px;
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -206,7 +238,7 @@ if IMAGEM_SIDEBAR:
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">🏛️ ACCESS GATE</div>
+            <div class="sidebar-title">🎥 ACCESS GATE</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -243,11 +275,11 @@ if not st.session_state.logado:
         with st.container():
             st.markdown("""
                 <div style="
-                    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(13, 17, 23, 0.95));
+                    background: linear-gradient(135deg, rgba(0, 20, 40, 0.95), rgba(0, 10, 25, 0.95));
                     backdrop-filter: blur(20px);
                     border-radius: 24px;
                     padding: 50px 40px;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(0, 212, 255, 0.3);
                     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
                 ">
             """, unsafe_allow_html=True)
@@ -261,21 +293,21 @@ if not st.session_state.logado:
                             width: 120px;
                             height: 120px;
                             margin: 0 auto;
-                            background: linear-gradient(135deg, #667eea, #764ba2);
+                            background: linear-gradient(135deg, #00d4ff, #667eea);
                             border-radius: 50%;
                             display: flex;
                             align-items: center;
                             justify-content: center;
                         '>
-                            <span style='font-size: 50px;'>🏛️</span>
+                            <span style='font-size: 50px;'>🎥</span>
                         </div>
                         <h2 style='margin-top: 20px;'>ACCESS GATE</h2>
-                        <p style='color: #64748b;'>Sistema Administrativo</p>
+                        <p style='color: #64748b;'>Sistema de Controle de Acesso</p>
                     </div>
                 """, unsafe_allow_html=True)
             
             st.markdown("<hr>", unsafe_allow_html=True)
-            st.markdown("<h3 style='text-align:center;'>🔐 Acesso Administrativo</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='text-align:center;'>🔐 Acesso ao Sistema</h3>", unsafe_allow_html=True)
             
             senha = st.text_input("Senha de acesso:", type="password", key="senha_login", placeholder="••••••••")
             
@@ -299,10 +331,10 @@ st.markdown(f"""
     <div class="admin-header">
         <div style='display: flex; justify-content: space-between; align-items: center;'>
             <div style='display: flex; align-items: center; gap: 15px;'>
-                {'<img src="data:image/png;base64,..." width="50">' if IMAGEM_HEADER else '<span style="font-size: 40px;">🏛️</span>'}
+                {'<img src="data:image/png;base64,..." width="50">' if IMAGEM_HEADER else '<span style="font-size: 40px;">🎥</span>'}
                 <div>
-                    <h1 style='margin: 0; font-size: 24px;'>PAINEL ADMINISTRATIVO</h1>
-                    <p style='margin: 0; color: #64748b; font-size: 12px;'>Controle de Acesso Hospitalar</p>
+                    <h1 style='margin: 0; font-size: 24px;'>PAINEL DE CONTROLE</h1>
+                    <p style='margin: 0; color: #00d4ff; font-size: 12px;'>Sistema de Registro de Acesso</p>
                 </div>
             </div>
             <div style='display: flex; align-items: center; gap: 20px;'>
@@ -371,10 +403,10 @@ with col4:
         <div class="admin-card">
             <div style='display: flex; justify-content: space-between; align-items: center;'>
                 <div>
-                    <div class="card-title">🕒 HOJE</div>
-                    <div class="card-value">---</div>
+                    <div class="card-title">🎥 CÂMERAS</div>
+                    <div class="card-value">24/7</div>
                 </div>
-                <div style='font-size: 35px;'>📅</div>
+                <div style='font-size: 35px;'>📹</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -577,11 +609,11 @@ if st.session_state.perfil == "ADMIN":
                     # Card com informações da pessoa selecionada
                     st.markdown(f"""
                         <div style='
-                            background: linear-gradient(135deg, rgba(102,126,234,0.1), rgba(118,75,162,0.1));
+                            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(102, 126, 234, 0.1));
                             border-radius: 10px;
                             padding: 12px;
                             margin-top: 10px;
-                            border-left: 3px solid #667eea;
+                            border-left: 3px solid #00d4ff;
                         '>
                             <div style='font-size: 13px; color: #94a3b8;'>PESSOA SELECIONADA</div>
                             <div style='font-weight: 700; margin-top: 5px;'>👤 {pessoa_selecionada['nome']}</div>
@@ -631,7 +663,7 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div style='text-align: center; padding: 20px; color: #64748b; font-size: 12px;'>
-        <p>🏛️ ACCESS GATE - Sistema Administrativo de Controle de Acesso</p>
+        <p>🎥 ACCESS GATE - Sistema de Controle de Acesso com Monitoramento</p>
         <p>© 2024 - Todos os direitos reservados</p>
     </div>
 """, unsafe_allow_html=True)
