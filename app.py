@@ -4,7 +4,6 @@ from datetime import datetime
 import pandas as pd
 from PIL import Image
 import base64
-import time
 
 # --- CONFIGURAÇÃO ---
 url = st.secrets["SUPABASE_URL"]
@@ -26,10 +25,10 @@ def gerar_html_impressao(df, titulo):
     colunas_presentes = [c for c in colunas if c in df.columns]
     linhas_html = ""
     for _, row in df.iterrows():
-        linhas_html += "<tr>"
+        linhas_html += "</table>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
-            linhas_html += f"<td>{valor}</td>"
+            linhas_html += f"<td>{valor}</table>"
         linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
@@ -116,108 +115,55 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
-# ====================== IMAGEM DE FUNDO (4K TECNOLÓGICA) ======================
-BACKGROUND_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg"
+# ====================== FUNDO (gradiente escuro rápido, sem scanner) ======================
+# Se quiser usar uma imagem externa, descomente a linha abaixo e comente o gradiente
+# BACKGROUND_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg"
 
-# ====================== DESIGN TECNOLÓGICO PREMIUM ======================
-st.markdown(f"""
+st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&display=swap');
 
-/* ========== ANIMAÇÕES AVANÇADAS ========== */
-@keyframes pulseNeon {{
-    0% {{ box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.7); }}
-    70% {{ box-shadow: 0 0 0 20px rgba(0, 191, 255, 0); }}
-    100% {{ box-shadow: 0 0 0 0 rgba(0, 191, 255, 0); }}
-}}
+/* ========== ANIMAÇÕES ========== */
+@keyframes pulseNeon {
+    0% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0.7); }
+    70% { box-shadow: 0 0 0 20px rgba(0, 191, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 191, 255, 0); }
+}
 
-@keyframes glowText {{
-    0% {{ text-shadow: 0 0 5px #00BFFF, 0 0 10px #00BFFF; }}
-    100% {{ text-shadow: 0 0 15px #00BFFF, 0 0 25px #00BFFF; }}
-}}
+@keyframes glowText {
+    0% { text-shadow: 0 0 5px #00BFFF, 0 0 10px #00BFFF; }
+    100% { text-shadow: 0 0 15px #00BFFF, 0 0 25px #00BFFF; }
+}
 
-@keyframes scanLine {{
-    0% {{ transform: translateY(-100%); }}
-    100% {{ transform: translateY(100%); }}
-}}
-
-@keyframes rotateRadar {{
-    from {{ transform: rotate(0deg); }}
-    to {{ transform: rotate(360deg); }}
-}}
-
-@keyframes floatBox {{
-    0% {{ transform: translateY(0px); }}
-    50% {{ transform: translateY(-8px); }}
-    100% {{ transform: translateY(0px); }}
-}}
-
-@keyframes particleFloat {{
-    0% {{ opacity: 0; transform: translateY(0px) scale(0.5); }}
-    50% {{ opacity: 1; transform: translateY(-20px) scale(1); }}
-    100% {{ opacity: 0; transform: translateY(-40px) scale(0.5); }}
-}}
-
-@keyframes circuitFlow {{
-    0% {{ background-position: 0% 0%; }}
-    100% {{ background-position: 200% 0%; }}
-}}
+@keyframes floatBox {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+    100% { transform: translateY(0px); }
+}
 
 /* ========== BASE ========== */
-.stApp {{
+.stApp {
     background: radial-gradient(ellipse at center, #0a0f1a 0%, #050a14 100%);
     font-family: 'Orbitron', 'Share Tech Mono', monospace;
-    position: relative;
-    overflow-x: hidden;
-}}
+}
 
-/* Partículas digitais de fundo */
-.stApp::before {{
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    background-image: radial-gradient(circle at 20% 50%, rgba(0,191,255,0.08) 1px, transparent 1px),
-                      radial-gradient(circle at 80% 70%, rgba(0,191,255,0.05) 1px, transparent 1px);
-    background-size: 50px 50px, 80px 80px;
-    animation: particleFloat 4s infinite;
-}}
-
-/* Scanner holográfico animado */
-.stApp::after {{
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    background: linear-gradient(transparent 50%, rgba(0,191,255,0.03) 50%);
-    background-size: 100% 4px;
-    animation: scanLine 8s linear infinite;
-    z-index: 0;
-}}
-
-/* ========== SIDEBAR PREMIUM ========== */
-[data-testid="stSidebar"] {{
+/* ========== SIDEBAR ========== */
+[data-testid="stSidebar"] {
     background: linear-gradient(135deg, rgba(5, 10, 20, 0.95), rgba(0, 5, 15, 0.98));
     backdrop-filter: blur(15px);
     border-right: 2px solid #00BFFF;
     box-shadow: -10px 0 30px rgba(0, 191, 255, 0.2);
-}}
+}
 
-.sidebar-header {{
+.sidebar-header {
     text-align: center;
     padding: 25px 15px;
     border-bottom: 2px solid #00BFFF;
     margin-bottom: 20px;
     animation: floatBox 3s ease-in-out infinite;
-}}
+}
 
-.sidebar-title {{
+.sidebar-title {
     font-size: 24px;
     font-weight: 900;
     background: linear-gradient(135deg, #00BFFF, #0080FF);
@@ -225,11 +171,10 @@ st.markdown(f"""
     -webkit-text-fill-color: transparent;
     letter-spacing: 3px;
     text-transform: uppercase;
-    text-shadow: 0 0 10px rgba(0,191,255,0.5);
-}}
+}
 
 /* ========== CABEÇALHO ========== */
-.admin-header {{
+.admin-header {
     background: rgba(5, 15, 25, 0.75);
     backdrop-filter: blur(15px);
     border-radius: 20px;
@@ -238,9 +183,9 @@ st.markdown(f"""
     border: 1px solid #00BFFF;
     box-shadow: 0 0 20px rgba(0, 191, 255, 0.3);
     animation: floatBox 3s ease-in-out infinite;
-}}
+}
 
-.badge-admin {{
+.badge-admin {
     background: linear-gradient(135deg, #00BFFF, #0080FF);
     padding: 6px 20px;
     border-radius: 30px;
@@ -250,45 +195,43 @@ st.markdown(f"""
     letter-spacing: 1px;
     box-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
     text-transform: uppercase;
-}}
+}
 
 /* ========== CARDS ========== */
-.admin-card {{
+.admin-card {
     background: rgba(5, 15, 25, 0.7);
     backdrop-filter: blur(12px);
     border-radius: 20px;
     padding: 20px;
     border: 1px solid #00BFFF;
     transition: all 0.3s ease;
-    animation: floatBox 4s ease-in-out infinite;
-}}
+}
 
-.admin-card:hover {{
+.admin-card:hover {
     transform: translateY(-8px) scale(1.02);
     border-color: #00BFFF;
     box-shadow: 0 0 30px rgba(0, 191, 255, 0.4);
-}}
+}
 
-.card-title {{
+.card-title {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 2px;
     color: #00BFFF;
     margin-bottom: 8px;
     font-weight: 700;
-}}
+}
 
-.card-value {{
+.card-value {
     font-size: 38px;
     font-weight: 900;
     background: linear-gradient(135deg, #ffffff, #00BFFF);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    text-shadow: 0 0 10px rgba(0,191,255,0.3);
-}}
+}
 
 /* ========== BOTÕES ========== */
-.stButton > button {{
+.stButton > button {
     border-radius: 50px;
     font-weight: 800;
     font-family: 'Orbitron', monospace;
@@ -299,97 +242,92 @@ st.markdown(f"""
     box-shadow: 0 0 15px rgba(0, 191, 255, 0.5);
     text-transform: uppercase;
     letter-spacing: 1px;
-}}
+}
 
-.stButton > button:hover {{
+.stButton > button:hover {
     transform: scale(1.03);
     box-shadow: 0 0 25px rgba(0, 191, 255, 0.9);
-    background: linear-gradient(90deg, #0080FF, #00BFFF);
-}}
+}
 
-.stButton > button[key="sair_final"] {{
+.stButton > button[key="sair_final"] {
     background: linear-gradient(90deg, #ff4444, #cc0000);
     color: white;
-    box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
-}}
+}
 
 /* ========== INPUTS ========== */
 .stTextInput > div > div > input,
 .stSelectbox > div > div,
-.stNumberInput > div > div > input {{
+.stNumberInput > div > div > input {
     background: rgba(0, 0, 0, 0.8);
     border: 2px solid #00BFFF;
     border-radius: 15px;
     color: #00BFFF;
     font-family: 'Share Tech Mono', monospace;
-    box-shadow: 0 0 5px rgba(0, 191, 255, 0.3);
     padding: 12px;
-}}
+}
 
-.stTextInput > div > div > input:focus {{
+.stTextInput > div > div > input:focus {
     border-color: #00BFFF;
     box-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
     color: #fff;
-}}
+}
 
 /* ========== EXPANDER ========== */
-.streamlit-expanderHeader {{
+.streamlit-expanderHeader {
     background: rgba(5, 15, 25, 0.9);
     border-radius: 15px;
     border: 1px solid #00BFFF;
     font-weight: 800;
     font-family: 'Orbitron', monospace;
     color: #00BFFF;
-}}
+}
 
 /* ========== TABS ========== */
-.stTabs [data-baseweb="tab-list"] {{
+.stTabs [data-baseweb="tab-list"] {
     gap: 8px;
     background: rgba(0, 0, 0, 0.5);
     padding: 6px;
     border-radius: 50px;
     border: 1px solid #00BFFF;
-}}
+}
 
-.stTabs [data-baseweb="tab"] {{
+.stTabs [data-baseweb="tab"] {
     border-radius: 40px;
     padding: 8px 25px;
     font-weight: 700;
     font-family: 'Orbitron', monospace;
     color: #ccc;
-}}
+}
 
-.stTabs [aria-selected="true"] {{
+.stTabs [aria-selected="true"] {
     background: linear-gradient(135deg, #00BFFF, #0080FF);
     color: #000;
     box-shadow: 0 0 15px #00BFFF;
-}}
+}
 
 /* ========== CHECKBOX ========== */
-.stCheckbox label {{
+.stCheckbox label {
     color: #00BFFF;
     font-weight: 500;
-    font-family: 'Share Tech Mono', monospace;
-}}
+}
 
 /* ========== DATAFRAME ========== */
-.stDataFrame {{
+.stDataFrame {
     background: rgba(0, 0, 0, 0.6);
     border-radius: 15px;
     border: 1px solid #00BFFF;
-}}
+}
 
 /* ========== ALERTAS ========== */
-.stAlert {{
+.stAlert {
     background: rgba(0, 0, 0, 0.85);
     border-left: 5px solid #00BFFF;
     border-radius: 12px;
     color: #00BFFF;
-    font-family: 'Share Tech Mono', monospace;
-}}
+}
 
 /* ========== FOOTER ========== */
-.footer {{
+.footer {
     text-align: center;
     padding: 20px;
     color: #00BFFF;
@@ -397,23 +335,22 @@ st.markdown(f"""
     border-top: 1px solid rgba(0, 191, 255, 0.3);
     margin-top: 30px;
     font-family: 'Orbitron', monospace;
-    text-shadow: 0 0 5px #00BFFF;
-}}
+}
 
 /* ========== TÍTULOS ========== */
-h1, h2, h3, h4, h5, h6 {{
+h1, h2, h3, h4, h5, h6 {
     font-family: 'Orbitron', monospace;
     color: #00BFFF;
-    text-shadow: 0 0 10px #00BFFF;
-}}
+    text-shadow: 0 0 5px #00BFFF;
+}
 
-hr {{
+hr {
     border-color: rgba(0, 191, 255, 0.3);
-}}
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR (com indicadores interativos) ======================
+# ====================== SIDEBAR ======================
 if IMAGEM_SIDEBAR:
     st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
 else:
@@ -462,41 +399,33 @@ if "pending_delete_ids" not in st.session_state:
 if "pending_clear_all" not in st.session_state:
     st.session_state.pending_clear_all = False
 
-# ====================== TELA DE LOGIN ULTRA TECNOLÓGICA ======================
+# ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
-    # Usamos HTML/CSS puro para maior controle
+    # HTML/CSS para a caixa de login
     st.markdown("""
     <style>
-    /* Estilos específicos do login */
     .login-container {
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 85vh;
-        position: relative;
-        z-index: 10;
     }
-    
     .login-box {
-        background: rgba(10, 20, 35, 0.82);
+        background: rgba(10, 20, 35, 0.85);
         backdrop-filter: blur(15px);
         border-radius: 32px;
         padding: 45px 40px;
         border: 2px solid #00BFFF;
-        box-shadow: 0 0 50px rgba(0, 191, 255, 0.4), inset 0 0 30px rgba(0, 191, 255, 0.05);
+        box-shadow: 0 0 50px rgba(0, 191, 255, 0.4);
         animation: floatBox 3s ease-in-out infinite;
         width: 100%;
         max-width: 500px;
         margin: 0 auto;
-        transition: all 0.3s;
     }
-    
     .logo-animated {
         text-align: center;
         margin-bottom: 30px;
-        position: relative;
     }
-    
     .logo-icon {
         width: 120px;
         height: 120px;
@@ -507,29 +436,14 @@ if not st.session_state.logado:
         align-items: center;
         justify-content: center;
         border: 3px solid #00BFFF;
-        box-shadow: 0 0 30px #00BFFF, inset 0 0 20px rgba(0,191,255,0.3);
+        box-shadow: 0 0 30px #00BFFF;
         animation: pulseNeon 2s infinite;
-        position: relative;
     }
-    
     .logo-icon span {
         font-size: 60px;
     }
-    
-    .radar-effect {
-        position: absolute;
-        top: -10px;
-        right: -10px;
-        width: 30px;
-        height: 30px;
-        background: #00BFFF;
-        border-radius: 50%;
-        box-shadow: 0 0 15px #00BFFF;
-        animation: pulseNeon 1s infinite;
-    }
-    
     .logo-title {
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 900;
         background: linear-gradient(135deg, #ffffff, #00BFFF);
         -webkit-background-clip: text;
@@ -539,80 +453,25 @@ if not st.session_state.logado:
         text-transform: uppercase;
         animation: glowText 2s infinite alternate;
     }
-    
     .logo-subtitle {
-        font-size: 12px;
+        font-size: 11px;
         color: #00BFFF;
         letter-spacing: 3px;
         margin-top: 5px;
     }
-    
-    .circuit-lines {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        background: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,191,255,0.03) 10px, rgba(0,191,255,0.03) 20px);
-    }
-    
-    .input-neon {
-        background: rgba(0, 0, 0, 0.7) !important;
-        border: 2px solid #00BFFF !important;
-        border-radius: 15px !important;
-        color: #00BFFF !important;
-        font-family: 'Share Tech Mono', monospace !important;
-        padding: 12px 15px !important;
-        width: 100%;
-        margin-bottom: 20px;
-        transition: all 0.3s;
-    }
-    
-    .input-neon:focus {
-        border-color: #00BFFF !important;
-        box-shadow: 0 0 20px rgba(0,191,255,0.6) !important;
-        color: white !important;
-    }
-    
-    .btn-login {
-        background: linear-gradient(90deg, #00BFFF, #0080FF) !important;
-        color: #000 !important;
-        border-radius: 50px !important;
-        padding: 12px !important;
-        font-weight: 800 !important;
-        font-family: 'Orbitron', monospace !important;
-        text-transform: uppercase !important;
-        letter-spacing: 2px !important;
-        border: none !important;
-        width: 100%;
-        transition: all 0.3s;
-        cursor: pointer;
-        box-shadow: 0 0 15px rgba(0,191,255,0.5);
-    }
-    
-    .btn-login:hover {
-        transform: scale(1.02);
-        box-shadow: 0 0 30px rgba(0,191,255,0.8);
-        background: linear-gradient(90deg, #0080FF, #00BFFF) !important;
-    }
-    
     .status-bar {
         margin-top: 25px;
         text-align: center;
-        font-size: 11px;
+        font-size: 10px;
         color: #00BFFF;
         border-top: 1px solid rgba(0,191,255,0.3);
         padding-top: 15px;
     }
-    
     .status-item {
         display: inline-block;
-        margin: 0 10px;
+        margin: 0 8px;
     }
-    
     .blink {
-        animation: pulseNeon 1s infinite;
         display: inline-block;
         width: 8px;
         height: 8px;
@@ -620,6 +479,7 @@ if not st.session_state.logado:
         border-radius: 50%;
         margin-right: 5px;
         box-shadow: 0 0 5px #00FF00;
+        animation: pulseNeon 1s infinite;
     }
     </style>
     
@@ -628,21 +488,10 @@ if not st.session_state.logado:
             <div class="logo-animated">
                 <div class="logo-icon">
                     <span>🔐</span>
-                    <div class="radar-effect"></div>
                 </div>
                 <div class="logo-title">JOHN ACESSOS</div>
                 <div class="logo-subtitle">SECURITY SYSTEM</div>
-                <div class="circuit-lines"></div>
             </div>
-            
-            <div>
-                <div style="margin-bottom: 15px;">
-                    <div style="text-align:center; margin-bottom:5px;">
-                        <span style="color:#00BFFF; font-size:12px;">🔒 CREDENCIAL DE SEGURANÇA</span>
-                    </div>
-                </div>
-            </div>
-            
             <div class="status-bar">
                 <div class="status-item"><span class="blink"></span> CFTV ONLINE</div>
                 <div class="status-item"><span class="blink"></span> IA MONITORANDO</div>
@@ -652,7 +501,6 @@ if not st.session_state.logado:
     </div>
     """, unsafe_allow_html=True)
     
-    # Campos de login (usando Streamlit puro para manter funcionalidade)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         senha = st.text_input("", type="password", key="senha_login", placeholder="Digite sua credencial de segurança", label_visibility="collapsed")
@@ -674,16 +522,7 @@ st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 15px;">
-                <div style="
-                    width: 45px;
-                    height: 45px;
-                    background: linear-gradient(135deg, #00BFFF, #0080FF);
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    box-shadow: 0 0 15px #00BFFF;
-                ">
+                <div style="width: 45px; height: 45px; background: linear-gradient(135deg, #00BFFF, #0080FF); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 15px #00BFFF;">
                     <span style="font-size: 24px;">🔐</span>
                 </div>
                 <div>
@@ -702,7 +541,7 @@ with col3:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== DASHBOARD (MESMO DE ANTES) ======================
+# ====================== DASHBOARD ======================
 pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
 total_presentes = len(pessoas_presentes)
 total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
