@@ -13,7 +13,7 @@ supabase = create_client(url, key)
 st.set_page_config(
     page_title="JOHN ACESSOS - SECURITY", 
     layout="wide", 
-    page_icon="🔐", 
+    page_icon="🔒", 
     initial_sidebar_state="expanded"
 )
 
@@ -29,7 +29,7 @@ def gerar_html_impressao(df, titulo):
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             linhas_html += f"<td>{valor}</td>"
-        linhas_html += "</table>"
+        linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -90,7 +90,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <tr>{cabecalho_html}</tr>
+                <td>{cabecalho_html}</tr>
             </thead>
             <tbody>
                 {linhas_html}
@@ -111,295 +111,251 @@ def carregar_imagem(nome_arquivo, nome_descricao):
     except:
         return None
 
-# === SE VOCÊ TIVER UMA IMAGEM DE LOGO, COLOQUE NA PASTA E DESCOMENTE AS LINHAS ABAIXO ===
-# IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
-# IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
-# IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
-# Caso contrário, usaremos texto estilizado como logo
-IMAGEM_LOGIN = None
-IMAGEM_SIDEBAR = None
-IMAGEM_HEADER = None
+IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
+IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
+IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
 # ====================== IMAGEM DE FUNDO ======================
-BACKGROUND_IMAGE = "vgilante.png"
+BACKGROUND_URL = "https://images.pexels.com/photos/5380642/security-guard-monitoring-cctv-footage-2021-08-26-21-47-58-utc.jpg"
 
-# ====================== DESIGN DE SEGURANÇA PRIVADA ======================
+# ====================== DESIGN TECNOLÓGICO COM CADEADO ======================
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    /* ========== ANIMAÇÕES ========== */
+    @keyframes pulse {{
+        0% {{ box-shadow: 0 0 0 0 rgba(0, 255, 255, 0.4); }}
+        70% {{ box-shadow: 0 0 0 20px rgba(0, 255, 255, 0); }}
+        100% {{ box-shadow: 0 0 0 0 rgba(0, 255, 255, 0); }}
+    }}
+    
+    @keyframes rotate {{
+        from {{ transform: rotate(0deg); }}
+        to {{ transform: rotate(360deg); }}
+    }}
+    
+    @keyframes glow {{
+        0% {{ text-shadow: 0 0 5px #0ff, 0 0 10px #0ff; }}
+        100% {{ text-shadow: 0 0 15px #0ff, 0 0 25px #0ff; }}
+    }}
+    
+    @keyframes slideIn {{
+        from {{
+            opacity: 0;
+            transform: translateY(-20px);
+        }}
+        to {{
+            opacity: 1;
+            transform: translateY(0);
+        }}
+    }}
+    
+    /* ========== BASE ========== */
     .stApp {{
-        background:
-            linear-gradient(
-                rgba(5, 10, 20, 0.88),
-                rgba(5, 10, 20, 0.88)
-            ),
-            url("{BACKGROUND_IMAGE}");
-
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-
-        font-family: 'Inter', 'Segoe UI', sans-serif;
+        background: linear-gradient(135deg, #0a0f1a 0%, #0a1a2a 50%, #0d1525 100%);
+        font-family: 'Orbitron', 'Inter', monospace;
     }}
-
+    
+    /* ========== SIDEBAR ========== */
     [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, #0a1a2a 0%, #0b2435 100%);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
-        box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+        background: linear-gradient(180deg, rgba(5, 10, 20, 0.95), rgba(0, 5, 15, 0.98));
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(0, 255, 255, 0.3);
+        box-shadow: -5px 0 20px rgba(0, 255, 255, 0.1);
     }}
-
+    
     .sidebar-header {{
         text-align: center;
         padding: 25px 15px;
-        border-bottom: 2px solid #2c7da0;
+        border-bottom: 2px solid #0ff;
         margin-bottom: 20px;
+        animation: slideIn 0.5s ease;
     }}
-
+    
     .sidebar-title {{
-        font-size: 22px;
-        font-weight: 800;
-        color: #61a5c2;
-        letter-spacing: 2px;
+        font-size: 24px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #0ff, #f0f);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 3px;
         text-transform: uppercase;
     }}
-
+    
+    /* ========== CABEÇALHO ========== */
     .admin-header {{
-        background: rgba(10, 26, 42, 0.90);
+        background: rgba(5, 15, 25, 0.85);
         backdrop-filter: blur(10px);
-        border-radius: 14px;
+        border-radius: 15px;
         padding: 15px 25px;
         margin-bottom: 25px;
-        border-bottom: 2px solid #2c7da0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        animation: slideIn 0.5s ease;
     }}
-
+    
     .badge-admin {{
-        background: #2c7da0;
-        padding: 6px 18px;
+        background: linear-gradient(135deg, #0ff, #f0f);
+        padding: 6px 20px;
         border-radius: 30px;
-        font-weight: 600;
+        font-weight: 700;
         font-size: 13px;
-        color: white;
-        letter-spacing: 0.5px;
+        color: #000;
+        letter-spacing: 1px;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
     }}
-
+    
+    /* ========== CARDS ========== */
     .admin-card {{
-        background: rgba(15, 35, 55, 0.82);
+        background: rgba(5, 15, 25, 0.75);
         backdrop-filter: blur(10px);
-        border-radius: 16px;
+        border-radius: 15px;
         padding: 20px;
-        border: 1px solid rgba(44, 125, 160, 0.3);
-        transition: all 0.2s;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        transition: all 0.3s ease;
+        animation: slideIn 0.5s ease;
     }}
-
+    
     .admin-card:hover {{
-        transform: translateY(-3px);
-        border-color: #2c7da0;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+        transform: translateY(-5px);
+        border-color: #0ff;
+        box-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
     }}
-
+    
     .card-title {{
         font-size: 12px;
         text-transform: uppercase;
-        letter-spacing: 1.5px;
-        color: #89c2d9;
+        letter-spacing: 2px;
+        color: #0ff;
         margin-bottom: 8px;
     }}
-
+    
     .card-value {{
-        font-size: 32px;
+        font-size: 36px;
         font-weight: 800;
-        color: #ffffff;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        background: linear-gradient(135deg, #ffffff, #0ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }}
-
+    
+    /* ========== BOTÕES ========== */
     .stButton > button {{
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.2s;
+        border-radius: 10px;
+        font-weight: 700;
+        font-family: 'Orbitron', monospace;
+        transition: all 0.3s ease;
         border: none;
-        background: #2c7da0;
-        color: white;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+        background: linear-gradient(90deg, #0ff, #00aaff);
+        color: #000;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
     }}
-
+    
     .stButton > button:hover {{
-        background: #1f5e7a;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        transform: scale(1.02);
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        background: linear-gradient(90deg, #00aaff, #0ff);
     }}
-
+    
     .stButton > button[key="sair_final"] {{
-        background: #9e2a2a;
+        background: linear-gradient(90deg, #ff4444, #cc0000);
+        color: white;
     }}
-
-    .stButton > button[key="sair_final"]:hover {{
-        background: #7e1f1f;
-    }}
-
+    
+    /* ========== INPUTS ========== */
     .stTextInput > div > div > input,
     .stSelectbox > div > div,
     .stNumberInput > div > div > input {{
-        background: rgba(0, 0, 0, 0.55);
-        border: 1px solid #2c7da0;
-        border-radius: 8px;
-        color: #e0e0e0;
-        padding: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        border: 2px solid #0ff;
+        border-radius: 12px;
+        color: #0ff;
+        font-family: 'Orbitron', monospace;
+        box-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
     }}
-
+    
     .stTextInput > div > div > input:focus {{
-        border-color: #61a5c2;
-        box-shadow: 0 0 0 1px #61a5c2;
+        border-color: #f0f;
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+        color: #fff;
     }}
-
+    
+    /* ========== EXPANDER ========== */
     .streamlit-expanderHeader {{
-        background: rgba(15, 35, 55, 0.92);
+        background: rgba(5, 15, 25, 0.9);
         border-radius: 12px;
-        border: 1px solid #2c7da0;
-        font-weight: 600;
-        color: #89c2d9;
+        border: 1px solid #0ff;
+        font-weight: 700;
+        font-family: 'Orbitron', monospace;
+        color: #0ff;
     }}
-
+    
+    /* ========== TABS ========== */
     .stTabs [data-baseweb="tab-list"] {{
-        gap: 5px;
-        background: rgba(0,0,0,0.35);
-        padding: 5px;
-        border-radius: 12px;
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 6px;
+        border-radius: 50px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
     }}
-
+    
     .stTabs [data-baseweb="tab"] {{
-        border-radius: 8px;
-        padding: 6px 20px;
-        font-weight: 500;
+        border-radius: 40px;
+        padding: 6px 25px;
+        font-weight: 600;
+        font-family: 'Orbitron', monospace;
         color: #ccc;
     }}
-
+    
     .stTabs [aria-selected="true"] {{
-        background: #2c7da0;
-        color: white;
+        background: linear-gradient(135deg, #0ff, #f0f);
+        color: #000;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
     }}
-
+    
+    /* ========== CHECKBOX ========== */
     .stCheckbox label {{
-        color: #e0e0e0;
+        color: #0ff;
+        font-weight: 500;
     }}
-
+    
+    /* ========== DATAFRAME ========== */
     .stDataFrame {{
+        background: rgba(0, 0, 0, 0.5);
         border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid #2c7da0;
+        border: 1px solid #0ff;
     }}
-
+    
+    /* ========== ALERTAS ========== */
     .stAlert {{
-        background: rgba(0,0,0,0.7);
-        border-left: 4px solid #2c7da0;
-        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.8);
+        border-left: 4px solid #0ff;
+        border-radius: 10px;
+        color: #0ff;
     }}
-
+    
+    /* ========== FOOTER ========== */
     .footer {{
         text-align: center;
         padding: 20px;
-        color: #7a8e9e;
-        font-size: 11px;
-        border-top: 1px solid rgba(44,125,160,0.2);
+        color: #0ff;
+        font-size: 10px;
+        border-top: 1px solid rgba(0, 255, 255, 0.2);
         margin-top: 30px;
+        font-family: 'Orbitron', monospace;
+        text-shadow: 0 0 5px #0ff;
     }}
-
-    h1, h2, h3 {{
-        color: #e0e0e0;
-        font-weight: 600;
+    
+    /* ========== TÍTULOS ========== */
+    h1, h2, h3, h4, h5, h6 {{
+        font-family: 'Orbitron', monospace;
+        color: #0ff;
+        text-shadow: 0 0 5px #0ff;
     }}
-
+    
     hr {{
-        border-color: rgba(44,125,160,0.3);
+        border-color: rgba(0, 255, 255, 0.3);
     }}
-
-    .logo-text {{
-        font-size: 24px;
-        font-weight: 800;
-        background: linear-gradient(135deg, #ffffff, #2c7da0);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 1px;
-    }}
-
-    .logo-icon {{
-        font-size: 32px;
-        margin-right: 8px;
-        vertical-align: middle;
-    }}
-
-    /* ================= LOGIN ================= */
-
-    .login-box {{
-        background: rgba(10, 26, 42, 0.93);
-        backdrop-filter: blur(12px);
-        border-radius: 24px;
-        padding: 40px 30px;
-        border: 1px solid #2c7da0;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-    }}
-
-    .login-logo {{
-        width: 120px;
-        height: 120px;
-        margin: auto;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #2c7da0, #61a5c2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 0 20px rgba(44,125,160,0.7);
-        font-size: 52px;
-    }}
-
-    .login-title {{
-        text-align: center;
-        color: white;
-        font-size: 28px;
-        font-weight: 800;
-        margin-top: 20px;
-        letter-spacing: 1px;
-    }}
-
-    .login-sub {{
-        text-align: center;
-        color: #89c2d9;
-        margin-bottom: 25px;
-        font-size: 14px;
-    }}
-
-    /* ================= EFEITO VIDRO ================= */
-
-    .glass-box {{
-        background: rgba(15, 35, 55, 0.75);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.08);
-        border-radius: 14px;
-        padding: 15px;
-    }}
-
-    /* ================= SCROLL ================= */
-
-    ::-webkit-scrollbar {{
-        width: 10px;
-    }}
-
-    ::-webkit-scrollbar-track {{
-        background: #08121d;
-    }}
-
-    ::-webkit-scrollbar-thumb {{
-        background: #2c7da0;
-        border-radius: 10px;
-    }}
-
-    ::-webkit-scrollbar-thumb:hover {{
-        background: #61a5c2;
-    }}
-
     </style>
 """, unsafe_allow_html=True)
 
@@ -409,13 +365,13 @@ if IMAGEM_SIDEBAR:
 else:
     st.sidebar.markdown("""
         <div class="sidebar-header">
-            <div class="sidebar-title">🔐 JOHN ACESSOS</div>
-            <p style="color:#89c2d9; font-size:12px;">Controle de Acesso</p>
+            <div class="sidebar-title">🔒 JOHN ACESSOS</div>
+            <p style="color:#0ff; font-size:11px; margin-top:8px;">TECHNOLOGY SECURITY</p>
         </div>
     """, unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📋 MENU")
+st.sidebar.markdown("### ⚡ MENU")
 st.sidebar.markdown("• 🏠 **Dashboard**")
 st.sidebar.markdown("• 👤 **Colaboradores**")
 st.sidebar.markdown("• 🔧 **Prestadores**")
@@ -429,7 +385,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("• 👑 **Perfil:** ---")
 st.sidebar.markdown("• 🟢 **Status:** Online")
-st.sidebar.markdown("• 📦 **Versão:** 3.0.0")
+st.sidebar.markdown("• 📦 **Versão:** 4.0.0")
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -453,46 +409,82 @@ if not st.session_state.logado:
         with st.container():
             st.markdown("""
                 <div style="
-                    background: rgba(10, 26, 42, 0.95);
-                    backdrop-filter: blur(10px);
-                    border-radius: 24px;
-                    padding: 40px 30px;
-                    border: 1px solid #2c7da0;
-                    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+                    background: rgba(5, 15, 25, 0.92);
+                    backdrop-filter: blur(20px);
+                    border-radius: 30px;
+                    padding: 50px 40px;
+                    border: 2px solid #0ff;
+                    box-shadow: 0 0 50px rgba(0, 255, 255, 0.4), inset 0 0 30px rgba(0, 255, 255, 0.1);
+                    animation: pulse 2s infinite;
                 ">
             """, unsafe_allow_html=True)
-            if IMAGEM_LOGIN:
-                st.image(IMAGEM_LOGIN, use_container_width=True)
-            else:
-                st.markdown("""
-                    <div style='text-align:center; margin-bottom: 20px;'>
-                        <div style="
-                            width: 100px; height: 100px; margin: 0 auto;
-                            background: #2c7da0;
-                            border-radius: 50%;
-                            display: flex; align-items: center; justify-content: center;
-                            box-shadow: 0 0 15px #2c7da0;
-                        ">
-                            <span style="font-size: 48px;">🔐</span>
+            
+            # Logo tecnológica com cadeado
+            st.markdown("""
+                <div style='text-align:center; margin-bottom: 30px;'>
+                    <div style="
+                        width: 130px;
+                        height: 130px;
+                        margin: 0 auto;
+                        background: linear-gradient(135deg, #0a1a2a, #0d2b3e);
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border: 3px solid #0ff;
+                        box-shadow: 0 0 30px #0ff, inset 0 0 20px rgba(0,255,255,0.3);
+                        animation: pulse 2s infinite;
+                    ">
+                        <div style="position: relative;">
+                            <span style="font-size: 60px;">🔒</span>
+                            <div style="
+                                position: absolute;
+                                top: -10px;
+                                right: -10px;
+                                width: 20px;
+                                height: 20px;
+                                background: #0ff;
+                                border-radius: 50%;
+                                box-shadow: 0 0 10px #0ff;
+                                animation: pulse 1s infinite;
+                            "></div>
                         </div>
-                        <h2 style="color:#e0e0e0;">JOHN ACESSOS</h2>
-                        <p style="color:#89c2d9;">Sistema de Controle de Acesso</p>
                     </div>
-                """, unsafe_allow_html=True)
-            st.markdown("<hr>", unsafe_allow_html=True)
-            st.markdown("<h3 style='text-align:center;'>🔐 Área Restrita</h3>", unsafe_allow_html=True)
+                    <div style="margin-top: 20px;">
+                        <div style="
+                            display: inline-block;
+                            padding: 5px 15px;
+                            background: rgba(0,255,255,0.1);
+                            border-radius: 20px;
+                            border: 1px solid #0ff;
+                        ">
+                            <span style="color: #0ff; font-size: 12px; letter-spacing: 2px;">● SECURE SYSTEM ●</span>
+                        </div>
+                    </div>
+                    <h2 style="color:#0ff; margin-top: 20px; text-shadow: 0 0 10px #0ff;">JOHN ACESSOS</h2>
+                    <p style="color:#89c2d9;">Sistema de Controle de Acesso<br>Tecnologia de Ponta</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown("<hr style='border-color:#0ff;'>", unsafe_allow_html=True)
+            st.markdown("<h3 style='text-align:center; color:#0ff;'>🔐 ACESSO AUTORIZADO</h3>", unsafe_allow_html=True)
+            
             senha = st.text_input("Senha de acesso:", type="password", key="senha_login", placeholder="••••••••")
-            if st.button("🔓 ENTRAR", key="login_btn", use_container_width=True):
-                if senha == "fgxv4VP0/*":
-                    st.session_state.logado = True
-                    st.session_state.perfil = "ADMIN"
-                    st.rerun()
-                elif senha == "JOHN123":
-                    st.session_state.logado = True
-                    st.session_state.perfil = "VIGILANTE"
-                    st.rerun()
-                else:
-                    st.error("❌ Acesso negado")
+            
+            col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+            with col_btn2:
+                if st.button("🔓 ENTRAR", key="login_btn", use_container_width=True):
+                    if senha == "fgxv4VP0/*":
+                        st.session_state.logado = True
+                        st.session_state.perfil = "ADMIN"
+                        st.rerun()
+                    elif senha == "JOHN123":
+                        st.session_state.logado = True
+                        st.session_state.perfil = "VIGILANTE"
+                        st.rerun()
+                    else:
+                        st.error("❌ Acesso negado - Credenciais inválidas")
+            
             st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
@@ -501,10 +493,21 @@ st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="display: flex; align-items: center; gap: 15px;">
-                <span style="font-size: 36px;">🔐</span>
+                <div style="
+                    width: 45px;
+                    height: 45px;
+                    background: linear-gradient(135deg, #0ff, #f0f);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 0 15px #0ff;
+                ">
+                    <span style="font-size: 24px;">🔒</span>
+                </div>
                 <div>
-                    <h1 style="margin:0; font-size: 24px;">JOHN ACESSOS - PAINEL DE CONTROLE</h1>
-                    <p style="margin:0; color: #89c2d9;">Monitoramento de Acesso</p>
+                    <h1 style="margin:0; font-size: 22px;">JOHN ACESSOS - PAINEL DE CONTROLE</h1>
+                    <p style="margin:0; color: #0ff; font-size: 11px;">SECURE ACCESS SYSTEM</p>
                 </div>
             </div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
@@ -934,7 +937,7 @@ if st.session_state.perfil == "ADMIN":
                     idx = lista.index(selecionado)
                     pessoa = filtrados[idx]
                     st.markdown(f"""
-                        <div style="background:rgba(44,125,160,0.1); border-radius:12px; padding:12px; border-left:3px solid #2c7da0;">
+                        <div style="background:rgba(0,255,255,0.1); border-radius:12px; padding:12px; border-left:3px solid #0ff;">
                             <b>👤 {pessoa['nome']}</b><br>
                             📄 CPF: {pessoa['cpf']}<br>
                             🏢 Empresa: {pessoa.get('empresa','N/A')}
@@ -963,7 +966,7 @@ if st.session_state.perfil == "ADMIN":
 st.markdown("---")
 st.markdown("""
     <div class="footer">
-        🔐 JOHN ACESSOS - Sistema de Controle de Acesso<br>
-        Monitoramento 24/7 - Segurança Privada
+        🔒 JOHN ACESSOS - Sistema de Controle de Acesso de Alta Tecnologia<br>
+        Monitoramento 24/7 | Criptografia Avançada | Segurança em Tempo Real
     </div>
 """, unsafe_allow_html=True)
