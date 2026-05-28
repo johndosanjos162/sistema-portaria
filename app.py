@@ -86,12 +86,12 @@ def gerar_html_impressao(df, titulo):
     colunas_presentes = [c for c in colunas if c in df.columns]
     linhas_html = ""
     for _, row in df.iterrows():
-        linhas_html += "<tr>"
+        linhas_html += "</td>"
         for col in colunas_presentes:
             valor = str(row[col]) if pd.notna(row[col]) else ''
             valor = valor.replace('<', '&lt;').replace('>', '&gt;')
             linhas_html += f"70><td{valor}迟"
-        linhas_html += "<tr>"
+        linhas_html += "</tr>"
     cabecalho_html = "".join([f"<th>{col.upper()}</th>" for col in colunas_presentes])
     html = f"""
     <!DOCTYPE html>
@@ -152,7 +152,7 @@ def gerar_html_impressao(df, titulo):
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         <table>
             <thead>
-                <tr>{cabecalho_html}</tr>
+                <tr>{cabecalho_html}<tr>
             </thead>
             <tbody>
                 {linhas_html}
@@ -322,8 +322,12 @@ st.markdown("""
     transform: scale(1.01);
     box-shadow: 0 0 12px #a855f7;
 }
-.stButton > button[key="sair_final"] {
-    background: linear-gradient(90deg, #ef4444, #b91c1c);
+.stButton > button[key="sair_final"], .stButton > button[key="btn_atualizar"] {
+    background: linear-gradient(90deg, #a855f7, #3b82f6);
+}
+.stButton > button[key="sair_final"]:hover, .stButton > button[key="btn_atualizar"]:hover {
+    transform: scale(1.01);
+    box-shadow: 0 0 12px #a855f7;
 }
 
 .stTextInput > div > div > input,
@@ -414,7 +418,7 @@ if "perfil" in st.session_state:
 else:
     st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 12.3 (SECURE)</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 12.4 (SECURE)</div>', unsafe_allow_html=True)
 
 # ====================== SESSÃO ======================
 if "logado" not in st.session_state:
@@ -659,13 +663,11 @@ else:
 
 alerta_monitoramento = total_conectados > 1
 
-# Construir o indicador
 if alerta_monitoramento:
     indicador_html = f'<div class="session-indicator"><span class="warning-triangle">⚠️</span> <span>👥 {total_conectados}</span></div>'
 else:
     indicador_html = f'<div class="session-indicator"><span>👥 {total_conectados}</span></div>'
 
-# ====================== HEADER APÓS LOGIN ======================
 st.markdown(f"""
     <div class="admin-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -686,8 +688,12 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-col1, col2, col3 = st.columns([8, 1, 1])
+# Botões: Atualizar e Sair (lado a lado)
+col1, col2, col3, col4 = st.columns([6, 1, 1, 1])
 with col3:
+    if st.button("🔄 ATUALIZAR", key="btn_atualizar", use_container_width=True):
+        st.rerun()   # Apenas recarrega a página, mantém logado
+with col4:
     if st.button("🚪 SAIR", key="sair_final", use_container_width=True):
         remover_sessao()
         st.session_state.logado = False
