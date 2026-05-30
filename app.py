@@ -88,30 +88,17 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÃO CORRIGIDA PARA GERAR HTML PARA IMPRESSÃO/PDF ======================
+# ====================== FUNÇÕES PARA GERAR HTML E PDF ======================
 def gerar_html_impressao(df, titulo):
-    """
-    Gera um HTML completo com os dados do DataFrame para impressão/PDF.
-    Usa df.to_html() para garantir que todas as linhas sejam renderizadas.
-    """
     if df.empty:
         return None
 
-    # Seleciona e ordena as colunas que nos interessam (se existirem no DataFrame)
     colunas_desejadas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
     colunas_existentes = [col for col in colunas_desejadas if col in df.columns]
-    
-    # Cria uma cópia do DataFrame apenas com as colunas desejadas
     df_relatorio = df[colunas_existentes].copy()
-    
-    # Substitui NaN por string vazia para evitar 'nan' no HTML
     df_relatorio = df_relatorio.fillna('')
-    
-    # Gera a tabela HTML usando pandas, sem escape (para manter caracteres especiais)
-    # Mas com escape para evitar injeção de HTML (safe default)
     tabela_html = df_relatorio.to_html(escape=True, index=False, classes='dataframe')
-    
-    # Cabeçalho com CSS personalizado e o botão de impressão
+
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -170,6 +157,145 @@ def gerar_html_impressao(df, titulo):
         <h1>JOHN ACESSOS - ACESSO DE DADOS - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         {tabela_html}
+        <div class="no-print" style="text-align:center; margin-top:30px;">
+            <button onclick="window.print();" style="padding:10px 20px; font-size:16px;">🖨️ Imprimir / Salvar como PDF</button>
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+def gerar_secao_html(df, titulo_secao):
+    if df.empty:
+        return f"""
+        <div class="section">
+            <h2>{titulo_secao}</h2>
+            <p>Nenhum registro encontrado.</p>
+        </div>
+        """
+    colunas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
+    colunas_existentes = [c for c in colunas if c in df.columns]
+    df_secao = df[colunas_existentes].fillna('')
+    tabela_html = df_secao.to_html(escape=True, index=False, classes='dataframe')
+    return f"""
+    <div class="section">
+        <h2>{titulo_secao} <span class="count-badge">{len(df)} registros</span></h2>
+        {tabela_html}
+    </div>
+    """
+
+def gerar_html_consolidado(df):
+    if df.empty:
+        return None
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>RELATÓRIO CONSOLIDADO - TODOS OS SETORES</title>
+        <style>
+            body {{
+                font-family: 'Segoe UI', 'Inter', Arial, sans-serif;
+                margin: 2cm;
+                background: white;
+            }}
+            h1 {{
+                text-align: center;
+                color: #0a2b3e;
+                font-size: 24px;
+                margin-bottom: 10px;
+            }}
+            .sub {{
+                text-align: center;
+                color: #555;
+                font-size: 12px;
+                margin-bottom: 30px;
+            }}
+            .section {{
+                margin-top: 40px;
+                page-break-inside: avoid;
+            }}
+            .section h2 {{
+                background: #0a2b3e;
+                color: white;
+                padding: 8px 12px;
+                border-radius: 8px;
+                font-size: 18px;
+                margin-bottom: 15px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10px;
+                margin-bottom: 20px;
+            }}
+            th {{
+                background: #0a2b3e;
+                color: white;
+                padding: 8px;
+                text-align: left;
+                font-weight: bold;
+            }}
+            td {{
+                border: 1px solid #ccc;
+                padding: 6px;
+                text-align: left;
+            }}
+            tr:nth-child(even) {{
+                background-color: #f9f9f9;
+            }}
+            .count-badge {{
+                display: inline-block;
+                background: #a855f7;
+                color: white;
+                border-radius: 20px;
+                padding: 2px 10px;
+                font-size: 12px;
+                margin-left: 10px;
+            }}
+            @media print {{
+                body {{
+                    margin: 1cm;
+                }}
+                .no-print {{
+                    display: none;
+                }}
+                .section {{
+                    page-break-inside: avoid;
+                }}
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>JOHN ACESSOS - RELATÓRIO CONSOLIDADO</h1>
+        <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
+    """
+
+    df_grsa = df[df['setor_destino'].str.contains('GRSA', case=False, na=False)]
+    html += gerar_secao_html(df_grsa, "🔧 GRSA")
+
+    df_bras = df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
+    html += gerar_secao_html(df_bras, "🏭 Brasanitas")
+
+    df_cc = df[df['setor_destino'].str.contains('C.C', case=False, na=False)]
+    html += gerar_secao_html(df_cc, "🏥 C.C")
+
+    empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
+    todas_empresas = df['empresa'].dropna().unique()
+    empresas_prestadores = [emp for emp in todas_empresas if emp.upper() not in [e.upper() for e in empresas_excluir]]
+    if empresas_prestadores:
+        df_prestadores = df[df['empresa'].isin(empresas_prestadores)]
+        html += gerar_secao_html(df_prestadores, "🏢 Prestadores de Serviços (Demais Empresas)")
+    else:
+        html += f"""
+        <div class="section">
+            <h2>🏢 Prestadores de Serviços</h2>
+            <p>Nenhum registro para esta categoria.</p>
+        </div>
+        """
+
+    html += """
         <div class="no-print" style="text-align:center; margin-top:30px;">
             <button onclick="window.print();" style="padding:10px 20px; font-size:16px;">🖨️ Imprimir / Salvar como PDF</button>
         </div>
@@ -520,6 +646,10 @@ if "bloqueado_ate" not in st.session_state:
     st.session_state.bloqueado_ate = None
 if "session_id" not in st.session_state:
     st.session_state.session_id = None
+if "pessoa_confirmada" not in st.session_state:
+    st.session_state.pessoa_confirmada = None
+if "pessoa_saida" not in st.session_state:
+    st.session_state.pessoa_saida = None
 
 # ====================== FUNÇÃO "MANAGE APP" (SOMENTE ADMIN) ======================
 if st.session_state.get("perfil") == "ADMIN" and st.session_state.get("logado"):
@@ -844,7 +974,7 @@ with col4:
         </div>
     """, unsafe_allow_html=True)
 
-# ====================== CADASTRO ======================
+# ====================== CADASTRO (COM VALIDAÇÃO DE CPF DUPLICADO) ======================
 st.markdown("---")
 st.markdown("### ✚ Cadastro de Nova Pessoa")
 with st.expander("📋 Formulário de Cadastro", expanded=True):
@@ -858,19 +988,26 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
                 st.error("❌ CPF inválido. Digite um CPF válido (11 dígitos).")
             else:
                 cpf_limpo = sanitizar_cpf(novo_cpf)
-                nome_limpo = sanitizar_texto(novo_nome).strip().upper()
-                empresa_limpa = sanitizar_texto(novo_empresa).strip().upper() if novo_empresa else ""
-                try:
-                    supabase.table("Pessoas").insert({
-                        "cpf": cpf_limpo,
-                        "nome": nome_limpo,
-                        "empresa": empresa_limpa
-                    }).execute()
-                    st.success("✅ Cadastro salvo com sucesso!")
-                    st.balloons()
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ Erro ao salvar: {e}")
+                # Verificar se CPF já existe
+                existe = supabase.table("Pessoas").select("id, empresa").eq("cpf", cpf_limpo).execute().data
+                if existe:
+                    # CPF já cadastrado
+                    empresa_existente = existe[0].get('empresa', 'N/A')
+                    st.error(f"❌ Pessoa já cadastrada com este CPF (Empresa atual: {empresa_existente}). Utilize a gestão de cadastros para editar ou excluir.")
+                else:
+                    nome_limpo = sanitizar_texto(novo_nome).strip().upper()
+                    empresa_limpa = sanitizar_texto(novo_empresa).strip().upper() if novo_empresa else ""
+                    try:
+                        supabase.table("Pessoas").insert({
+                            "cpf": cpf_limpo,
+                            "nome": nome_limpo,
+                            "empresa": empresa_limpa
+                        }).execute()
+                        st.success("✅ Cadastro salvo com sucesso!")
+                        st.balloons()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Erro ao salvar: {e}")
         else:
             st.error("❌ CPF e Nome são obrigatórios.")
 
@@ -1132,6 +1269,21 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             st.info("Nenhuma empresa cadastrada (além das fixas: BRASANITAS, GRSA, C.C).")
 
         st.markdown("---")
+        st.markdown("#### 📑 Relatório Consolidado (Todos os Setores em uma folha)")
+        if st.button("📑 Gerar PDF Consolidado (GRSA + Brasanitas + C.C + Prestadores)", key="btn_consolidado"):
+            if not todos_dados:
+                st.warning("Nenhum dado disponível para gerar o relatório consolidado.")
+            else:
+                html_consolidado = gerar_html_consolidado(df)
+                if html_consolidado:
+                    b64 = base64.b64encode(html_consolidado.encode()).decode()
+                    href = f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Clique aqui para abrir o relatório consolidado (nova aba)</a>'
+                    st.markdown(href, unsafe_allow_html=True)
+                    st.caption("Após abrir, pressione Ctrl+P e escolha 'Salvar como PDF'.")
+                else:
+                    st.error("Erro ao gerar o HTML consolidado.")
+
+        st.markdown("---")
         st.markdown("### 🗑️ Exclusão de Registros")
         st.markdown("#### Selecione os registros que deseja excluir:")
         for idx, row in df.iterrows():
@@ -1220,54 +1372,93 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     else:
         st.info("📭 Nenhum registro encontrado no histórico.")
 
-# ====================== GESTÃO DE CADASTROS ======================
+# ====================== GESTÃO DE CADASTROS DE PESSOAS ======================
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
         todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
-        if todos:
-            col_search, col_results = st.columns([1,1])
-            with col_search:
-                search_term = st.text_input("🔍 Pesquisar", placeholder="Nome, CPF ou empresa...", key="search_exclusao", label_visibility="collapsed")
-                if search_term:
-                    search_term_sanitizado = sanitizar_texto(search_term).lower()
-                    filtrados = [p for p in todos if search_term_sanitizado in p['nome'].lower() or search_term_sanitizado in p['cpf'].lower() or search_term_sanitizado in p.get('empresa','').lower()]
-                    st.markdown(f"📊 {len(filtrados)} resultado(s) para: **{search_term}**")
-                else:
-                    filtrados = todos
-                    st.markdown(f"📋 Total: **{len(filtrados)}** pessoas")
-            with col_results:
-                lista = [f"{p['nome']} - CPF: {p['cpf']}" + (f" | {p['empresa']}" if p.get('empresa') else "") for p in filtrados]
-                if lista:
-                    selecionado = st.selectbox("Selecione para excluir:", lista, label_visibility="collapsed")
-                    idx = lista.index(selecionado)
-                    pessoa = filtrados[idx]
-                    st.markdown(f"""
-                        <div style="background:rgba(168,85,247,0.1); border-radius:12px; padding:12px; border-left:3px solid #a855f7;">
-                            <b>👤 {pessoa['nome']}</b><br>
-                            📄 CPF: {pessoa['cpf']}<br>
-                            🏢 Empresa: {pessoa.get('empresa','N/A')}
-                        </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.warning("Nenhum resultado encontrado")
-            if 'pessoa' in locals():
-                st.markdown("---")
-                confirmar = st.checkbox("✅ Confirmar exclusão permanente")
-                if confirmar:
-                    with st.popover("⚠️ CLIQUE PARA EXCLUIR", use_container_width=True):
-                        st.error("Ação irreversível!")
-                        if st.button("🗑️ SIM, EXCLUIR", key="del_cad"):
-                            try:
-                                supabase.table("Pessoas").delete().eq("cpf", pessoa['cpf']).execute()
-                                st.success("Cadastro excluído!")
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"Erro: {e}")
-                else:
-                    st.info("Marque a confirmação para habilitar a exclusão")
+
+        if not todos:
+            st.info("Nenhum cadastro encontrado.")
         else:
-            st.info("Nenhum cadastro encontrado")
+            # Separar por empresa
+            funcionarios_brasanitas = [p for p in todos if p.get('empresa', '').upper() == "BRASANITAS"]
+            funcionarios_grsa = [p for p in todos if p.get('empresa', '').upper() == "GRSA"]
+            funcionarios_outros = [p for p in todos if p.get('empresa', '').upper() not in ["BRASANITAS", "GRSA"]]
+
+            # Abas para cada categoria
+            aba1, aba2, aba3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 OUTROS (Prestadores/Serviços)"])
+
+            with aba1:
+                st.markdown(f"**Total:** {len(funcionarios_brasanitas)} funcionários")
+                if funcionarios_brasanitas:
+                    for pessoa in funcionarios_brasanitas:
+                        col1, col2, col3 = st.columns([4, 2, 1])
+                        col1.markdown(f"**👤 {pessoa['nome']}**")
+                        col2.markdown(f"📄 CPF: {pessoa['cpf']}")
+                        with col3:
+                            with st.popover("🗑️ Excluir", use_container_width=True):
+                                st.warning(f"Tem certeza que deseja excluir **{pessoa['nome']}**?")
+                                if st.button("✅ Confirmar exclusão", key=f"del_brasanitas_{pessoa['id']}"):
+                                    try:
+                                        supabase.table("Pessoas").delete().eq("id", pessoa['id']).execute()
+                                        st.success(f"✅ {pessoa['nome']} excluído com sucesso!")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Erro ao excluir: {e}")
+                        st.divider()
+                else:
+                    st.info("Nenhum funcionário cadastrado para BRASANITAS.")
+
+            with aba2:
+                st.markdown(f"**Total:** {len(funcionarios_grsa)} funcionários")
+                if funcionarios_grsa:
+                    for pessoa in funcionarios_grsa:
+                        col1, col2, col3 = st.columns([4, 2, 1])
+                        col1.markdown(f"**👤 {pessoa['nome']}**")
+                        col2.markdown(f"📄 CPF: {pessoa['cpf']}")
+                        with col3:
+                            with st.popover("🗑️ Excluir", use_container_width=True):
+                                st.warning(f"Tem certeza que deseja excluir **{pessoa['nome']}**?")
+                                if st.button("✅ Confirmar exclusão", key=f"del_grsa_{pessoa['id']}"):
+                                    try:
+                                        supabase.table("Pessoas").delete().eq("id", pessoa['id']).execute()
+                                        st.success(f"✅ {pessoa['nome']} excluído com sucesso!")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Erro ao excluir: {e}")
+                        st.divider()
+                else:
+                    st.info("Nenhum funcionário cadastrado para GRSA.")
+
+            with aba3:
+                st.markdown(f"**Total:** {len(funcionarios_outros)} pessoas")
+                if funcionarios_outros:
+                    search = st.text_input("🔍 Pesquisar por nome, CPF ou empresa", key="search_outros")
+                    filtrados = funcionarios_outros
+                    if search:
+                        search_lower = search.lower()
+                        filtrados = [p for p in funcionarios_outros if search_lower in p['nome'].lower() or search_lower in p['cpf'].lower() or search_lower in p.get('empresa', '').lower()]
+                        st.caption(f"Mostrando {len(filtrados)} de {len(funcionarios_outros)} resultados")
+
+                    for pessoa in filtrados:
+                        col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
+                        col1.markdown(f"**👤 {pessoa['nome']}**")
+                        col2.markdown(f"📄 CPF: {pessoa['cpf']}")
+                        col3.markdown(f"🏢 Empresa: {pessoa.get('empresa', 'N/A')}")
+                        with col4:
+                            with st.popover("🗑️ Excluir", use_container_width=True):
+                                st.warning(f"Tem certeza que deseja excluir **{pessoa['nome']}**?")
+                                if st.button("✅ Confirmar exclusão", key=f"del_outros_{pessoa['id']}"):
+                                    try:
+                                        supabase.table("Pessoas").delete().eq("id", pessoa['id']).execute()
+                                        st.success(f"✅ {pessoa['nome']} excluído com sucesso!")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Erro ao excluir: {e}")
+                        st.divider()
+                else:
+                    st.info("Nenhum cadastro encontrado na categoria 'Outros'.")
 
 st.markdown("---")
 st.markdown("""
