@@ -13,9 +13,15 @@ MAX_TENTATIVAS_LOGIN = 5
 SESSION_TIMEOUT_MINUTOS = 5
 
 # --- CONFIGURAÇÃO SUPABASE ---
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-supabase = create_client(url, key)
+try:
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    supabase = create_client(url, key)
+    # Teste rápido de conexão
+    supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
+except Exception as e:
+    st.error(f"❌ Erro de conexão com Supabase: {e}\nVerifique secrets e se o projeto está ativo.")
+    st.stop()
 
 st.set_page_config(
     page_title="JOHN ACESSOS - ACESSO DE DADOS",
@@ -40,7 +46,7 @@ def registrar_sessao(perfil, usuario="admin"):
         st.session_state.session_id = session_id
         return True
     except Exception as e:
-        print(f"Erro ao registrar sessão: {e}")
+        st.error(f"Erro ao registrar sessão: {e}")
         return False
 
 def atualizar_atividade_sessao():
@@ -49,8 +55,8 @@ def atualizar_atividade_sessao():
             supabase.table("sessoes_ativas").update({
                 "ultima_atividade": datetime.now().isoformat()
             }).eq("id", st.session_state.session_id).execute()
-        except Exception as e:
-            print(f"Erro ao atualizar sessão: {e}")
+        except:
+            pass
 
 def remover_sessao():
     if "session_id" in st.session_state and st.session_state.session_id:
@@ -65,8 +71,7 @@ def contar_sessoes_ativas():
     try:
         result = supabase.table("sessoes_ativas").select("id", count="exact").gte("ultima_atividade", limite).execute()
         return result.count
-    except Exception as e:
-        print(f"Erro ao contar sessões: {e}")
+    except:
         return 0
 
 def limpar_sessoes_expiradas():
@@ -76,20 +81,19 @@ def limpar_sessoes_expiradas():
             supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).neq("id", st.session_state.session_id).execute()
         else:
             supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).execute()
-    except Exception as e:
-        print(f"Erro ao limpar sessões: {e}")
+    except:
+        pass
 
 def encerrar_outras_sessoes():
     if "session_id" in st.session_state and st.session_state.session_id:
         try:
             supabase.table("sessoes_ativas").delete().neq("id", st.session_state.session_id).execute()
             return True
-        except Exception as e:
-            print(f"Erro ao encerrar outras sessões: {e}")
+        except:
             return False
     return False
 
-# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA ======================
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (CORRIGIDAS) ======================
 def get_background_config():
     config_padrao = {
         "type": "gradient",
@@ -100,7 +104,7 @@ def get_background_config():
         result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
         if result.data:
             return json.loads(result.data[0]['value'])
-    except Exception:
+    except:
         if "background_config" in st.session_state:
             return st.session_state.background_config
     return config_padrao
@@ -120,20 +124,29 @@ def save_background_config(config):
         return False
 
 def apply_background_css(config=None):
+    """Aplica o CSS de fundo de forma mais robusta"""
     if config is None:
         config = st.session_state.get("background_config", get_background_config())
     bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-    st.markdown(f"""
+    # Injetar CSS com alta prioridade e também forçar via JavaScript
+    css = f"""
     <style>
-    .stApp {{
-        background: {bg_value};
-        background-attachment: fixed;
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-position: center;
+    .stApp, .stApp > header, .stApp > div {{
+        background: {bg_value} !important;
+        background-attachment: fixed !important;
+        background-size: cover !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
     }}
     </style>
-    """, unsafe_allow_html=True)
+    <script>
+        // Forçar aplicação no body também (fallback)
+        document.body.style.background = "{bg_value}";
+        document.body.style.backgroundAttachment = "fixed";
+        document.body.style.backgroundSize = "cover";
+    </script>
+    """
+    st.markdown(css, unsafe_allow_html=True)
 
 # ====================== FUNÇÕES DE RELATÓRIOS (PDF) ======================
 def gerar_html_impressao(df, titulo):
@@ -229,7 +242,7 @@ def carregar_imagem(nome):
 
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png")
 
-# ====================== CSS BASE ======================
+# ====================== CSS BASE (SEM BACKGROUND FIXO) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
@@ -423,6 +436,7 @@ if st.session_state.perfil == "ADMIN":
             tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
             novo_valor = config_atual.get("value", "")
             novo_tipo = tipo_atual
+            
             if tipo == "Gradiente padrão":
                 novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
                 novo_tipo = "gradient"
@@ -440,19 +454,37 @@ if st.session_state.perfil == "ADMIN":
                 else:
                     novo_valor = config_atual.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
                     novo_tipo = tipo_atual if tipo_atual in ["gradient","solid"] else "gradient"
+            
+            # Exibir pré-visualização
+            st.markdown(f"**Prévia atual:**")
+            st.markdown(f'<div style="width:100%; height:50px; background:{novo_valor}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+            
             aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
-            if st.button("💾 Salvar e Aplicar Tema", key="salvar_tema"):
-                nova_config = {"type": novo_tipo, "value": novo_valor, "apply_to_login": aplicar_login}
-                save_background_config(nova_config)
-                apply_background_css(nova_config)
-                st.success("✅ Tema salvo! Recarregando...")
-                st.rerun()
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("💾 Salvar e Aplicar Tema", key="salvar_tema"):
+                    nova_config = {"type": novo_tipo, "value": novo_valor, "apply_to_login": aplicar_login}
+                    if save_background_config(nova_config):
+                        st.success("✅ Tema salvo! Recarregando...")
+                        st.rerun()
+                    else:
+                        st.error("Erro ao salvar. Verifique conexão com Supabase.")
+            with col_btn2:
+                if st.button("↺ Restaurar Padrão", key="reset_tema"):
+                    padrao = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
+                    save_background_config(padrao)
+                    st.success("Tema restaurado para o padrão! Recarregando...")
+                    st.rerun()
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
-pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
-total_presentes = len(pessoas_presentes)
-total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
+try:
+    pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
+    total_presentes = len(pessoas_presentes)
+    total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
+except:
+    total_presentes = 0
+    total_colaboradores = 0
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -478,11 +510,11 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
                 st.error("❌ CPF inválido.")
             else:
                 cpf_limpo = sanitizar_cpf(novo_cpf)
-                existe = supabase.table("Pessoas").select("id, empresa").eq("cpf", cpf_limpo).execute().data
-                if existe:
-                    st.error(f"❌ Pessoa já cadastrada (Empresa: {existe[0].get('empresa', 'N/A')})")
-                else:
-                    try:
+                try:
+                    existe = supabase.table("Pessoas").select("id, empresa").eq("cpf", cpf_limpo).execute().data
+                    if existe:
+                        st.error(f"❌ Pessoa já cadastrada (Empresa: {existe[0].get('empresa', 'N/A')})")
+                    else:
                         supabase.table("Pessoas").insert({
                             "cpf": cpf_limpo,
                             "nome": sanitizar_texto(novo_nome).strip().upper(),
@@ -491,8 +523,8 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
                         st.success("✅ Cadastro salvo!")
                         st.balloons()
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"Erro: {e}")
+                except Exception as e:
+                    st.error(f"Erro: {e}")
         else:
             st.error("CPF e Nome obrigatórios.")
 
@@ -515,13 +547,16 @@ with col_btn:
             if not validar_cpf(cpf_limpo):
                 st.error("CPF inválido")
             else:
-                pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_limpo).execute().data
-                if pessoa:
-                    st.session_state.pessoa_confirmada = {"cpf": cpf_limpo, "nome": pessoa[0]['nome'], "empresa": pessoa[0].get('empresa', '')}
-                    st.success(f"✅ {pessoa[0]['nome']} - {pessoa[0].get('empresa','N/A')}")
-                else:
-                    st.error("CPF não cadastrado")
-                    st.session_state.pessoa_confirmada = None
+                try:
+                    pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_limpo).execute().data
+                    if pessoa:
+                        st.session_state.pessoa_confirmada = {"cpf": cpf_limpo, "nome": pessoa[0]['nome'], "empresa": pessoa[0].get('empresa', '')}
+                        st.success(f"✅ {pessoa[0]['nome']} - {pessoa[0].get('empresa','N/A')}")
+                    else:
+                        st.error("CPF não cadastrado")
+                        st.session_state.pessoa_confirmada = None
+                except:
+                    st.error("Erro ao buscar CPF")
     else:
         st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
 
@@ -547,7 +582,10 @@ if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
 # ====================== PESSOAS PRESENTES ======================
 st.markdown("---")
 st.markdown("### 📍 Pessoas Presentes")
-dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
+try:
+    dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
+except:
+    dados = []
 if dados:
     st.markdown("#### 🔍 Pesquisar CPF para saída")
     col_pesq, col_btn_sair = st.columns([3,1])
@@ -567,10 +605,13 @@ if dados:
         p = st.session_state.pessoa_saida
         st.markdown(f"**{p['nome']}** - CPF: {p['cpf']} - Setor: {p['setor_destino']}")
         if st.button("🚪 Registrar Saída", key="sair_pesquisado"):
-            supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-            st.success("Saída registrada")
-            st.session_state.pessoa_saida = None
-            st.rerun()
+            try:
+                supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
+                st.success("Saída registrada")
+                st.session_state.pessoa_saida = None
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro: {e}")
         st.markdown("---")
     st.markdown("#### 📋 Lista completa")
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
@@ -581,8 +622,11 @@ if dados:
             col2.write(f"📍 {p['setor_destino']}")
             col3.write(f"🏢 {p.get('empresa','N/A')}")
             if col4.button("🚪 Saída", key=f"saida_{p['id']}"):
-                supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                st.rerun()
+                try:
+                    supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
+                    st.rerun()
+                except:
+                    pass
             st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
     for i, setor in enumerate(["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"], 1):
         with tabs[i]:
@@ -594,8 +638,11 @@ if dados:
                 col2.write(f"🏢 {p.get('empresa','N/A')}")
                 col3.write(f"🕒 {p['data_entrada']}")
                 if col4.button("🚪 Saída", key=f"saida2_{p['id']}"):
-                    supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                    st.rerun()
+                    try:
+                        supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
+                        st.rerun()
+                    except:
+                        pass
                 st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
 else:
     st.info("Nenhuma pessoa presente no momento")
@@ -603,7 +650,10 @@ else:
 # ====================== HISTÓRICO ======================
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
-    todos = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
+    try:
+        todos = supabase.table("movimentacao").select("*").order("id", desc=True).execute().data
+    except:
+        todos = []
     if todos:
         df = pd.DataFrame(todos)
         st.markdown("### 📄 Gerar Relatório")
@@ -650,11 +700,14 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             col_conf, col_canc = st.columns(2)
             with col_conf:
                 if st.button("✅ SIM, EXCLUIR", key="confirmar_excluir"):
-                    for id_ in st.session_state.pending_delete_ids:
-                        supabase.table("movimentacao").delete().eq("id", id_).execute()
-                    st.session_state.selected_ids = []
-                    st.session_state.pending_delete_ids = []
-                    st.rerun()
+                    try:
+                        for id_ in st.session_state.pending_delete_ids:
+                            supabase.table("movimentacao").delete().eq("id", id_).execute()
+                        st.session_state.selected_ids = []
+                        st.session_state.pending_delete_ids = []
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro: {e}")
             with col_canc:
                 if st.button("❌ Cancelar", key="cancelar_excluir"):
                     st.session_state.pending_delete_ids = []
@@ -666,10 +719,13 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             with col_clear:
                 if st.button("🔥 EXCLUIR TUDO", key="excluir_tudo"):
                     if confirm == "LIMPAR TUDO":
-                        supabase.table("movimentacao").delete().neq("id", 0).execute()
-                        st.success("Histórico limpo!")
-                        st.session_state.pending_clear_all = False
-                        st.rerun()
+                        try:
+                            supabase.table("movimentacao").delete().neq("id", 0).execute()
+                            st.success("Histórico limpo!")
+                            st.session_state.pending_clear_all = False
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro: {e}")
                     else:
                         st.error("Confirmação incorreta")
             with col_cancel_clear:
@@ -683,7 +739,10 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
-        todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
+        try:
+            todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
+        except:
+            todos = []
         if not todos:
             st.info("Nenhum cadastro")
         else:
@@ -705,25 +764,31 @@ if st.session_state.perfil == "ADMIN":
                                 nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_br_{p['id']}")
                                 if st.form_submit_button("Salvar", key=f"save_br_{p['id']}"):
                                     if validar_cpf(novo_cpf):
-                                        conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
-                                        if not conflito:
-                                            supabase.table("Pessoas").update({
-                                                "nome": sanitizar_texto(novo_nome).upper(),
-                                                "cpf": sanitizar_cpf(novo_cpf),
-                                                "empresa": sanitizar_texto(nova_emp).upper()
-                                            }).eq("id", p['id']).execute()
-                                            st.success("Atualizado!")
-                                            st.rerun()
-                                        else:
-                                            st.error("CPF já existe")
+                                        try:
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            if not conflito:
+                                                supabase.table("Pessoas").update({
+                                                    "nome": sanitizar_texto(novo_nome).upper(),
+                                                    "cpf": sanitizar_cpf(novo_cpf),
+                                                    "empresa": sanitizar_texto(nova_emp).upper()
+                                                }).eq("id", p['id']).execute()
+                                                st.success("Atualizado!")
+                                                st.rerun()
+                                            else:
+                                                st.error("CPF já existe")
+                                        except Exception as e:
+                                            st.error(f"Erro: {e}")
                                     else:
                                         st.error("CPF inválido")
                     with col4:
                         with st.popover("🗑️ Excluir"):
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_br_{p['id']}"):
-                                supabase.table("Pessoas").delete().eq("id", p['id']).execute()
-                                st.rerun()
+                                try:
+                                    supabase.table("Pessoas").delete().eq("id", p['id']).execute()
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Erro: {e}")
                     st.divider()
             with tab2:
                 st.markdown(f"**Total:** {len(gr)}")
@@ -739,25 +804,31 @@ if st.session_state.perfil == "ADMIN":
                                 nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_gr_{p['id']}")
                                 if st.form_submit_button("Salvar", key=f"save_gr_{p['id']}"):
                                     if validar_cpf(novo_cpf):
-                                        conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
-                                        if not conflito:
-                                            supabase.table("Pessoas").update({
-                                                "nome": sanitizar_texto(novo_nome).upper(),
-                                                "cpf": sanitizar_cpf(novo_cpf),
-                                                "empresa": sanitizar_texto(nova_emp).upper()
-                                            }).eq("id", p['id']).execute()
-                                            st.success("Atualizado!")
-                                            st.rerun()
-                                        else:
-                                            st.error("CPF já existe")
+                                        try:
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            if not conflito:
+                                                supabase.table("Pessoas").update({
+                                                    "nome": sanitizar_texto(novo_nome).upper(),
+                                                    "cpf": sanitizar_cpf(novo_cpf),
+                                                    "empresa": sanitizar_texto(nova_emp).upper()
+                                                }).eq("id", p['id']).execute()
+                                                st.success("Atualizado!")
+                                                st.rerun()
+                                            else:
+                                                st.error("CPF já existe")
+                                        except Exception as e:
+                                            st.error(f"Erro: {e}")
                                     else:
                                         st.error("CPF inválido")
                     with col4:
                         with st.popover("🗑️ Excluir"):
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_gr_{p['id']}"):
-                                supabase.table("Pessoas").delete().eq("id", p['id']).execute()
-                                st.rerun()
+                                try:
+                                    supabase.table("Pessoas").delete().eq("id", p['id']).execute()
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Erro: {e}")
                     st.divider()
             with tab3:
                 st.markdown(f"**Total:** {len(outros)}")
@@ -776,25 +847,31 @@ if st.session_state.perfil == "ADMIN":
                                 nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_out_{p['id']}")
                                 if st.form_submit_button("Salvar", key=f"save_out_{p['id']}"):
                                     if validar_cpf(novo_cpf):
-                                        conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
-                                        if not conflito:
-                                            supabase.table("Pessoas").update({
-                                                "nome": sanitizar_texto(novo_nome).upper(),
-                                                "cpf": sanitizar_cpf(novo_cpf),
-                                                "empresa": sanitizar_texto(nova_emp).upper()
-                                            }).eq("id", p['id']).execute()
-                                            st.success("Atualizado!")
-                                            st.rerun()
-                                        else:
-                                            st.error("CPF já existe")
+                                        try:
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            if not conflito:
+                                                supabase.table("Pessoas").update({
+                                                    "nome": sanitizar_texto(novo_nome).upper(),
+                                                    "cpf": sanitizar_cpf(novo_cpf),
+                                                    "empresa": sanitizar_texto(nova_emp).upper()
+                                                }).eq("id", p['id']).execute()
+                                                st.success("Atualizado!")
+                                                st.rerun()
+                                            else:
+                                                st.error("CPF já existe")
+                                        except Exception as e:
+                                            st.error(f"Erro: {e}")
                                     else:
                                         st.error("CPF inválido")
                     with col5:
                         with st.popover("🗑️ Excluir"):
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_out_{p['id']}"):
-                                supabase.table("Pessoas").delete().eq("id", p['id']).execute()
-                                st.rerun()
+                                try:
+                                    supabase.table("Pessoas").delete().eq("id", p['id']).execute()
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Erro: {e}")
                     st.divider()
 
 st.markdown("---")
