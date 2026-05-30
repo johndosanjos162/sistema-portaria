@@ -18,9 +18,10 @@ try:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     supabase = create_client(url, key)
+    # Teste rápido de conexão
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
-    st.error(f"❌ Erro de conexão com Supabase: {e}")
+    st.error(f"❌ Erro de conexão com Supabase: {e}\nVerifique secrets e se o projeto está ativo.")
     st.stop()
 
 st.set_page_config(
@@ -93,9 +94,9 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (GLOBAL COM IMAGEM) ======================
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (PERSISTENTE) ======================
 def compress_image_to_base64(uploaded_file, max_size_kb=500):
-    """Converte imagem para Base64 com compressão para não estourar limite do Supabase."""
+    """Converte imagem para Base64 com compressão."""
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
         img = img.convert('RGB')
@@ -117,7 +118,7 @@ def compress_image_to_base64(uploaded_file, max_size_kb=500):
     return f"data:image/jpeg;base64,{b64_str}"
 
 def get_theme_config():
-    """Carrega configuração do Supabase (global) com todos os parâmetros."""
+    """Carrega configuração do Supabase (global) com fallback e cria registro padrão se não existir."""
     padrao = {
         "type": "gradient",
         "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
@@ -129,18 +130,20 @@ def get_theme_config():
         result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
         if result.data:
             config = json.loads(result.data[0]['value'])
-            # Garantir que novos campos existam (para compatibilidade)
-            if "image_adjust" not in config:
-                config["image_adjust"] = "cover"
-            if "image_position" not in config:
-                config["image_position"] = "center"
+            # Garantir que novos campos existam
+            config.setdefault("image_adjust", "cover")
+            config.setdefault("image_position", "center")
             return config
-    except:
-        pass
-    return padrao
+        else:
+            # Cria o registro padrão no banco
+            save_theme_config(padrao)
+            return padrao
+    except Exception as e:
+        st.error(f"Erro ao carregar tema: {e}")
+        return padrao
 
 def save_theme_config(config):
-    """Salva configuração no Supabase (global)."""
+    """Salva configuração no Supabase e recarrega no session_state."""
     try:
         supabase.table("app_config").upsert({
             "key": "background_config",
@@ -154,7 +157,7 @@ def save_theme_config(config):
         return False
 
 def apply_theme_css():
-    """Aplica o CSS de fundo com as configurações de ajuste e posição."""
+    """Aplica o CSS de fundo a partir da configuração global."""
     config = st.session_state.get("theme_config", get_theme_config())
     bg_type = config.get("type", "gradient")
     
@@ -370,7 +373,8 @@ if "pessoa_confirmada" not in st.session_state:
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 
-# Carregar tema global do Supabase
+# ========== CARREGAMENTO DO TEMA GLOBAL (PERSISTENTE) ==========
+# Força o carregamento do tema do Supabase a cada execução
 st.session_state.theme_config = get_theme_config()
 
 # ====================== TELA DE LOGIN ======================
@@ -430,6 +434,7 @@ if not st.session_state.logado:
     st.stop()
 
 # ====================== APÓS LOGIN ======================
+# Aplica o tema carregado do Supabase
 apply_theme_css()
 
 if st.session_state.session_id:
@@ -505,15 +510,18 @@ if st.session_state.perfil == "ADMIN":
         elif tipo == "Imagem (URL)":
             url_padrao = ""
             if tipo_atual == "url" and config_atual.get("value", "").startswith("url('"):
-                url_padrao = config_atual.get("value", "").replace("url('", "").replace("') center/cover no-repeat fixed", "")
+                # Extrai a URL pura
+                match = re.search(r"url\('([^']+)'", config_atual.get("value", ""))
+                if match:
+                    url_padrao = match.group(1)
             url_img = st.text_input("URL da imagem", value=url_padrao, key="url_img", placeholder="https://exemplo.com/imagem.jpg")
             if url_img and (url_img.startswith('http://') or url_img.startswith('https://')):
-                novo_valor = url_img  # guarda só a URL, depois monta o CSS
+                novo_valor = url_img
                 novo_tipo = "url"
             elif url_img:
                 st.error("URL inválida. Use http:// ou https://")
                 novo_valor = config_atual.get("value", "")
-                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid"] else "gradient"
+                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
             else:
                 novo_valor = config_atual.get("value", "")
                 novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
@@ -526,14 +534,12 @@ if st.session_state.perfil == "ADMIN":
                         novo_valor = imagem_data_url
                         novo_tipo = "url"
                         st.success("✅ Imagem carregada e comprimida com sucesso!")
-                        # Mostrar prévia
                         st.image(uploaded_file, width=200, caption="Imagem carregada")
                     except Exception as e:
                         st.error(f"Erro ao processar imagem: {e}")
                         novo_valor = config_atual.get("value", "")
                         novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
             else:
-                # Se não houver upload, manter valor anterior se for imagem
                 if tipo_atual == "url" and config_atual.get("value", "").startswith("data:image"):
                     novo_valor = config_atual.get("value")
                     novo_tipo = "url"
@@ -541,7 +547,7 @@ if st.session_state.perfil == "ADMIN":
                     novo_valor = config_atual.get("value", "")
                     novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
         
-        # Se for imagem (tipo url), mostrar opções de ajuste e posição
+        # Opções de ajuste apenas se for imagem (tipo url)
         ajuste_opcoes = ["cover", "contain", "stretch"]
         posicao_opcoes = ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"]
         
@@ -563,11 +569,11 @@ if st.session_state.perfil == "ADMIN":
         elif novo_tipo == "solid":
             preview_style = novo_valor
         else:
-            preview_style = f"url('{novo_valor}') center/cover no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+            preview_style = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
         st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
         
         aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
-        col_btn1, col_btn2 = st.columns(2)
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
         with col_btn1:
             if st.button("💾 Salvar e Aplicar Tema (Global)", key="salvar_tema_global"):
                 # Monta o valor final para o CSS
@@ -606,6 +612,11 @@ if st.session_state.perfil == "ADMIN":
                 if save_theme_config(padrao):
                     apply_theme_css()
                     st.success("Tema restaurado para o padrão global!")
+        with col_btn3:
+            if st.button("🔄 Recarregar Tema do Banco", key="reload_tema"):
+                st.session_state.theme_config = get_theme_config()
+                apply_theme_css()
+                st.success("Tema recarregado do Supabase!")
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
