@@ -18,7 +18,7 @@ try:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     supabase = create_client(url, key)
-    # Teste rápido de conexão (usa nome correto da tabela)
+    # Teste rápido de conexão (tabela sessoes_ativas)
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
@@ -99,63 +99,34 @@ st.markdown("""
         0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
         100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
     }
-    .cyber-card {
+    /* Cards usando st.metric - estilo glassmorphism */
+    div[data-testid="metric-container"] {
         background: rgba(15, 15, 35, 0.55);
         backdrop-filter: blur(12px);
         border-radius: 28px;
         padding: 1.2rem 1rem;
-        margin: 0.5rem;
         border: 1px solid rgba(0, 255, 255, 0.4);
         box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 0 12px rgba(0,255,255,0.3);
         transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
-        position: relative;
-        overflow: hidden;
         cursor: default;
     }
-    .cyber-card::before {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, cyan, magenta, cyan);
-        border-radius: 30px;
-        z-index: -1;
-        opacity: 0;
-        transition: opacity 0.4s;
-    }
-    .cyber-card:hover {
+    div[data-testid="metric-container"]:hover {
         transform: translateY(-6px);
         border-color: cyan;
         box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 25px cyan;
     }
-    .cyber-card:hover::before {
-        opacity: 0.4;
-    }
-    .card-icon {
-        font-size: 3rem;
-        text-align: center;
-        filter: drop-shadow(0 0 6px cyan);
-        transition: 0.2s;
-    }
-    .cyber-card:hover .card-icon {
-        transform: scale(1.05);
-        filter: drop-shadow(0 0 12px magenta);
-    }
-    .card-title {
+    div[data-testid="metric-container"] label {
         font-size: 0.85rem;
         letter-spacing: 3px;
         text-transform: uppercase;
         color: #aaf;
-        text-align: center;
         font-weight: 500;
-        margin: 10px 0 5px;
+        text-align: center;
+        display: block;
     }
-    .card-value {
+    div[data-testid="metric-container"] .stMetricValue {
         font-size: 2.6rem;
         font-weight: 800;
-        text-align: center;
         background: linear-gradient(135deg, #fff, cyan);
         -webkit-background-clip: text;
         background-clip: text;
@@ -163,21 +134,12 @@ st.markdown("""
         text-shadow: 0 0 20px rgba(0,255,255,0.5);
         line-height: 1.2;
         font-family: 'Space Mono', monospace;
+        text-align: center;
     }
-    .cyber-card::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(0,255,255,0.2), transparent);
-        transition: left 0.6s;
-        pointer-events: none;
+    div[data-testid="metric-container"] .stMetricDelta {
+        display: none;
     }
-    .cyber-card:hover::after {
-        left: 100%;
-    }
+    /* BOTÕES NEON */
     .stButton>button, .stForm button {
         background: rgba(0,20,40,0.7) !important;
         backdrop-filter: blur(8px);
@@ -195,6 +157,7 @@ st.markdown("""
         box-shadow: 0 0 15px magenta;
         transform: scale(1.02);
     }
+    /* INPUTS FUTURISTAS */
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
         background: rgba(0, 10, 20, 0.7) !important;
         backdrop-filter: blur(8px);
@@ -1313,98 +1276,38 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DIAGNÓSTICO (SOMENTE ADMIN) ======================
-if st.session_state.perfil == "ADMIN" and st.session_state.logado:
-    with st.sidebar.expander("🔍 DIAGNÓSTICO DO SUPABASE", expanded=False):
-        st.markdown("### Informações das tabelas")
-        try:
-            pessoas_count = supabase.table("Pessoas").select("id", count="exact").execute().count
-            st.write(f"📊 Tabela `Pessoas`: {pessoas_count} registros")
-        except Exception as e:
-            st.error(f"Erro na tabela 'Pessoas': {e}")
-        try:
-            mov_count = supabase.table("movimentacao").select("id", count="exact").execute().count
-            st.write(f"📊 Tabela `movimentacao`: {mov_count} registros")
-        except Exception as e:
-            st.error(f"Erro na tabela 'movimentacao': {e}")
-        try:
-            presentes = supabase.table("movimentacao").select("*", count="exact").eq("data_saida", "").execute()
-            st.write(f"📍 Pessoas presentes: {presentes.count}")
-        except Exception as e:
-            st.error(f"Erro ao contar presentes: {e}")
-
-# ====================== DASHBOARD (CARDS CORRIGIDOS - NOMES CORRETOS DAS TABELAS) ======================
+# ====================== DASHBOARD (CARDS CORRIGIDOS - USANDO st.metric) ======================
 st.markdown("---")
 try:
-    # Usando os nomes exatos das tabelas: "Pessoas" e "movimentacao"
-    presentes_data = supabase.table("movimentacao").select("*", count="exact").eq("data_saida", "").execute()
-    total_presentes = presentes_data.count if hasattr(presentes_data, 'count') else len(presentes_data.data)
+    # PRESENTES: pessoas com data_saida vazia
+    presentes_data = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
+    total_presentes = presentes_data.count if hasattr(presentes_data, 'count') else 0
     
-    cadastrados_data = supabase.table("Pessoas").select("*", count="exact").execute()
-    total_cadastrados = cadastrados_data.count if hasattr(cadastrados_data, 'count') else len(cadastrados_data.data)
+    # CADASTRADOS: total de pessoas
+    cadastrados_data = supabase.table("Pessoas").select("id", count="exact").execute()
+    total_cadastrados = cadastrados_data.count if hasattr(cadastrados_data, 'count') else 0
     
+    # SETORES ATIVOS: setores distintos na movimentacao
     setores_data = supabase.table("movimentacao").select("setor_destino").execute()
     if setores_data.data:
         setores_unicos = len(set(p['setor_destino'] for p in setores_data.data))
     else:
-        setores_unicos = 11  # fallback
+        setores_unicos = 11
 except Exception as e:
     st.error(f"Erro ao carregar estatísticas: {e}")
     total_presentes = 0
     total_cadastrados = 0
     setores_unicos = 11
 
-cards_data = [
-    {"icon": "👥", "title": "PRESENTES", "value": total_presentes},
-    {"icon": "📊", "title": "CADASTRADOS", "value": total_cadastrados},
-    {"icon": "🏛️", "title": "SETORES ATIVOS", "value": setores_unicos},
-    {"icon": "🛡️", "title": "SEGURANÇA", "value": "24/7"}
-]
-
 col1, col2, col3, col4 = st.columns(4)
-cols = [col1, col2, col3, col4]
-
-for idx, card in enumerate(cards_data):
-    with cols[idx]:
-        if isinstance(card["value"], int):
-            value_display = f'<div class="card-value" data-target="{card["value"]}">0</div>'
-        else:
-            value_display = f'<div class="card-value">{card["value"]}</div>'
-        st.markdown(f"""
-        <div class="cyber-card">
-            <div class="card-icon">{card["icon"]}</div>
-            <div class="card-title">{card["title"]}</div>
-            {value_display}
-        </div>
-        """, unsafe_allow_html=True)
-
-# Script para animar contadores
-st.markdown("""
-<script>
-    function animateCounters() {
-        const counters = document.querySelectorAll('.card-value');
-        counters.forEach(counter => {
-            const target = parseInt(counter.getAttribute('data-target'));
-            if (target && !counter.dataset.animated) {
-                counter.dataset.animated = 'true';
-                let current = 0;
-                const increment = Math.ceil(target / 30);
-                const update = () => {
-                    current += increment;
-                    if (current >= target) {
-                        counter.innerText = target;
-                    } else {
-                        counter.innerText = current;
-                        requestAnimationFrame(update);
-                    }
-                };
-                requestAnimationFrame(update);
-            }
-        });
-    }
-    document.addEventListener('DOMContentLoaded', animateCounters);
-</script>
-""", unsafe_allow_html=True)
+with col1:
+    st.metric("👥 PRESENTES", total_presentes)
+with col2:
+    st.metric("📊 CADASTRADOS", total_cadastrados)
+with col3:
+    st.metric("🏛️ SETORES ATIVOS", setores_unicos)
+with col4:
+    st.metric("🛡️ SEGURANÇA", "24/7")
 
 # ====================== CADASTRO ======================
 st.markdown("---")
