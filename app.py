@@ -261,7 +261,7 @@ st.markdown("""
         z-index: -9999;
         pointer-events: none;
     }
-    /* Estilos da tela de login (layout corrigido: logo no topo, campos abaixo) */
+    /* Estilos da tela de login - layout em duas colunas: campos à esquerda, logo à direita */
     .login-container {
         position: fixed;
         top: 0;
@@ -280,24 +280,35 @@ st.markdown("""
         background: rgba(8, 8, 20, 0.75);
         backdrop-filter: blur(20px);
         border-radius: 56px;
-        padding: 30px 32px 40px 32px;
+        padding: 30px 32px;
         border: 1px solid rgba(0, 255, 255, 0.4);
         width: 90%;
-        max-width: 460px;
+        max-width: 800px;
         text-align: center;
         animation: float 3s ease-in-out infinite;
         box-shadow: 0 0 40px rgba(0, 255, 255, 0.2), inset 0 0 20px rgba(0,255,255,0.05);
         position: relative;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+    }
+    /* Coluna da esquerda: campos de login */
+    .login-fields {
+        flex: 1;
+        text-align: left;
+    }
+    /* Coluna da direita: logo */
+    .login-logo {
+        flex: 0.8;
+        text-align: center;
     }
     .hex-logo {
-        width: 90px;
-        height: 90px;
-        margin: 0 auto 20px auto;
-        position: relative;
-        display: block;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto;
+        display: inline-block;
     }
     .hex-logo svg {
         width: 100%;
@@ -310,31 +321,31 @@ st.markdown("""
         transform: scale(1.02);
     }
     .logo-title {
-        font-size: 28px;
+        font-size: 22px;
         font-weight: 800;
         background: linear-gradient(135deg, #fff, #0ff, #a855f7);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
         letter-spacing: 1px;
+        margin-top: 10px;
         margin-bottom: 5px;
     }
     .logo-subtitle {
-        font-size: 11px;
+        font-size: 10px;
         color: #aaf;
         letter-spacing: 2px;
-        margin-bottom: 25px;
         text-transform: uppercase;
     }
     .binary-stream {
         font-family: 'Space Mono', monospace;
-        font-size: 10px;
+        font-size: 9px;
         background: rgba(0,0,0,0.4);
-        padding: 6px 12px;
+        padding: 4px 8px;
         border-radius: 30px;
         display: inline-block;
         color: cyan;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
         border: 1px solid rgba(0,255,255,0.3);
     }
     .stForm {
@@ -355,20 +366,22 @@ st.markdown("""
         border: 1px solid cyan !important;
         border-radius: 40px !important;
         color: white !important;
-        padding: 12px 20px !important;
+        padding: 10px 16px !important;
         font-family: 'Space Mono', monospace;
         margin: 0;
+        font-size: 0.9rem;
     }
     .stForm button {
         width: 100%;
         margin-top: 8px;
+        padding: 8px !important;
     }
     .fingerprint-area {
         display: flex;
-        justify-content: center;
+        justify-content: flex-start;
         gap: 12px;
         margin-top: 12px;
-        font-size: 13px;
+        font-size: 11px;
         color: #aaf;
         font-family: monospace;
     }
@@ -377,21 +390,22 @@ st.markdown("""
         50% { transform: translateY(-6px); }
         100% { transform: translateY(0px); }
     }
-    @media (max-width: 600px) {
+    @media (max-width: 700px) {
         .login-box {
-            padding: 20px 20px 30px 20px;
+            flex-direction: column;
+            max-width: 460px;
+            padding: 25px 20px;
         }
-        .hex-logo {
-            width: 70px;
-            height: 70px;
+        .login-logo {
+            order: -1;
             margin-bottom: 15px;
         }
-        .logo-title {
-            font-size: 24px;
+        .hex-logo {
+            width: 80px;
+            height: 80px;
         }
-        .logo-subtitle {
-            font-size: 9px;
-            margin-bottom: 20px;
+        .logo-title {
+            font-size: 20px;
         }
     }
 </style>
@@ -940,7 +954,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN (LAYOUT CORRIGIDO) ======================
+# ====================== TELA DE LOGIN (NOVO LAYOUT: LOGO À DIREITA, CAMPOS À ESQUERDA) ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -951,36 +965,10 @@ if not st.session_state.logado:
     st.markdown("""
     <div class="login-container">
         <div class="login-box">
-            <div class="hex-logo">
-                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stop-color="#00ffff"/>
-                            <stop offset="100%" stop-color="#a855f7"/>
-                        </linearGradient>
-                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                            <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
-                            <feMerge>
-                                <feMergeNode in="offsetblur" />
-                                <feMergeNode in="SourceGraphic" />
-                            </feMerge>
-                        </filter>
-                    </defs>
-                    <polygon points="50,5 90,27 90,73 50,95 10,73 10,27" fill="rgba(0,20,40,0.4)" stroke="url(#hexGrad)" stroke-width="2" filter="url(#glow)"/>
-                    <polygon points="50,15 80,32 80,68 50,85 20,68 20,32" fill="url(#hexGrad)" opacity="0.2"/>
-                    <path d="M50 25 L65 32 L65 52 C65 68 50 78 50 78 C50 78 35 68 35 52 L35 32 L50 25Z" fill="rgba(0,255,255,0.3)" stroke="cyan" stroke-width="1.5"/>
-                    <rect x="46" y="48" width="8" height="10" rx="2" fill="white" opacity="0.9"/>
-                    <path d="M44 48 C44 44 56 44 56 48" stroke="white" stroke-width="2" fill="none"/>
-                    <path d="M20 45 L25 45 L25 50 L30 50" stroke="#0ff" stroke-width="1" fill="none" opacity="0.6"/>
-                    <path d="M80 45 L75 45 L75 50 L70 50" stroke="#0ff" stroke-width="1" fill="none" opacity="0.6"/>
-                    <circle cx="30" cy="50" r="1.5" fill="#0ff" opacity="0.8"/>
-                    <circle cx="70" cy="50" r="1.5" fill="#0ff" opacity="0.8"/>
-                </svg>
-            </div>
-            <div class="logo-title">JOHN ACESSOS</div>
-            <div class="logo-subtitle">CYBER SECURITY 2026</div>
-            <div id="binary-container" style="text-align:center;"></div>
-    """, unsafe_allow_html=True)
+            <!-- Coluna da esquerda: campos de login -->
+            <div class="login-fields">
+                <div id="binary-container" style="margin-bottom: 15px;"></div>
+                """, unsafe_allow_html=True)
     
     st.markdown("""
     <script>
@@ -1029,7 +1017,42 @@ if not st.session_state.logado:
                 else:
                     st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
     
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.markdown("""
+            </div>
+            <!-- Coluna da direita: logo -->
+            <div class="login-logo">
+                <div class="hex-logo">
+                    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#00ffff"/>
+                                <stop offset="100%" stop-color="#a855f7"/>
+                            </linearGradient>
+                            <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+                                <feMerge>
+                                    <feMergeNode in="offsetblur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <polygon points="50,5 90,27 90,73 50,95 10,73 10,27" fill="rgba(0,20,40,0.4)" stroke="url(#hexGrad)" stroke-width="2" filter="url(#glow)"/>
+                        <polygon points="50,15 80,32 80,68 50,85 20,68 20,32" fill="url(#hexGrad)" opacity="0.2"/>
+                        <path d="M50 25 L65 32 L65 52 C65 68 50 78 50 78 C50 78 35 68 35 52 L35 32 L50 25Z" fill="rgba(0,255,255,0.3)" stroke="cyan" stroke-width="1.5"/>
+                        <rect x="46" y="48" width="8" height="10" rx="2" fill="white" opacity="0.9"/>
+                        <path d="M44 48 C44 44 56 44 56 48" stroke="white" stroke-width="2" fill="none"/>
+                        <path d="M20 45 L25 45 L25 50 L30 50" stroke="#0ff" stroke-width="1" fill="none" opacity="0.6"/>
+                        <path d="M80 45 L75 45 L75 50 L70 50" stroke="#0ff" stroke-width="1" fill="none" opacity="0.6"/>
+                        <circle cx="30" cy="50" r="1.5" fill="#0ff" opacity="0.8"/>
+                        <circle cx="70" cy="50" r="1.5" fill="#0ff" opacity="0.8"/>
+                    </svg>
+                </div>
+                <div class="logo-title">JOHN ACESSOS</div>
+                <div class="logo-subtitle">CYBER SECURITY 2026</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.stop()
 
 # ====================== APÓS LOGIN ======================
