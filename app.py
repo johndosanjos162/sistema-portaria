@@ -93,7 +93,7 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (CORRIGIDAS) ======================
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (COM ANIMAÇÃO) ======================
 def compress_image_to_base64(uploaded_file, max_size_kb=500):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -114,6 +114,15 @@ def compress_image_to_base64(uploaded_file, max_size_kb=500):
         quality -= 10
     b64_str = base64.b64encode(buffer.getvalue()).decode()
     return f"data:image/jpeg;base64,{b64_str}"
+
+def compress_video_to_base64(uploaded_file, max_size_mb=5):
+    """Converte vídeo/GIF para Base64 (cuidado: pode ficar grande)."""
+    bytes_data = uploaded_file.getvalue()
+    if len(bytes_data) > max_size_mb * 1024 * 1024:
+        st.warning(f"Arquivo muito grande ({len(bytes_data)/1024/1024:.1f}MB). Pode causar lentidão. Recomenda-se até {max_size_mb}MB.")
+    b64_str = base64.b64encode(bytes_data).decode()
+    mime_type = uploaded_file.type
+    return f"data:{mime_type};base64,{b64_str}"
 
 def get_theme_config():
     padrao = {
@@ -151,64 +160,106 @@ def save_theme_config(config):
         return False
 
 def apply_theme_css():
-    """Aplica o CSS de fundo com seletores amplos + JavaScript fallback."""
+    """Aplica o fundo (estático ou animado)."""
     config = st.session_state.get("theme_config", get_theme_config())
     bg_type = config.get("type", "gradient")
     
     if bg_type == "gradient":
         bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-        bg_css_value = bg_value
-        adjust = "cover"
-        position = "center"
+        css = f"""
+        <style>
+        html, body, .stApp, .stApp > header, .stApp > div, .main, .main > div {{
+            background: {bg_value} !important;
+            background-attachment: fixed !important;
+            background-size: cover !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+        }}
+        </style>
+        """
+        st.markdown(css, unsafe_allow_html=True)
     elif bg_type == "solid":
         bg_value = config.get("value", "#0a0a1a")
-        bg_css_value = bg_value
-        adjust = "cover"
-        position = "center"
-    else:  # imagem
+        css = f"""
+        <style>
+        html, body, .stApp, .stApp > header, .stApp > div, .main, .main > div {{
+            background: {bg_value} !important;
+            background-attachment: fixed !important;
+        }}
+        </style>
+        """
+        st.markdown(css, unsafe_allow_html=True)
+    elif bg_type == "url":
+        # Imagem estática (URL ou upload)
         bg_value = config.get("value", "")
         if not bg_value or bg_value.startswith("radial"):
-            bg_css_value = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-            adjust = "cover"
-            position = "center"
-        else:
-            bg_css_value = bg_value
-            adjust = config.get("image_adjust", "cover")
-            position = config.get("image_position", "center")
-    
-    # CSS com seletores específicos
-    css = f"""
-    <style>
-    html, body, .stApp, .stApp > header, .stApp > div, .main, .main > div {{
-        background: {bg_css_value} !important;
-        background-attachment: fixed !important;
-        background-size: {adjust} !important;
-        background-repeat: no-repeat !important;
-        background-position: {position} !important;
-    }}
-    </style>
-    <script>
-        (function() {{
-            var bgValue = "{bg_css_value.replace('"', '\\"')}";
-            var adjust = "{adjust}";
-            var position = "{position}";
-            document.body.style.background = bgValue;
-            document.body.style.backgroundAttachment = "fixed";
-            document.body.style.backgroundSize = adjust;
-            document.body.style.backgroundRepeat = "no-repeat";
-            document.body.style.backgroundPosition = position;
-            var app = document.querySelector('.stApp');
-            if(app) {{
-                app.style.background = bgValue;
-                app.style.backgroundAttachment = "fixed";
-                app.style.backgroundSize = adjust;
-                app.style.backgroundRepeat = "no-repeat";
-                app.style.backgroundPosition = position;
+            bg_value = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+        adjust = config.get("image_adjust", "cover")
+        position = config.get("image_position", "center")
+        css = f"""
+        <style>
+        html, body, .stApp, .stApp > header, .stApp > div, .main, .main > div {{
+            background: {bg_value} !important;
+            background-attachment: fixed !important;
+            background-size: {adjust} !important;
+            background-repeat: no-repeat !important;
+            background-position: {position} !important;
+        }}
+        </style>
+        """
+        st.markdown(css, unsafe_allow_html=True)
+    elif bg_type == "video":
+        # Fundo animado (vídeo/GIF) usando tag <video> ou <img> para GIF
+        media_value = config.get("value", "")
+        adjust = config.get("image_adjust", "cover")
+        mime_type = config.get("mime_type", "video/mp4")
+        if not media_value:
+            # Fallback para gradiente
+            apply_theme_css()  # recursão? melhor usar gradiente padrão
+            return
+        
+        # Para GIF, podemos usar <img> com animação
+        if mime_type == "image/gif":
+            html = f"""
+            <style>
+            .bg-animation {{
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: {adjust};
+                z-index: -1;
+                pointer-events: none;
             }}
-        }})();
-    </script>
-    """
-    st.markdown(css, unsafe_allow_html=True)
+            </style>
+            <img src="{media_value}" class="bg-animation" alt="background animation" style="object-fit: {adjust};">
+            """
+        else:
+            html = f"""
+            <style>
+            .bg-video {{
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                object-fit: {adjust};
+                z-index: -1;
+                pointer-events: none;
+            }}
+            </style>
+            <video autoplay loop muted playsinline class="bg-video">
+                <source src="{media_value}" type="{mime_type}">
+            </video>
+            """
+        st.markdown(html, unsafe_allow_html=True)
+        # Também adiciona um CSS de fallback (caso o vídeo não carregue)
+        st.markdown("""
+        <style>
+        .stApp { background: #0a0a1a; }
+        </style>
+        """, unsafe_allow_html=True)
 
 # ====================== FUNÇÕES DE RELATÓRIOS (PDF) ======================
 def gerar_html_impressao(df, titulo):
@@ -379,7 +430,7 @@ if "pessoa_confirmada" not in st.session_state:
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 
-# Carregar tema global do Supabase (força recarga)
+# Carregar tema global do Supabase
 st.session_state.theme_config = get_theme_config()
 
 # ====================== TELA DE LOGIN ======================
@@ -439,7 +490,6 @@ if not st.session_state.logado:
     st.stop()
 
 # ====================== APÓS LOGIN ======================
-# Aplica o tema carregado do Supabase
 apply_theme_css()
 
 if st.session_state.session_id:
@@ -496,12 +546,15 @@ if st.session_state.perfil == "ADMIN":
         st.markdown("### Personalizar Fundo - Aplica para todos os usuários")
         config_atual = st.session_state.theme_config
         tipo_atual = config_atual.get("type", "gradient")
-        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)"]
-        idx = 0 if tipo_atual == "gradient" else 1 if tipo_atual == "solid" else 2 if tipo_atual == "url" else 3
+        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (GIF/MP4)"]
+        # Mapeia tipo para índice
+        idx_map = {"gradient":0, "solid":1, "url":2, "image_upload":3, "video":4}
+        idx = idx_map.get(tipo_atual, 0)
         tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
         
         novo_valor = config_atual.get("value", "")
         novo_tipo = tipo_atual
+        novo_mime = config_atual.get("mime_type", "")
         
         if tipo == "Gradiente padrão":
             novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
@@ -528,7 +581,7 @@ if st.session_state.perfil == "ADMIN":
             else:
                 novo_valor = config_atual.get("value", "")
                 novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-        else:  # Imagem (upload)
+        elif tipo == "Imagem (upload)":
             uploaded_file = st.file_uploader("Escolha uma imagem (PNG, JPG, JPEG, GIF)", type=["png","jpg","jpeg","gif"], key="upload_img")
             if uploaded_file:
                 with st.spinner("Processando imagem..."):
@@ -549,18 +602,58 @@ if st.session_state.perfil == "ADMIN":
                 else:
                     novo_valor = config_atual.get("value", "")
                     novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+        else:  # Animação (GIF/MP4)
+            uploaded_media = st.file_uploader("Escolha um GIF ou MP4", type=["gif","mp4"], key="upload_video")
+            url_media = st.text_input("Ou informe URL de um vídeo/GIF (MP4/GIF)", key="url_video", placeholder="https://exemplo.com/video.mp4")
+            if uploaded_media:
+                with st.spinner("Processando mídia..."):
+                    try:
+                        mime = uploaded_media.type
+                        data_url = compress_video_to_base64(uploaded_media, max_size_mb=10)
+                        novo_valor = data_url
+                        novo_tipo = "video"
+                        novo_mime = mime
+                        st.success("✅ Mídia carregada! (pode demorar um pouco)")
+                        if mime.startswith("image"):
+                            st.image(uploaded_media, width=200, caption="Prévia do GIF")
+                        else:
+                            st.video(uploaded_media, format="video/mp4")
+                    except Exception as e:
+                        st.error(f"Erro: {e}")
+                        novo_valor = config_atual.get("value", "")
+                        novo_tipo = tipo_atual
+                        novo_mime = config_atual.get("mime_type", "")
+            elif url_media:
+                if url_media.startswith(('http://', 'https://')):
+                    novo_valor = url_media
+                    novo_tipo = "video"
+                    # Tentar inferir mime type pela extensão
+                    if url_media.lower().endswith('.gif'):
+                        novo_mime = "image/gif"
+                    else:
+                        novo_mime = "video/mp4"
+                    st.success("✅ URL de mídia configurada!")
+                else:
+                    st.error("URL inválida")
+                    novo_valor = config_atual.get("value", "")
+                    novo_tipo = tipo_atual
+                    novo_mime = config_atual.get("mime_type", "")
+            else:
+                novo_valor = config_atual.get("value", "")
+                novo_tipo = tipo_atual
+                novo_mime = config_atual.get("mime_type", "")
         
-        # Opções de ajuste apenas para imagem
+        # Opções de ajuste (para imagem estática ou vídeo)
         ajuste_opcoes = ["cover", "contain", "stretch"]
-        posicao_opcoes = ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"]
-        
-        if novo_tipo == "url" and novo_valor:
+        if novo_tipo in ["url", "video"]:
             st.markdown("---")
-            st.markdown("#### Ajustes da imagem")
+            st.markdown("#### Ajustes da mídia")
             ajuste_atual = config_atual.get("image_adjust", "cover")
             posicao_atual = config_atual.get("image_position", "center")
+            # Para vídeo, usamos apenas object-fit, posição não se aplica (mas deixamos opcional)
             novo_ajuste = st.selectbox("Modo de ajuste:", ajuste_opcoes, index=ajuste_opcoes.index(ajuste_atual) if ajuste_atual in ajuste_opcoes else 0, key="ajuste_imagem")
-            nova_posicao = st.selectbox("Posição:", posicao_opcoes, index=posicao_opcoes.index(posicao_atual) if posicao_atual in posicao_opcoes else 3, key="posicao_imagem")
+            # Posição não se aplica para vídeos, mas mantemos para compatibilidade
+            nova_posicao = st.selectbox("Posição (para imagens fixas):", ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"], index=3 if posicao_atual == "center" else 0, key="posicao_imagem")
         else:
             novo_ajuste = "cover"
             nova_posicao = "center"
@@ -569,26 +662,40 @@ if st.session_state.perfil == "ADMIN":
         st.markdown("**Prévia:**")
         if novo_tipo == "gradient":
             preview_style = novo_valor
+            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
         elif novo_tipo == "solid":
             preview_style = novo_valor
-        else:
+            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+        elif novo_tipo == "url":
             preview_style = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-        st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+        else:  # video
+            if novo_valor:
+                if novo_mime == "image/gif":
+                    st.markdown(f'<img src="{novo_valor}" style="width:100%; max-height:100px; object-fit:cover; border-radius:8px;">', unsafe_allow_html=True)
+                else:
+                    st.video(novo_valor, format="video/mp4")
+            else:
+                st.info("Selecione uma mídia para prévia")
         
         aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         with col_btn1:
             if st.button("💾 Salvar e Aplicar Tema (Global)", key="salvar_tema_global"):
-                # Monta o valor final para o CSS
+                # Monta o valor final para CSS/HTML
                 if novo_tipo == "gradient":
                     valor_final = novo_valor
                 elif novo_tipo == "solid":
                     valor_final = novo_valor
-                else:  # imagem
+                elif novo_tipo == "url":
                     if novo_valor:
                         valor_final = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed"
                     else:
                         valor_final = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+                        novo_tipo = "gradient"
+                else:  # video
+                    valor_final = novo_valor if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+                    if not novo_valor:
                         novo_tipo = "gradient"
                 
                 nova_config = {
@@ -596,7 +703,8 @@ if st.session_state.perfil == "ADMIN":
                     "value": valor_final,
                     "apply_to_login": aplicar_login,
                     "image_adjust": novo_ajuste,
-                    "image_position": nova_posicao
+                    "image_position": nova_posicao,
+                    "mime_type": novo_mime if novo_tipo == "video" else ""
                 }
                 if save_theme_config(nova_config):
                     apply_theme_css()
@@ -610,7 +718,8 @@ if st.session_state.perfil == "ADMIN":
                     "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
                     "apply_to_login": False,
                     "image_adjust": "cover",
-                    "image_position": "center"
+                    "image_position": "center",
+                    "mime_type": ""
                 }
                 if save_theme_config(padrao):
                     apply_theme_css()
@@ -1019,7 +1128,7 @@ if st.session_state.perfil == "ADMIN":
                                     st.error(f"Erro: {e}")
                     st.divider()
 
-# Reaplicar o tema novamente ao final (para garantir)
+# Reaplicar o tema ao final (garantia)
 apply_theme_css()
 
 st.markdown("---")
