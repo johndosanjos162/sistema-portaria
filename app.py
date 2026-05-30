@@ -18,7 +18,6 @@ try:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     supabase = create_client(url, key)
-    # Teste rápido de conexão
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
@@ -117,7 +116,6 @@ def compress_image_to_base64(uploaded_file, max_size_kb=500):
     return f"data:image/jpeg;base64,{b64_str}"
 
 def compress_video_to_base64(uploaded_file, max_size_mb=5):
-    """Converte vídeo/GIF para Base64 (atenção: pode ficar grande)."""
     bytes_data = uploaded_file.getvalue()
     if len(bytes_data) > max_size_mb * 1024 * 1024:
         st.warning(f"Arquivo muito grande ({len(bytes_data)/1024/1024:.1f}MB). Pode causar lentidão. Recomenda-se até {max_size_mb}MB.")
@@ -163,7 +161,7 @@ def save_theme_config(config):
         return False
 
 def apply_theme_css():
-    """Aplica o fundo (estático ou animado) com suporte a loop."""
+    """Aplica o fundo (estático ou animado) com z-index baixo e sem interferência nos dados."""
     config = st.session_state.get("theme_config", get_theme_config())
     bg_type = config.get("type", "gradient")
     
@@ -217,50 +215,38 @@ def apply_theme_css():
         video_loop = config.get("video_loop", True)
         loop_attr = "loop" if video_loop else ""
         if not media_value:
-            # fallback para gradiente
             st.markdown("""
             <style>
             .stApp { background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%); }
             </style>
             """, unsafe_allow_html=True)
             return
+        
+        # Vídeo/GIF com z-index extremamente baixo e pointer-events: none
+        container_div = "<div style='position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -9999; pointer-events: none;'>"
         if mime_type == "image/gif":
-            html = f"""
-            <style>
-            .bg-animation {{
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                object-fit: {adjust};
-                z-index: -1;
-                pointer-events: none;
-            }}
-            </style>
-            <img src="{media_value}" class="bg-animation" alt="background animation" style="object-fit: {adjust};">
-            """
+            media_html = f'<img src="{media_value}" style="width: 100%; height: 100%; object-fit: {adjust};">'
         else:
-            html = f"""
-            <style>
-            .bg-video {{
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                object-fit: {adjust};
-                z-index: -1;
-                pointer-events: none;
-            }}
-            </style>
-            <video autoplay muted playsinline {loop_attr} class="bg-video">
-                <source src="{media_value}" type="{mime_type}">
-            </video>
-            """
-        st.markdown(html, unsafe_allow_html=True)
-        # Fallback de cor para caso o vídeo não carregue
-        st.markdown('<style>.stApp { background: #0a0a1a; }</style>', unsafe_allow_html=True)
+            media_html = f'<video autoplay muted playsinline {loop_attr} style="width: 100%; height: 100%; object-fit: {adjust};"><source src="{media_value}" type="{mime_type}"></video>'
+        st.markdown(container_div + media_html + "</div>", unsafe_allow_html=True)
+        
+        # Adiciona um fundo semi-transparente sobre o vídeo para garantir legibilidade dos dados
+        st.markdown("""
+        <style>
+        .stApp {
+            background: rgba(0, 0, 0, 0.6) !important;
+        }
+        /* Cards, sidebars, inputs com fundo escuro semi-transparente */
+        .admin-card, .admin-header, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div, .stTabs [data-baseweb="tab-list"], .stTabs [data-baseweb="tab"] {
+            background: rgba(0, 0, 0, 0.5) !important;
+            backdrop-filter: blur(4px);
+        }
+        h1, h2, h3, p, label, .card-title, .card-value, .info-item, .stMarkdown, .stRadio label {
+            color: #f0f0f0 !important;
+            text-shadow: 1px 1px 2px #000;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
 # ====================== FUNÇÕES DE RELATÓRIOS (PDF) ======================
 def gerar_html_impressao(df, titulo):
@@ -356,7 +342,7 @@ def carregar_imagem(nome):
 
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png")
 
-# ====================== CSS BASE ======================
+# ====================== CSS BASE (sem background fixo) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
