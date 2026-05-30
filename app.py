@@ -220,18 +220,28 @@ def apply_theme_css():
             media_html = f'<video autoplay muted playsinline {loop_attr} style="width: 100%; height: 100%; object-fit: {adjust};"><source src="{media_url}" type="{mime_type}"></video>'
         st.markdown(container_div + media_html + "</div>", unsafe_allow_html=True)
         
+        # Ajustes de contraste SEM escurecer o vídeo
         st.markdown("""
         <style>
+        /* Remove o overlay escuro sobre o app */
         .stApp {
-            background: rgba(0, 0, 0, 0.6) !important;
+            background: transparent !important;
         }
+        /* Garante que os cards e elementos tenham fundo semi-transparente para legibilidade */
         .admin-card, .admin-header, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div, .stTabs [data-baseweb="tab-list"], .stTabs [data-baseweb="tab"] {
-            background: rgba(0, 0, 0, 0.5) !important;
-            backdrop-filter: blur(4px);
+            background: rgba(20, 20, 40, 0.7) !important;
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.2);
         }
-        h1, h2, h3, p, label, .card-title, .card-value, .info-item, .stMarkdown, .stRadio label {
-            color: #f0f0f0 !important;
-            text-shadow: 1px 1px 2px #000;
+        /* Textos com sombra e cor clara para contraste */
+        h1, h2, h3, p, label, .card-title, .card-value, .info-item, .stMarkdown, .stRadio label, .stCheckbox label, .stTextInput label, .stSelectbox label {
+            color: #ffffff !important;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        /* Sidebar mantém seu estilo original, mas com maior transparência */
+        [data-testid="stSidebar"] {
+            background: rgba(8, 8, 20, 0.75) !important;
+            backdrop-filter: blur(8px);
         }
         </style>
         """, unsafe_allow_html=True)
