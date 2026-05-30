@@ -93,42 +93,6 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE STORAGE PARA VÍDEOS ======================
-def init_storage_bucket():
-    """Cria o bucket theme_videos se não existir."""
-    try:
-        buckets = supabase.storage.list_buckets()
-        if not any(b['name'] == 'theme_videos' for b in buckets):
-            supabase.storage.create_bucket('theme_videos', {'public': True})
-            st.success("Bucket 'theme_videos' criado com sucesso!")
-        return True
-    except Exception as e:
-        st.error(f"Erro ao configurar storage: {e}")
-        return False
-
-def upload_video_to_storage(uploaded_file):
-    """Faz upload do vídeo para o Storage e retorna URL pública."""
-    try:
-        init_storage_bucket()
-        ext = uploaded_file.name.split('.')[-1]
-        file_name = f"video_{uuid.uuid4().hex}.{ext}"
-        supabase.storage.from_('theme_videos').upload(file_name, uploaded_file.getvalue())
-        url = supabase.storage.from_('theme_videos').get_public_url(file_name)
-        return url
-    except Exception as e:
-        st.error(f"Erro no upload do vídeo: {e}")
-        return None
-
-def delete_video_from_storage(url):
-    """Remove vídeo antigo do Storage (opcional, para limpeza)."""
-    try:
-        # Extrair nome do arquivo da URL
-        if 'theme_videos' in url:
-            file_name = url.split('theme_videos/')[-1].split('?')[0]
-            supabase.storage.from_('theme_videos').remove([file_name])
-    except:
-        pass
-
 # ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA ======================
 def compress_image_to_base64(uploaded_file, max_size_kb=500):
     img = Image.open(uploaded_file)
@@ -236,12 +200,12 @@ def apply_theme_css():
         """
         st.markdown(css, unsafe_allow_html=True)
     elif bg_type == "video":
-        media_value = config.get("value", "")
+        media_url = config.get("value", "")
         adjust = config.get("image_adjust", "cover")
         mime_type = config.get("mime_type", "video/mp4")
         video_loop = config.get("video_loop", True)
         loop_attr = "loop" if video_loop else ""
-        if not media_value:
+        if not media_url:
             st.markdown("""
             <style>
             .stApp { background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%); }
@@ -251,9 +215,9 @@ def apply_theme_css():
         
         container_div = "<div style='position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -9999; pointer-events: none;'>"
         if mime_type == "image/gif":
-            media_html = f'<img src="{media_value}" style="width: 100%; height: 100%; object-fit: {adjust};">'
+            media_html = f'<img src="{media_url}" style="width: 100%; height: 100%; object-fit: {adjust};">'
         else:
-            media_html = f'<video autoplay muted playsinline {loop_attr} style="width: 100%; height: 100%; object-fit: {adjust};"><source src="{media_value}" type="{mime_type}"></video>'
+            media_html = f'<video autoplay muted playsinline {loop_attr} style="width: 100%; height: 100%; object-fit: {adjust};"><source src="{media_url}" type="{mime_type}"></video>'
         st.markdown(container_div + media_html + "</div>", unsafe_allow_html=True)
         
         st.markdown("""
@@ -441,7 +405,6 @@ if "pessoa_confirmada" not in st.session_state:
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 
-# Carregar tema global do Supabase
 st.session_state.theme_config = get_theme_config()
 
 # ====================== TELA DE LOGIN ======================
@@ -557,7 +520,7 @@ if st.session_state.perfil == "ADMIN":
         st.markdown("### Personalizar Fundo - Aplica para todos os usuários")
         config_atual = st.session_state.theme_config
         tipo_atual = config_atual.get("type", "gradient")
-        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (GIF/MP4)"]
+        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (URL)"]
         idx_map = {"gradient":0, "solid":1, "url":2, "image_upload":3, "video":4}
         idx = idx_map.get(tipo_atual, 0)
         tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
@@ -613,50 +576,28 @@ if st.session_state.perfil == "ADMIN":
                 else:
                     novo_valor = config_atual.get("value", "")
                     novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-        else:  # Animação (GIF/MP4)
-            uploaded_media = st.file_uploader("Escolha um GIF ou MP4", type=["gif","mp4"], key="upload_video")
-            url_media = st.text_input("Ou informe URL de um vídeo/GIF (MP4/GIF)", key="url_video", placeholder="https://exemplo.com/video.mp4")
+        else:  # Animação (URL)
+            url_padrao = ""
+            if tipo_atual == "video":
+                url_padrao = config_atual.get("value", "")
+            url_media = st.text_input("URL do vídeo/GIF (MP4/GIF)", value=url_padrao, key="url_video", placeholder="https://exemplo.com/video.mp4")
             video_loop = st.checkbox("Reproduzir em loop infinito", value=config_atual.get("video_loop", True), key="video_loop")
-            if uploaded_media:
-                with st.spinner("Fazendo upload do vídeo..."):
-                    try:
-                        video_url = upload_video_to_storage(uploaded_media)
-                        if video_url:
-                            novo_valor = video_url
-                            novo_tipo = "video"
-                            novo_mime = uploaded_media.type
-                            st.success("✅ Vídeo enviado para o servidor!")
-                            st.video(video_url)
-                        else:
-                            st.error("Falha no upload")
-                            novo_valor = config_atual.get("value", "")
-                            novo_tipo = tipo_atual
-                            novo_mime = config_atual.get("mime_type", "")
-                    except Exception as e:
-                        st.error(f"Erro: {e}")
-                        novo_valor = config_atual.get("value", "")
-                        novo_tipo = tipo_atual
-                        novo_mime = config_atual.get("mime_type", "")
-            elif url_media:
-                if url_media.startswith(('http://', 'https://')):
-                    novo_valor = url_media
-                    novo_tipo = "video"
-                    if url_media.lower().endswith('.gif'):
-                        novo_mime = "image/gif"
-                    else:
-                        novo_mime = "video/mp4"
-                    st.success("✅ URL de mídia configurada!")
+            if url_media and (url_media.startswith('http://') or url_media.startswith('https://')):
+                novo_valor = url_media
+                novo_tipo = "video"
+                if url_media.lower().endswith('.gif'):
+                    novo_mime = "image/gif"
                 else:
-                    st.error("URL inválida")
-                    novo_valor = config_atual.get("value", "")
-                    novo_tipo = tipo_atual
-                    novo_mime = config_atual.get("mime_type", "")
+                    novo_mime = "video/mp4"
+                st.success("✅ URL de mídia configurada!")
+            elif url_media:
+                st.error("URL inválida. Use http:// ou https://")
+                novo_valor = config_atual.get("value", "")
+                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
             else:
                 novo_valor = config_atual.get("value", "")
-                novo_tipo = tipo_atual
-                novo_mime = config_atual.get("mime_type", "")
+                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
         
-        # Opções de ajuste (para imagens e vídeos)
         ajuste_opcoes = ["cover", "contain", "stretch"]
         if novo_tipo in ["url", "video"]:
             st.markdown("---")
@@ -687,7 +628,7 @@ if st.session_state.perfil == "ADMIN":
                 else:
                     st.video(novo_valor, format="video/mp4")
             else:
-                st.info("Selecione uma mídia para prévia")
+                st.info("Informe uma URL para prévia")
         
         aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
         col_btn1, col_btn2, col_btn3 = st.columns(3)
@@ -1140,7 +1081,6 @@ if st.session_state.perfil == "ADMIN":
                                     st.error(f"Erro: {e}")
                     st.divider()
 
-# Reaplicar o tema ao final (garantia)
 apply_theme_css()
 
 st.markdown("---")
