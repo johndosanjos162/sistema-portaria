@@ -163,7 +163,6 @@ st.markdown("""
         line-height: 1.2;
         font-family: 'Space Mono', monospace;
     }
-    /* Efeito holográfico no hover */
     .cyber-card::after {
         content: '';
         position: absolute;
@@ -300,6 +299,16 @@ st.markdown("""
         align-items: center;
         gap: 5px;
     }
+    /* CANVAS FUTURISTA */
+    #futuristic-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -9999;
+        pointer-events: none;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -344,7 +353,7 @@ def save_avatar_url(url):
         st.error(f"Erro ao salvar avatar: {e}")
         return False
 
-# ====================== FUNÇÕES DE TEMA ======================
+# ====================== FUNÇÕES DE TEMA (INCLUINDO FUTURISTA) ======================
 def compress_image_to_base64(uploaded_file, max_size_kb=500):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -402,6 +411,200 @@ def save_theme_config(config):
     except Exception as e:
         st.error(f"Erro ao salvar tema global: {e}")
         return False
+
+def futuristic_background_script():
+    st.markdown("""
+    <canvas id="futuristic-canvas"></canvas>
+    <script>
+        (function() {
+            const canvas = document.getElementById('futuristic-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+            let dataLines = [];
+            let holographicShield = { angle: 0, pulse: 0 };
+            
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.radius = Math.random() * 2 + 1;
+                    this.speedX = (Math.random() - 0.5) * 0.5;
+                    this.speedY = (Math.random() - 0.5) * 0.5 + 0.2;
+                    this.opacity = Math.random() * 0.5 + 0.2;
+                    this.color = `rgba(0, ${150 + Math.random() * 105}, 255, ${this.opacity})`;
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    if (this.y > height) this.y = 0;
+                    if (this.x > width) this.x = 0;
+                    if (this.x < 0) this.x = width;
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                }
+            }
+            
+            class DataLine {
+                constructor() {
+                    this.x1 = Math.random() * width;
+                    this.y1 = Math.random() * height;
+                    this.x2 = this.x1 + (Math.random() - 0.5) * 300;
+                    this.y2 = this.y1 + (Math.random() - 0.5) * 300;
+                    this.progress = 0;
+                    this.speed = 0.005 + Math.random() * 0.01;
+                    this.color = `rgba(0, 200, 255, ${0.2 + Math.random() * 0.3})`;
+                }
+                update() {
+                    this.progress += this.speed;
+                    if (this.progress >= 1) {
+                        this.progress = 0;
+                        this.x1 = Math.random() * width;
+                        this.y1 = Math.random() * height;
+                        this.x2 = this.x1 + (Math.random() - 0.5) * 300;
+                        this.y2 = this.y1 + (Math.random() - 0.5) * 300;
+                    }
+                }
+                draw() {
+                    const x = this.x1 + (this.x2 - this.x1) * this.progress;
+                    const y = this.y1 + (this.y2 - this.y1) * this.progress;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x1, this.y1);
+                    ctx.lineTo(x, y);
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(0, 200, 255, 0.8)`;
+                    ctx.fill();
+                }
+            }
+            
+            function drawServers() {
+                const serverCols = Math.floor(width / 180);
+                for (let i = 0; i < serverCols; i++) {
+                    const x = 80 + i * 180;
+                    const y = height * 0.2;
+                    ctx.fillStyle = 'rgba(0, 20, 40, 0.7)';
+                    ctx.fillRect(x, y, 60, 300);
+                    ctx.strokeStyle = '#0ff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, 60, 300);
+                    for (let j = 0; j < 5; j++) {
+                        ctx.fillStyle = `rgba(0, ${100 + j * 30}, 200, 0.5)`;
+                        ctx.fillRect(x + 5, y + 20 + j * 50, 50, 10);
+                    }
+                }
+            }
+            
+            function drawShield() {
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const radius = 120 + Math.sin(Date.now() * 0.002) * 5;
+                holographicShield.pulse = 0.5 + Math.sin(Date.now() * 0.005) * 0.2;
+                ctx.save();
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#0ff';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0, 200, 255, ${0.6 + holographicShield.pulse * 0.3})`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius - 10, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(100, 0, 255, 0.5)`;
+                ctx.stroke();
+                ctx.font = "50px 'Segoe UI', 'Material Icons'";
+                ctx.fillStyle = `rgba(0, 255, 255, ${0.8 + Math.sin(Date.now() * 0.003) * 0.2})`;
+                ctx.shadowBlur = 15;
+                ctx.fillText("🔒", centerX - 28, centerY + 20);
+                ctx.restore();
+                for (let i = 0; i < 12; i++) {
+                    const angle = Date.now() * 0.002 + i * Math.PI * 2 / 12;
+                    const x1 = centerX + Math.cos(angle) * radius;
+                    const y1 = centerY + Math.sin(angle) * radius;
+                    const x2 = centerX + Math.cos(angle) * (radius + 40 + Math.sin(Date.now() * 0.01 + i) * 20);
+                    const y2 = centerY + Math.sin(angle) * (radius + 40 + Math.sin(Date.now() * 0.01 + i) * 20);
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.strokeStyle = `rgba(0, 255, 255, 0.4)`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+            
+            function drawNeuralNetwork() {
+                const nodes = [];
+                for (let i = 0; i < 30; i++) {
+                    nodes.push({ x: Math.random() * width, y: Math.random() * height, active: false });
+                }
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const dx = nodes[i].x - nodes[j].x;
+                        const dy = nodes[i].y - nodes[j].y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist < 150) {
+                            ctx.beginPath();
+                            ctx.moveTo(nodes[i].x, nodes[i].y);
+                            ctx.lineTo(nodes[j].x, nodes[j].y);
+                            ctx.strokeStyle = `rgba(0, 255, 255, ${0.2 * (1 - dist / 150)})`;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                nodes.forEach(node => {
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(0, 200, 255, 0.7)`;
+                    ctx.fill();
+                });
+            }
+            
+            function init() {
+                resize();
+                for (let i = 0; i < 150; i++) particles.push(new Particle());
+                for (let i = 0; i < 40; i++) dataLines.push(new DataLine());
+            }
+            
+            function animate() {
+                if (!ctx) return;
+                ctx.clearRect(0, 0, width, height);
+                const grad = ctx.createLinearGradient(0, 0, width, height);
+                grad.addColorStop(0, '#030318');
+                grad.addColorStop(0.5, '#0a0a2a');
+                grad.addColorStop(1, '#050518');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, width, height);
+                drawServers();
+                dataLines.forEach(line => { line.update(); line.draw(); });
+                particles.forEach(p => { p.update(); p.draw(); });
+                drawNeuralNetwork();
+                drawShield();
+                if (Math.random() < 0.05) {
+                    ctx.fillStyle = `rgba(0, 255, 255, 0.15)`;
+                    ctx.font = "12px monospace";
+                    ctx.fillText("010101", Math.random() * width, Math.random() * height);
+                }
+                requestAnimationFrame(animate);
+            }
+            
+            init();
+            animate();
+        })();
+    </script>
+    """, unsafe_allow_html=True)
 
 def apply_theme_css():
     config = st.session_state.get("theme_config", get_theme_config())
@@ -476,13 +679,10 @@ def apply_theme_css():
         .stApp {
             background: transparent !important;
         }
-        .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div, .stTabs [data-baseweb="tab-list"], .stTabs [data-baseweb="tab"] {
-            background: rgba(20, 20, 40, 0.7) !important;
-            backdrop-filter: blur(6px);
-            border: 1px solid rgba(0,255,255,0.3);
-        }
         </style>
         """, unsafe_allow_html=True)
+    elif bg_type == "futuristic":
+        futuristic_background_script()
 
 # ====================== FUNÇÕES DE SESSÃO ======================
 def registrar_sessao(perfil, usuario="admin"):
@@ -547,20 +747,7 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== VALIDAÇÃO ======================
-def validar_cpf(cpf):
-    cpf_limpo = re.sub(r'\D', '', cpf)
-    return cpf_limpo.isdigit() and len(cpf_limpo) == 11
-
-def sanitizar_cpf(cpf):
-    return re.sub(r'\D', '', cpf)
-
-def sanitizar_texto(texto):
-    if not texto:
-        return texto
-    return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
-
-# ====================== RELATÓRIOS PDF ======================
+# ====================== FUNÇÕES DE RELATÓRIOS PDF ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
@@ -631,6 +818,19 @@ def gerar_html_consolidado(df):
         html += "<div class='section'><h2>🏢 Prestadores de Serviços</h2><p>Nenhum registro.</p></div>"
     html += '<div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div></body></html>'
     return html
+
+# ====================== FUNÇÕES DE VALIDAÇÃO ======================
+def validar_cpf(cpf):
+    cpf_limpo = re.sub(r'\D', '', cpf)
+    return cpf_limpo.isdigit() and len(cpf_limpo) == 11
+
+def sanitizar_cpf(cpf):
+    return re.sub(r'\D', '', cpf)
+
+def sanitizar_texto(texto):
+    if not texto:
+        return texto
+    return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
 
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
@@ -802,8 +1002,8 @@ if st.session_state.perfil == "ADMIN":
         st.markdown("### Personalizar Fundo - Aplica para todos")
         config_atual = st.session_state.theme_config
         tipo_atual = config_atual.get("type", "gradient")
-        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (URL)"]
-        idx_map = {"gradient":0, "solid":1, "url":2, "image_upload":3, "video":4}
+        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (URL)", "Futurista Dinâmico (Canvas)"]
+        idx_map = {"gradient":0, "solid":1, "url":2, "image_upload":3, "video":4, "futuristic":5}
         idx = idx_map.get(tipo_atual, 0)
         tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
         
@@ -858,7 +1058,7 @@ if st.session_state.perfil == "ADMIN":
                 else:
                     novo_valor = config_atual.get("value", "")
                     novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-        else:  # Animação (URL)
+        elif tipo == "Animação (URL)":
             url_padrao = ""
             if tipo_atual == "video":
                 url_padrao = config_atual.get("value", "")
@@ -879,6 +1079,9 @@ if st.session_state.perfil == "ADMIN":
             else:
                 novo_valor = config_atual.get("value", "")
                 novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+        elif tipo == "Futurista Dinâmico (Canvas)":
+            novo_valor = "futuristic"
+            novo_tipo = "futuristic"
         
         ajuste_opcoes = ["cover", "contain", "stretch"]
         if novo_tipo in ["url", "video"]:
@@ -902,7 +1105,7 @@ if st.session_state.perfil == "ADMIN":
         elif novo_tipo == "url":
             preview_style = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
             st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid cyan;"></div>', unsafe_allow_html=True)
-        else:  # video
+        elif novo_tipo == "video":
             if novo_valor:
                 if novo_mime == "image/gif":
                     st.markdown(f'<img src="{novo_valor}" style="width:100%; max-height:100px; object-fit:cover; border-radius:8px;">', unsafe_allow_html=True)
@@ -910,6 +1113,8 @@ if st.session_state.perfil == "ADMIN":
                     st.video(novo_valor, format="video/mp4")
             else:
                 st.info("Informe uma URL para prévia")
+        elif novo_tipo == "futuristic":
+            st.info("Fundo futurista dinâmico (Canvas) será aplicado após salvar.")
         
         aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
         col_btn1, col_btn2, col_btn3 = st.columns(3)
@@ -925,10 +1130,13 @@ if st.session_state.perfil == "ADMIN":
                     else:
                         valor_final = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
                         novo_tipo = "gradient"
-                else:  # video
+                elif novo_tipo == "video":
                     valor_final = novo_valor if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
                     if not novo_valor:
                         novo_tipo = "gradient"
+                else:  # futuristic
+                    valor_final = "futuristic"
+                    novo_tipo = "futuristic"
                 
                 nova_config = {
                     "type": novo_tipo,
@@ -1048,22 +1256,15 @@ for idx, card in enumerate(cards_data):
     with cols[idx]:
         if isinstance(card["value"], int):
             value_display = f'<div class="card-value" data-target="{card["value"]}">0</div>'
-            # Injetar script para animação
-            st.markdown(f"""
-            <div class="cyber-card">
-                <div class="card-icon">{card["icon"]}</div>
-                <div class="card-title">{card["title"]}</div>
-                {value_display}
-            </div>
-            """, unsafe_allow_html=True)
         else:
-            st.markdown(f"""
-            <div class="cyber-card">
-                <div class="card-icon">{card["icon"]}</div>
-                <div class="card-title">{card["title"]}</div>
-                <div class="card-value">{card["value"]}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            value_display = f'<div class="card-value">{card["value"]}</div>'
+        st.markdown(f"""
+        <div class="cyber-card">
+            <div class="card-icon">{card["icon"]}</div>
+            <div class="card-title">{card["title"]}</div>
+            {value_display}
+        </div>
+        """, unsafe_allow_html=True)
 
 # Script para animar contadores
 st.markdown("""
