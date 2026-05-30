@@ -38,17 +38,92 @@ st.markdown("""
         background: transparent !important;
         box-shadow: none !important;
     }
-    /* Ajusta a cor dos ícones para branco (para contraste em fundos escuros) */
+    /* Ajusta a cor dos ícones para branco */
     header[data-testid="stHeader"] button {
         color: white !important;
     }
-    /* Garante que o conteúdo do app não fique sobreposto pelo header */
     .stApp {
         margin-top: 0 !important;
         padding-top: 0 !important;
     }
+    /* Efeito para o avatar */
+    .avatar-container {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .avatar-image {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #00aaff;
+        box-shadow: 0 0 15px rgba(0, 170, 255, 0.6), inset 0 0 5px rgba(0, 170, 255, 0.3);
+        transition: 0.3s;
+    }
+    .avatar-image:hover {
+        box-shadow: 0 0 25px rgba(0, 170, 255, 0.9);
+        transform: scale(1.02);
+    }
+    .sidebar-header {
+        text-align: center;
+        padding: 25px 10px;
+        border-bottom: 1px solid rgba(100,0,255,0.5);
+    }
+    .sidebar-title {
+        font-size: 22px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #a855f7, #3b82f6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-top: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+# ====================== FUNÇÕES DE STORAGE PARA AVATAR ======================
+def init_avatar_bucket():
+    try:
+        buckets = supabase.storage.list_buckets()
+        if not any(b['name'] == 'security_avatar' for b in buckets):
+            supabase.storage.create_bucket('security_avatar', {'public': True})
+        return True
+    except Exception as e:
+        st.error(f"Erro ao configurar storage para avatar: {e}")
+        return False
+
+def upload_avatar_to_storage(uploaded_file):
+    try:
+        init_avatar_bucket()
+        ext = uploaded_file.name.split('.')[-1]
+        file_name = f"avatar_{uuid.uuid4().hex}.{ext}"
+        supabase.storage.from_('security_avatar').upload(file_name, uploaded_file.getvalue())
+        return supabase.storage.from_('security_avatar').get_public_url(file_name)
+    except Exception as e:
+        st.error(f"Erro no upload do avatar: {e}")
+        return None
+
+def get_avatar_url():
+    padrao_url = "https://placehold.co/400x400/0a0a2a/white?text=SEGURANÇA"
+    try:
+        result = supabase.table("app_config").select("value").eq("key", "avatar_url").execute()
+        if result.data and result.data[0]['value']:
+            return result.data[0]['value']
+    except:
+        pass
+    return padrao_url
+
+def save_avatar_url(url):
+    try:
+        supabase.table("app_config").upsert({
+            "key": "avatar_url",
+            "value": url,
+            "updated_at": datetime.now().isoformat()
+        }).execute()
+        st.session_state.avatar_url = url
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar URL do avatar: {e}")
+        return False
 
 # ====================== FUNÇÕES DE GERENCIAMENTO DE SESSÃO ======================
 def registrar_sessao(perfil, usuario="admin"):
@@ -355,59 +430,6 @@ def carregar_imagem(nome):
 
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png")
 
-# ====================== CSS BASE (SEM BACKGROUND FIXO) ======================
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(100,0,255,0.4); } 70% { box-shadow: 0 0 0 12px rgba(100,0,255,0); } 100% { box-shadow: 0 0 0 0 rgba(100,0,255,0); } }
-@keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0px); } }
-@keyframes buttonGlow { 0% { box-shadow: 0 0 5px #0ff; } 50% { box-shadow: 0 0 20px #0ff; } 100% { box-shadow: 0 0 5px #0ff; } }
-[data-testid="stSidebar"] { background: rgba(8,8,20,0.85); backdrop-filter: blur(12px); border-right: 1px solid rgba(100,0,255,0.3); }
-.sidebar-header { text-align: center; padding: 25px 10px; border-bottom: 1px solid rgba(100,0,255,0.5); }
-.sidebar-title { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, #a855f7, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.info-item { margin-bottom: 12px; color: #c4b5fd; font-size: 12px; display: flex; gap: 8px; font-family: 'Space Mono', monospace; }
-.admin-header { background: rgba(8,8,20,0.7); backdrop-filter: blur(8px); border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; border: 1px solid rgba(168,85,247,0.4); }
-.badge-admin { background: linear-gradient(135deg, #a855f7, #3b82f6); padding: 4px 15px; border-radius: 30px; font-weight: 700; font-size: 11px; color: white; }
-.session-indicator { background: rgba(0,0,0,0.6); border-radius: 30px; padding: 4px 12px; font-size: 12px; font-family: 'Space Mono', monospace; color: #a78bfa; display: inline-flex; align-items: center; gap: 5px; }
-.admin-card { background: rgba(15,15,30,0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 18px; border: 1px solid rgba(168,85,247,0.2); transition: 0.2s; }
-.admin-card:hover { transform: translateY(-3px); border-color: #a855f7; box-shadow: 0 5px 20px rgba(168,85,247,0.15); }
-.card-title { font-size: 10px; letter-spacing: 2px; color: #a78bfa; }
-.card-value { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.stButton>button, .stForm button { border-radius: 40px; font-weight: 600; background: linear-gradient(90deg, #a855f7, #3b82f6); color: white; border: none; transition: all 0.3s ease; position: relative; overflow: hidden; z-index: 1; }
-.stButton>button::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); transition: left 0.5s ease; z-index: -1; }
-.stButton>button:hover::before { left: 100%; }
-.stButton>button:hover { transform: scale(1.02); box-shadow: 0 0 20px #a855f7; animation: buttonGlow 0.8s infinite alternate; }
-.stTextInput>div>div>input, .stNumberInput>div>div>input { background: rgba(0,0,0,0.8); border: 1px solid #a855f7; border-radius: 12px; color: #0ff !important; font-family: 'Space Mono', monospace; }
-.stSelectbox>div>div { background: rgba(0,0,0,0.8) !important; border: 1px solid #a855f7 !important; border-radius: 12px !important; color: #0ff !important; }
-.stTabs [data-baseweb="tab-list"] { gap: 6px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 30px; }
-.stTabs [data-baseweb="tab"] { border-radius: 25px; padding: 5px 20px; color: #ccc; }
-.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #a855f7, #3b82f6); color: white; }
-.footer { text-align: center; padding: 15px; color: #6b7280; font-size: 9px; border-top: 1px solid rgba(168,85,247,0.2); margin-top: 25px; }
-h1, h2, h3 { font-family: 'Inter', sans-serif; color: #e9d5ff; }
-</style>
-""", unsafe_allow_html=True)
-
-# ====================== SIDEBAR ======================
-if IMAGEM_SIDEBAR:
-    st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
-else:
-    st.sidebar.markdown('<div class="sidebar-header"><div class="sidebar-title">👮‍♂️ JOHN ACESSOS</div><p style="color:#a78bfa; font-size:9px;">ACESSO DE DADOS</p></div>', unsafe_allow_html=True)
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚡ ESTADO")
-st.sidebar.markdown('<div class="info-item">🟢 REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">🤖 MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">🗄️ DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📡 INFO")
-if st.session_state.get("perfil"):
-    st.sidebar.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
-else:
-    st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="info-item">📦 Versão: 13.1 (TECH)</div>', unsafe_allow_html=True)
-
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -431,6 +453,7 @@ if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 
 st.session_state.theme_config = get_theme_config()
+st.session_state.avatar_url = get_avatar_url()
 
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
@@ -498,13 +521,14 @@ if st.session_state.session_id:
 else:
     total_conectados = 0
 
-# ====================== CABEÇALHO PERSONALIZADO (OPCIONAL) ======================
-# Se quiser manter o título e badge, pode deixar; se não, remova este bloco.
+# ====================== CABEÇALHO PERSONALIZADO COM AVATAR ======================
 st.markdown(f"""
 <div class="admin-header">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; gap:10px; align-items:center;">
-            <div style="width:36px;height:36px;background:linear-gradient(135deg,#a855f7,#3b82f6);border-radius:50%;display:flex;align-items:center;justify-content:center;"><span style="font-size:20px;">👮‍♂️</span></div>
+            <div style="width:36px;height:36px;">
+                <img src="{st.session_state.avatar_url}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid #00aaff; box-shadow:0 0 5px #00aaff;">
+            </div>
             <div><h1 style="margin:0;font-size:16px;">JOHN ACESSOS - ACESSO DE DADOS</h1><p style="margin:0;color:#a78bfa;font-size:8px;">SEGURANÇA E PROTEÇÃO</p></div>
         </div>
         <div style="display:flex; gap:15px; align-items:center;">{f'<div class="session-indicator">{"⚠️" if total_conectados > 1 else ""} 👥 {total_conectados}</div>'}<div class="badge-admin">👑 {st.session_state.perfil}</div></div>
@@ -522,7 +546,32 @@ with col4:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== ADMIN: MANAGE APP E TEMA GLOBAL ======================
+# ====================== SIDEBAR COM AVATAR ======================
+with st.sidebar:
+    st.markdown(f"""
+    <div class="avatar-container">
+        <img src="{st.session_state.avatar_url}" class="avatar-image">
+        <div class="sidebar-title">👮‍♂️ JOHN ACESSOS</div>
+        <p style="color:#a78bfa; font-size:9px;">ACESSO DE DADOS</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown("### ⚡ ESTADO")
+    st.markdown('<div class="info-item">🟢 REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item">🤖 MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item">🗄️ DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
+    st.markdown("---")
+    st.markdown("### 📡 INFO")
+    if st.session_state.get("perfil"):
+        st.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
+    st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item">📦 Versão: 13.1 (TECH)</div>', unsafe_allow_html=True)
+
+# ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
@@ -740,6 +789,33 @@ if st.session_state.perfil == "ADMIN":
                     st.warning("Nenhum registro para o filtro selecionado.")
         except Exception as e:
             st.error(f"Erro ao carregar dados: {e}")
+    
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("🖼️ Configurar Avatar (Segurança)", expanded=False):
+        st.markdown("### Personalizar Imagem do Perfil")
+        st.markdown("Envie uma imagem realista de segurança patrimonial (recomendado 4K).")
+        uploaded_avatar = st.file_uploader("Escolha uma imagem (PNG/JPG)", type=["png","jpg","jpeg"], key="upload_avatar")
+        if uploaded_avatar:
+            with st.spinner("Enviando imagem..."):
+                url = upload_avatar_to_storage(uploaded_avatar)
+                if url:
+                    if save_avatar_url(url):
+                        st.session_state.avatar_url = url
+                        st.success("✅ Avatar atualizado com sucesso!")
+                        st.rerun()
+                    else:
+                        st.error("Erro ao salvar URL.")
+                else:
+                    st.error("Falha no upload.")
+        st.markdown("---")
+        st.markdown("**Imagem atual:**")
+        st.image(st.session_state.avatar_url, width=120, caption="Avatar atual")
+        if st.button("↺ Restaurar Avatar Padrão", key="reset_avatar"):
+            padrao_url = "https://placehold.co/400x400/0a0a2a/white?text=SEGURANÇA"
+            if save_avatar_url(padrao_url):
+                st.session_state.avatar_url = padrao_url
+                st.success("Avatar restaurado para o padrão!")
+                st.rerun()
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
