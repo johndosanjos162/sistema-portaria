@@ -7,6 +7,7 @@ import base64
 import re
 import uuid
 import json
+import io
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
 MAX_TENTATIVAS_LOGIN = 5
@@ -124,6 +125,39 @@ def save_background_config(config):
         except Exception as e:
             print(f"Erro ao salvar config: {e}")
     st.session_state.background_config = config
+
+def upload_background_image(file):
+    """Faz upload da imagem para o Supabase e retorna o ID e URL de dados."""
+    try:
+        # Ler bytes da imagem
+        bytes_data = file.getvalue()
+        content_type = file.type
+        filename = file.name
+        
+        # Inserir na tabela app_images
+        result = supabase.table("app_images").insert({
+            "filename": filename,
+            "data": base64.b64encode(bytes_data).decode('utf-8'),  # store as base64
+            "content_type": content_type,
+            "uploaded_at": datetime.now().isoformat()
+        }).execute()
+        
+        image_id = result.data[0]['id']
+        # Construir URL de dados para usar diretamente no CSS
+        data_url = f"data:{content_type};base64,{base64.b64encode(bytes_data).decode('utf-8')}"
+        return {"id": image_id, "data_url": data_url}
+    except Exception as e:
+        st.error(f"Erro ao fazer upload da imagem: {e}")
+        return None
+
+def delete_old_background_images(current_id=None):
+    """Remove imagens antigas da tabela app_images (opcional, para não acumular)."""
+    try:
+        # Manter apenas a última imagem (opcional)
+        if current_id:
+            supabase.table("app_images").delete().neq("id", current_id).execute()
+    except Exception as e:
+        print(f"Erro ao limpar imagens antigas: {e}")
 
 # Carregar configuração no session_state (se ainda não)
 if "background_config" not in st.session_state:
@@ -376,10 +410,17 @@ def apply_background_css(config=None):
     if config is None:
         config = st.session_state.get("background_config", get_background_config())
     bg_style = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
+    # Garantir que a imagem se ajuste corretamente
+    if config.get("type") == "url":
+        # Se for URL de dados, já está no formato correto
+        bg_style = bg_style
     css = f"""
     <style>
     .stApp {{
         background: {bg_style};
+        background-attachment: fixed;
+        background-size: cover;
+        background-repeat: no-repeat;
     }}
     </style>
     """
@@ -699,28 +740,66 @@ if st.session_state.get("perfil") == "ADMIN" and st.session_state.get("logado"):
         st.markdown("---")
         st.caption("Ações disponíveis apenas para o administrador.")
 
-    # Ícone de configurações de tema (engrenagem)
+    # Ícone de configurações de tema (engrenagem) - agora fora do expander para fácil acesso
     st.sidebar.markdown("---")
     if st.sidebar.button("⚙️ Configurar Tema (Background)", use_container_width=True):
         # Abrir popover para configurações
         with st.popover("🎨 Configurações de Fundo", use_container_width=True):
-            config = st.session_state.background_config.copy()
-            tipo = st.selectbox("Tipo de fundo:", ["Gradiente (padrão)", "Cor sólida", "Imagem via URL"], index=0 if config['type']=='gradient' else 1 if config['type']=='solid' else 2)
+            config_atual = st.session_state.background_config.copy()
+            tipo_opcoes = ["Gradiente (padrão)", "Cor sólida", "Imagem via URL", "Imagem do computador"]
+            idx_atual = 0
+            if config_atual['type'] == 'gradient':
+                idx_atual = 0
+            elif config_atual['type'] == 'solid':
+                idx_atual = 1
+            elif config_atual['type'] == 'url':
+                idx_atual = 2
+            elif config_atual['type'] == 'upload':
+                idx_atual = 3
+            
+            tipo = st.selectbox("Tipo de fundo:", tipo_opcoes, index=idx_atual)
+            
+            novo_valor = config_atual.get('value', '')
+            novo_tipo = config_atual.get('type', 'gradient')
+            
             if tipo == "Gradiente (padrão)":
                 novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
                 novo_tipo = "gradient"
             elif tipo == "Cor sólida":
-                cor = st.color_picker("Escolha uma cor", value=config.get('value', '#0a0a1a') if config['type']=='solid' else '#0a0a1a')
+                cor = st.color_picker("Escolha uma cor", value=config_atual.get('value', '#0a0a1a') if config_atual['type']=='solid' else '#0a0a1a')
                 novo_valor = cor
                 novo_tipo = "solid"
-            else:  # Imagem via URL
-                url_img = st.text_input("URL da imagem (ex: https://exemplo.com/fundo.jpg)", value=config.get('value', '') if config['type']=='url' else '')
+            elif tipo == "Imagem via URL":
+                url_img = st.text_input("URL da imagem (ex: https://exemplo.com/fundo.jpg)", value=config_atual.get('value', '') if config_atual['type']=='url' else '')
                 if url_img:
                     novo_valor = f"url('{url_img}') center/cover no-repeat fixed"
                 else:
-                    novo_valor = config.get('value', 'radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)')
+                    novo_valor = config_atual.get('value', 'radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)')
                 novo_tipo = "url"
-            aplicar_login = st.checkbox("Aplicar também na tela de login", value=config.get('apply_to_login', False))
+            else:  # Imagem do computador
+                uploaded_file = st.file_uploader("Escolha uma imagem (PNG, JPG, JPEG, GIF)", type=['png', 'jpg', 'jpeg', 'gif'])
+                if uploaded_file is not None:
+                    with st.spinner("Fazendo upload da imagem..."):
+                        img_info = upload_background_image(uploaded_file)
+                        if img_info:
+                            novo_valor = f"url('{img_info['data_url']}') center/cover no-repeat fixed"
+                            novo_tipo = "url"  # tratamos como URL de dados
+                            st.success("Imagem enviada com sucesso!")
+                        else:
+                            st.error("Falha no upload. Mantendo configuração anterior.")
+                            novo_valor = config_atual.get('value', 'radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)')
+                            novo_tipo = config_atual.get('type', 'gradient')
+                else:
+                    # Se não houver nova imagem, manter a atual (se for do tipo upload)
+                    if config_atual['type'] == 'url' and 'data:image' in config_atual.get('value', ''):
+                        novo_valor = config_atual.get('value')
+                        novo_tipo = 'url'
+                    else:
+                        novo_valor = config_atual.get('value', 'radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)')
+                        novo_tipo = config_atual.get('type', 'gradient')
+            
+            aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get('apply_to_login', False))
+            
             if st.button("💾 Salvar configuração"):
                 nova_config = {
                     "type": novo_tipo,
@@ -728,7 +807,7 @@ if st.session_state.get("perfil") == "ADMIN" and st.session_state.get("logado"):
                     "apply_to_login": aplicar_login
                 }
                 save_background_config(nova_config)
-                st.success("✅ Configuração salva! Recarregue a página para aplicar.")
+                st.success("✅ Configuração salva! A página será recarregada para aplicar o novo tema.")
                 st.rerun()
 
 # ====================== SESSÃO (INICIALIZAÇÃO) ======================
@@ -761,7 +840,7 @@ if not st.session_state.logado:
     if st.session_state.background_config.get("apply_to_login", False):
         apply_background_css(st.session_state.background_config)
     else:
-        # Fundo padrão (mantido do CSS original, mas vamos forçar o radial padrão)
+        # Fundo padrão (mantido do CSS original)
         st.markdown("""
         <style>
         .stApp {
