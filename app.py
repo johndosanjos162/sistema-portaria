@@ -7,6 +7,7 @@ import base64
 import re
 import uuid
 import json
+import io
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
 MAX_TENTATIVAS_LOGIN = 5
@@ -92,24 +93,54 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (GLOBAL) ======================
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (GLOBAL COM IMAGEM) ======================
+def compress_image_to_base64(uploaded_file, max_size_kb=500):
+    """Converte imagem para Base64 com compressão para não estourar limite do Supabase."""
+    img = Image.open(uploaded_file)
+    if img.mode in ('RGBA', 'LA', 'P'):
+        img = img.convert('RGB')
+    max_width = 1920
+    if img.width > max_width:
+        ratio = max_width / img.width
+        new_size = (max_width, int(img.height * ratio))
+        img = img.resize(new_size, Image.Resampling.LANCZOS)
+    buffer = io.BytesIO()
+    quality = 85
+    while True:
+        buffer.seek(0)
+        img.save(buffer, format='JPEG', quality=quality, optimize=True)
+        size_kb = buffer.tell() / 1024
+        if size_kb <= max_size_kb or quality <= 20:
+            break
+        quality -= 10
+    b64_str = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/jpeg;base64,{b64_str}"
+
 def get_theme_config():
-    """Carrega configuração do Supabase (global) e fallback para padrão."""
+    """Carrega configuração do Supabase (global) com todos os parâmetros."""
     padrao = {
         "type": "gradient",
         "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
-        "apply_to_login": False
+        "apply_to_login": False,
+        "image_adjust": "cover",
+        "image_position": "center"
     }
     try:
         result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
         if result.data:
-            return json.loads(result.data[0]['value'])
+            config = json.loads(result.data[0]['value'])
+            # Garantir que novos campos existam (para compatibilidade)
+            if "image_adjust" not in config:
+                config["image_adjust"] = "cover"
+            if "image_position" not in config:
+                config["image_position"] = "center"
+            return config
     except:
         pass
     return padrao
 
 def save_theme_config(config):
-    """Salva configuração no Supabase (global) e atualiza session_state local."""
+    """Salva configuração no Supabase (global)."""
     try:
         supabase.table("app_config").upsert({
             "key": "background_config",
@@ -123,20 +154,51 @@ def save_theme_config(config):
         return False
 
 def apply_theme_css():
-    """Aplica o CSS de fundo a partir da configuração global."""
+    """Aplica o CSS de fundo com as configurações de ajuste e posição."""
     config = st.session_state.get("theme_config", get_theme_config())
-    bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-    css = f"""
-    <style>
-    .stApp, .stApp > header, .stApp > div {{
-        background: {bg_value} !important;
-        background-attachment: fixed !important;
-        background-size: cover !important;
-        background-repeat: no-repeat !important;
-        background-position: center !important;
-    }}
-    </style>
-    """
+    bg_type = config.get("type", "gradient")
+    
+    if bg_type == "gradient":
+        bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
+        css = f"""
+        <style>
+        .stApp, .stApp > header, .stApp > div {{
+            background: {bg_value} !important;
+            background-attachment: fixed !important;
+            background-size: cover !important;
+            background-repeat: no-repeat !important;
+            background-position: center !important;
+        }}
+        </style>
+        """
+    elif bg_type == "solid":
+        bg_value = config.get("value", "#0a0a1a")
+        css = f"""
+        <style>
+        .stApp, .stApp > header, .stApp > div {{
+            background: {bg_value} !important;
+            background-attachment: fixed !important;
+            background-size: cover !important;
+        }}
+        </style>
+        """
+    else:  # image (url ou upload)
+        bg_value = config.get("value", "")
+        if not bg_value:
+            bg_value = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+        adjust = config.get("image_adjust", "cover")
+        position = config.get("image_position", "center")
+        css = f"""
+        <style>
+        .stApp, .stApp > header, .stApp > div {{
+            background: {bg_value} !important;
+            background-attachment: fixed !important;
+            background-size: {adjust} !important;
+            background-repeat: no-repeat !important;
+            background-position: {position} !important;
+        }}
+        </style>
+        """
     st.markdown(css, unsafe_allow_html=True)
 
 # ====================== FUNÇÕES DE RELATÓRIOS (PDF) ======================
@@ -424,11 +486,13 @@ if st.session_state.perfil == "ADMIN":
         st.markdown("### Personalizar Fundo - Aplica para todos os usuários")
         config_atual = st.session_state.theme_config
         tipo_atual = config_atual.get("type", "gradient")
-        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)"]
-        idx = 0 if tipo_atual == "gradient" else 1 if tipo_atual == "solid" else 2
+        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)"]
+        idx = 0 if tipo_atual == "gradient" else 1 if tipo_atual == "solid" else 2 if tipo_atual == "url" else 3
         tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
+        
         novo_valor = config_atual.get("value", "")
         novo_tipo = tipo_atual
+        imagem_data_url = None
         
         if tipo == "Gradiente padrão":
             novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
@@ -438,40 +502,107 @@ if st.session_state.perfil == "ADMIN":
             cor = st.color_picker("Escolha a cor", value=cor_padrao, key="cor_picker")
             novo_valor = cor
             novo_tipo = "solid"
-        else:  # URL
+        elif tipo == "Imagem (URL)":
             url_padrao = ""
             if tipo_atual == "url" and config_atual.get("value", "").startswith("url('"):
                 url_padrao = config_atual.get("value", "").replace("url('", "").replace("') center/cover no-repeat fixed", "")
             url_img = st.text_input("URL da imagem", value=url_padrao, key="url_img", placeholder="https://exemplo.com/imagem.jpg")
             if url_img and (url_img.startswith('http://') or url_img.startswith('https://')):
-                novo_valor = f"url('{url_img}') center/cover no-repeat fixed"
+                novo_valor = url_img  # guarda só a URL, depois monta o CSS
                 novo_tipo = "url"
             elif url_img:
                 st.error("URL inválida. Use http:// ou https://")
-                novo_valor = config_atual.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
+                novo_valor = config_atual.get("value", "")
                 novo_tipo = tipo_atual if tipo_atual in ["gradient","solid"] else "gradient"
             else:
-                novo_valor = config_atual.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid"] else "gradient"
+                novo_valor = config_atual.get("value", "")
+                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+        else:  # Imagem (upload)
+            uploaded_file = st.file_uploader("Escolha uma imagem (PNG, JPG, JPEG, GIF)", type=["png","jpg","jpeg","gif"], key="upload_img")
+            if uploaded_file:
+                with st.spinner("Processando imagem..."):
+                    try:
+                        imagem_data_url = compress_image_to_base64(uploaded_file)
+                        novo_valor = imagem_data_url
+                        novo_tipo = "url"
+                        st.success("✅ Imagem carregada e comprimida com sucesso!")
+                        # Mostrar prévia
+                        st.image(uploaded_file, width=200, caption="Imagem carregada")
+                    except Exception as e:
+                        st.error(f"Erro ao processar imagem: {e}")
+                        novo_valor = config_atual.get("value", "")
+                        novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+            else:
+                # Se não houver upload, manter valor anterior se for imagem
+                if tipo_atual == "url" and config_atual.get("value", "").startswith("data:image"):
+                    novo_valor = config_atual.get("value")
+                    novo_tipo = "url"
+                else:
+                    novo_valor = config_atual.get("value", "")
+                    novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+        
+        # Se for imagem (tipo url), mostrar opções de ajuste e posição
+        ajuste_opcoes = ["cover", "contain", "stretch"]
+        posicao_opcoes = ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"]
+        
+        if novo_tipo == "url" and novo_valor:
+            st.markdown("---")
+            st.markdown("#### Ajustes da imagem")
+            ajuste_atual = config_atual.get("image_adjust", "cover")
+            posicao_atual = config_atual.get("image_position", "center")
+            novo_ajuste = st.selectbox("Modo de ajuste:", ajuste_opcoes, index=ajuste_opcoes.index(ajuste_atual) if ajuste_atual in ajuste_opcoes else 0, key="ajuste_imagem")
+            nova_posicao = st.selectbox("Posição:", posicao_opcoes, index=posicao_opcoes.index(posicao_atual) if posicao_atual in posicao_opcoes else 3, key="posicao_imagem")
+        else:
+            novo_ajuste = "cover"
+            nova_posicao = "center"
         
         # Pré-visualização
         st.markdown("**Prévia:**")
-        st.markdown(f'<div style="width:100%; height:50px; background:{novo_valor}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+        if novo_tipo == "gradient":
+            preview_style = novo_valor
+        elif novo_tipo == "solid":
+            preview_style = novo_valor
+        else:
+            preview_style = f"url('{novo_valor}') center/cover no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+        st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
         
         aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
             if st.button("💾 Salvar e Aplicar Tema (Global)", key="salvar_tema_global"):
-                nova_config = {"type": novo_tipo, "value": novo_valor, "apply_to_login": aplicar_login}
+                # Monta o valor final para o CSS
+                if novo_tipo == "gradient":
+                    valor_final = novo_valor
+                elif novo_tipo == "solid":
+                    valor_final = novo_valor
+                else:  # imagem
+                    if novo_valor:
+                        valor_final = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed"
+                    else:
+                        valor_final = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+                        novo_tipo = "gradient"
+                
+                nova_config = {
+                    "type": novo_tipo,
+                    "value": valor_final,
+                    "apply_to_login": aplicar_login,
+                    "image_adjust": novo_ajuste,
+                    "image_position": nova_posicao
+                }
                 if save_theme_config(nova_config):
-                    # Atualiza o CSS imediatamente
                     apply_theme_css()
                     st.success("✅ Tema global salvo e aplicado! Todos os usuários verão este tema.")
                 else:
                     st.error("Erro ao salvar tema global.")
         with col_btn2:
             if st.button("↺ Restaurar Padrão", key="reset_tema_global"):
-                padrao = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
+                padrao = {
+                    "type": "gradient",
+                    "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
+                    "apply_to_login": False,
+                    "image_adjust": "cover",
+                    "image_position": "center"
+                }
                 if save_theme_config(padrao):
                     apply_theme_css()
                     st.success("Tema restaurado para o padrão global!")
