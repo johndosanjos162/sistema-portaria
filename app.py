@@ -18,7 +18,6 @@ try:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     supabase = create_client(url, key)
-    # Teste rápido de conexão (tabela sessoes_ativas)
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
@@ -99,33 +98,113 @@ st.markdown("""
         0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
         100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
     }
-    /* Cards usando st.metric - estilo glassmorphism */
-    div[data-testid="metric-container"] {
-        background: rgba(15, 15, 35, 0.55);
+
+    /* ===== NOVOS CARDS ULTRA TECNOLÓGICOS ===== */
+    .dashboard-card {
+        background: rgba(10, 15, 30, 0.45);
         backdrop-filter: blur(12px);
         border-radius: 28px;
         padding: 1.2rem 1rem;
-        border: 1px solid rgba(0, 255, 255, 0.4);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 0 12px rgba(0,255,255,0.3);
+        margin: 0.5rem;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 15px rgba(0,255,255,0.2);
         transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+        position: relative;
+        overflow: hidden;
         cursor: default;
+        z-index: 1;
     }
-    div[data-testid="metric-container"]:hover {
+    /* Efeito de reflexo dinâmico */
+    .dashboard-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.15), transparent);
+        transition: left 0.6s ease;
+        z-index: 0;
+        pointer-events: none;
+    }
+    .dashboard-card:hover::before {
+        left: 100%;
+    }
+    /* Borda neon animada no hover */
+    .dashboard-card::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, cyan, magenta, cyan, #0ff);
+        border-radius: 30px;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.4s;
+    }
+    .dashboard-card:hover::after {
+        opacity: 0.6;
+    }
+    .dashboard-card:hover {
         transform: translateY(-6px);
-        border-color: cyan;
-        box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 25px cyan;
+        border-color: rgba(0, 255, 255, 0.8);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 25px cyan;
     }
-    div[data-testid="metric-container"] label {
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        position: relative;
+        z-index: 2;
+    }
+    .card-icon {
+        font-size: 2.5rem;
+        filter: drop-shadow(0 0 6px cyan);
+        transition: 0.2s;
+    }
+    .dashboard-card:hover .card-icon {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 12px magenta);
+    }
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0,0,0,0.5);
+        padding: 4px 10px;
+        border-radius: 30px;
+        font-size: 0.7rem;
+        font-family: 'Space Mono', monospace;
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        backdrop-filter: blur(4px);
+    }
+    .status-led {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #0f0;
+        box-shadow: 0 0 6px #0f0;
+        animation: pulseLed 1.2s infinite;
+    }
+    @keyframes pulseLed {
+        0% { opacity: 0.4; transform: scale(0.8); }
+        100% { opacity: 1; transform: scale(1.2); }
+    }
+    .card-title {
         font-size: 0.85rem;
         letter-spacing: 3px;
         text-transform: uppercase;
         color: #aaf;
         font-weight: 500;
-        text-align: center;
-        display: block;
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 2;
     }
-    div[data-testid="metric-container"] .stMetricValue {
-        font-size: 2.6rem;
+    .card-value {
+        font-size: 2.8rem;
         font-weight: 800;
         background: linear-gradient(135deg, #fff, cyan);
         -webkit-background-clip: text;
@@ -134,10 +213,20 @@ st.markdown("""
         text-shadow: 0 0 20px rgba(0,255,255,0.5);
         line-height: 1.2;
         font-family: 'Space Mono', monospace;
-        text-align: center;
+        margin-bottom: 4px;
+        position: relative;
+        z-index: 2;
     }
-    div[data-testid="metric-container"] .stMetricDelta {
-        display: none;
+    .card-footer {
+        font-size: 0.7rem;
+        color: rgba(0, 255, 255, 0.7);
+        font-family: monospace;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        position: relative;
+        z-index: 2;
     }
     /* BOTÕES NEON */
     .stButton>button, .stForm button {
@@ -1276,7 +1365,7 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS CORRIGIDOS - USANDO st.metric) ======================
+# ====================== DASHBOARD (CARDS ULTRA TECNOLÓGICOS) ======================
 st.markdown("---")
 try:
     # PRESENTES: pessoas com data_saida vazia
@@ -1299,15 +1388,72 @@ except Exception as e:
     total_cadastrados = 0
     setores_unicos = 11
 
+# Layout dos cards
 col1, col2, col3, col4 = st.columns(4)
+
 with col1:
-    st.metric("👥 PRESENTES", total_presentes)
+    st.markdown(f"""
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div class="card-icon">👥</div>
+            <div class="status-indicator"><span class="status-led"></span> ATIVO</div>
+        </div>
+        <div class="card-title">PRESENTES</div>
+        <div class="card-value">{total_presentes}</div>
+        <div class="card-footer">
+            <span>🟢 ONLINE</span>
+            <span>⏱️ TEMPO REAL</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 with col2:
-    st.metric("📊 CADASTRADOS", total_cadastrados)
+    st.markdown(f"""
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div class="card-icon">📊</div>
+            <div class="status-indicator"><span class="status-led"></span> BASE</div>
+        </div>
+        <div class="card-title">CADASTRADOS</div>
+        <div class="card-value">{total_cadastrados}</div>
+        <div class="card-footer">
+            <span>📋 CADASTROS</span>
+            <span>✅ VERIFICADOS</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 with col3:
-    st.metric("🏛️ SETORES ATIVOS", setores_unicos)
+    st.markdown(f"""
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div class="card-icon">🏛️</div>
+            <div class="status-indicator"><span class="status-led"></span> MAPA</div>
+        </div>
+        <div class="card-title">SETORES ATIVOS</div>
+        <div class="card-value">{setores_unicos}</div>
+        <div class="card-footer">
+            <span>📍 ÁREAS</span>
+            <span>🔍 MONITORADAS</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 with col4:
-    st.metric("🛡️ SEGURANÇA", "24/7")
+    st.markdown(f"""
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div class="card-icon">🛡️</div>
+            <div class="status-indicator"><span class="status-led"></span> 24/7</div>
+        </div>
+        <div class="card-title">SEGURANÇA</div>
+        <div class="card-value">ATIVA</div>
+        <div class="card-footer">
+            <span>🔒 PROTEÇÃO</span>
+            <span>⚡ INTELIGENTE</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ====================== CADASTRO ======================
 st.markdown("---")
