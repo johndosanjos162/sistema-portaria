@@ -261,7 +261,7 @@ st.markdown("""
         z-index: -9999;
         pointer-events: none;
     }
-    /* Estilos da tela de login - layout em duas colunas: campos à esquerda, logo à direita */
+    /* Estilos da tela de login - layout em duas colunas corrigido para inputs funcionarem */
     .login-container {
         position: fixed;
         top: 0;
@@ -293,16 +293,21 @@ st.markdown("""
         align-items: center;
         justify-content: space-between;
         gap: 20px;
+        z-index: 1001;
     }
-    /* Coluna da esquerda: campos de login */
+    /* Coluna da esquerda: campos de login - garantir que sejam interativos */
     .login-fields {
         flex: 1;
         text-align: left;
+        z-index: 1002;
+        position: relative;
     }
     /* Coluna da direita: logo */
     .login-logo {
         flex: 0.8;
         text-align: center;
+        z-index: 1002;
+        position: relative;
     }
     .hex-logo {
         width: 100px;
@@ -351,6 +356,8 @@ st.markdown("""
     .stForm {
         width: 100%;
         margin-top: 0;
+        z-index: 1003;
+        position: relative;
     }
     .stForm > div {
         display: flex;
@@ -362,7 +369,7 @@ st.markdown("""
     }
     .stTextInput > div > div > input {
         width: 100%;
-        background: rgba(0, 15, 30, 0.7) !important;
+        background: rgba(0, 15, 30, 0.9) !important;
         border: 1px solid cyan !important;
         border-radius: 40px !important;
         color: white !important;
@@ -370,11 +377,15 @@ st.markdown("""
         font-family: 'Space Mono', monospace;
         margin: 0;
         font-size: 0.9rem;
+        pointer-events: auto !important;
+        z-index: 1004;
+        position: relative;
     }
     .stForm button {
         width: 100%;
         margin-top: 8px;
         padding: 8px !important;
+        pointer-events: auto !important;
     }
     .fingerprint-area {
         display: flex;
@@ -954,7 +965,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN (NOVO LAYOUT: LOGO À DIREITA, CAMPOS À ESQUERDA) ======================
+# ====================== TELA DE LOGIN (CORRIGIDA - INPUTS FUNCIONAIS) ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
