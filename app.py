@@ -92,26 +92,39 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA ======================
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (GLOBAL) ======================
 def get_theme_config():
-    """Retorna a configuração de tema salva no session_state."""
+    """Carrega configuração do Supabase (global) e fallback para padrão."""
     padrao = {
         "type": "gradient",
         "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
         "apply_to_login": False
     }
-    if "theme_config" not in st.session_state:
-        st.session_state.theme_config = padrao.copy()
-    return st.session_state.theme_config
+    try:
+        result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
+        if result.data:
+            return json.loads(result.data[0]['value'])
+    except:
+        pass
+    return padrao
 
 def save_theme_config(config):
-    """Salva a configuração no session_state."""
-    st.session_state.theme_config = config
-    return True
+    """Salva configuração no Supabase (global) e atualiza session_state local."""
+    try:
+        supabase.table("app_config").upsert({
+            "key": "background_config",
+            "value": json.dumps(config),
+            "updated_at": datetime.now().isoformat()
+        }).execute()
+        st.session_state.theme_config = config
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar tema global: {e}")
+        return False
 
 def apply_theme_css():
-    """Aplica o CSS de fundo (sem JavaScript, apenas CSS)."""
-    config = get_theme_config()
+    """Aplica o CSS de fundo a partir da configuração global."""
+    config = st.session_state.get("theme_config", get_theme_config())
     bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
     css = f"""
     <style>
@@ -295,12 +308,12 @@ if "pessoa_confirmada" not in st.session_state:
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 
-# Inicializa tema
-get_theme_config()  # garante que existe
+# Carregar tema global do Supabase
+st.session_state.theme_config = get_theme_config()
 
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
-    theme = get_theme_config()
+    theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
         apply_theme_css()
     else:
@@ -387,7 +400,7 @@ with col4:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== ADMIN: MANAGE APP E TEMA ======================
+# ====================== ADMIN: MANAGE APP E TEMA GLOBAL ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
@@ -407,9 +420,9 @@ if st.session_state.perfil == "ADMIN":
         st.caption("Ações disponíveis apenas para o administrador.")
     
     st.sidebar.markdown("---")
-    with st.sidebar.expander("🎨 Configurar Tema", expanded=False):
-        st.markdown("### Personalizar Fundo")
-        config_atual = get_theme_config()
+    with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
+        st.markdown("### Personalizar Fundo - Aplica para todos os usuários")
+        config_atual = st.session_state.theme_config
         tipo_atual = config_atual.get("type", "gradient")
         opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)"]
         idx = 0 if tipo_atual == "gradient" else 1 if tipo_atual == "solid" else 2
@@ -426,7 +439,6 @@ if st.session_state.perfil == "ADMIN":
             novo_valor = cor
             novo_tipo = "solid"
         else:  # URL
-            # Limpa valor anterior se for URL
             url_padrao = ""
             if tipo_atual == "url" and config_atual.get("value", "").startswith("url('"):
                 url_padrao = config_atual.get("value", "").replace("url('", "").replace("') center/cover no-repeat fixed", "")
@@ -449,17 +461,20 @@ if st.session_state.perfil == "ADMIN":
         aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            if st.button("💾 Aplicar Tema", key="aplicar_tema"):
+            if st.button("💾 Salvar e Aplicar Tema (Global)", key="salvar_tema_global"):
                 nova_config = {"type": novo_tipo, "value": novo_valor, "apply_to_login": aplicar_login}
-                save_theme_config(nova_config)
-                apply_theme_css()
-                st.success("✅ Tema aplicado!")
+                if save_theme_config(nova_config):
+                    # Atualiza o CSS imediatamente
+                    apply_theme_css()
+                    st.success("✅ Tema global salvo e aplicado! Todos os usuários verão este tema.")
+                else:
+                    st.error("Erro ao salvar tema global.")
         with col_btn2:
-            if st.button("↺ Restaurar Padrão", key="reset_tema"):
+            if st.button("↺ Restaurar Padrão", key="reset_tema_global"):
                 padrao = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
-                save_theme_config(padrao)
-                apply_theme_css()
-                st.success("Tema restaurado para o padrão!")
+                if save_theme_config(padrao):
+                    apply_theme_css()
+                    st.success("Tema restaurado para o padrão global!")
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
