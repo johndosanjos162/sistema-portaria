@@ -30,7 +30,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== CSS FUTURISTA GLOBAL ======================
+# ====================== CSS FUTURISTA GLOBAL (MANTIDO) ======================
 st.markdown("""
 <style>
     /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
@@ -348,92 +348,6 @@ st.markdown("""
         z-index: -9999;
         pointer-events: none;
     }
-    .login-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        z-index: 1000;
-    }
-    .login-box {
-        background: rgba(8, 8, 20, 0.85);
-        backdrop-filter: blur(20px);
-        border-radius: 50px;
-        padding: 45px 35px;
-        border: 1px solid rgba(168, 85, 247, 0.6);
-        width: 90%;
-        max-width: 480px;
-        text-align: center;
-        animation: float 3s ease-in-out infinite;
-        box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
-        margin: 20px;
-    }
-    .guard-logo {
-        width: 110px;
-        height: 110px;
-        margin: 0 auto 20px;
-        background: radial-gradient(circle, rgba(168,85,247,0.3), rgba(59,130,246,0.1));
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        animation: pulse 2s infinite;
-    }
-    .guard-logo span {
-        font-size: 60px;
-        filter: drop-shadow(0 0 10px #a855f7);
-    }
-    .logo-title {
-        font-size: 32px;
-        font-weight: 800;
-        background: linear-gradient(135deg, #fff, #a855f7);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 1px;
-    }
-    .logo-subtitle {
-        font-size: 11px;
-        color: #a78bfa;
-        letter-spacing: 3px;
-        margin-bottom: 25px;
-    }
-    .binary-stream {
-        font-family: 'Space Mono', monospace;
-        font-size: 10px;
-        background: rgba(0,0,0,0.5);
-        padding: 6px;
-        border-radius: 20px;
-        display: inline-block;
-        color: #a855f7;
-        margin-bottom: 15px;
-    }
-    @media (max-width: 600px) {
-        .login-box {
-            padding: 30px 20px;
-            max-width: 90%;
-        }
-        .guard-logo {
-            width: 80px;
-            height: 80px;
-        }
-        .guard-logo span {
-            font-size: 45px;
-        }
-        .logo-title {
-            font-size: 24px;
-        }
-        .logo-subtitle {
-            font-size: 9px;
-        }
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -734,7 +648,6 @@ def futuristic_background_script():
 def apply_theme_css():
     config = st.session_state.get("theme_config", get_theme_config())
     bg_type = config.get("type", "gradient")
-    
     if bg_type == "gradient":
         bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
         css = f"""
@@ -980,7 +893,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN (CAMPOS ACIMA DA LOGO E ACESSÍVEIS) ======================
+# ====================== TELA DE LOGIN TOTALMENTE REFAITA ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -988,96 +901,44 @@ if not st.session_state.logado:
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
     
-    # CSS para garantir que o formulário fique acessível e a logo não atrapalhe
-    st.markdown("""
-    <style>
-    /* Força o formulário a ficar na frente e com alta interatividade */
-    .login-box form {
-        position: relative;
-        z-index: 10;
-    }
-    /* Elementos da logo ficam atrás e sem capturar cliques */
-    .login-box .guard-logo,
-    .login-box .logo-title,
-    .login-box .logo-subtitle,
-    .login-box #binary-container {
-        position: relative;
-        z-index: 1;
-        pointer-events: none;
-    }
-    /* Remove qualquer overlay escuro extra */
-    .login-container {
-        background: transparent !important;
-    }
-    .login-box {
-        background: rgba(8, 8, 20, 0.9) !important;
-        backdrop-filter: blur(20px);
-    }
-    /* Garante que os inputs fiquem visíveis e clicáveis */
-    .stTextInput > div > div > input {
-        background: rgba(0, 10, 20, 0.9) !important;
-        color: #0ff !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="login-container">
-        <div class="login-box">
-    """, unsafe_allow_html=True)
-    
-    # FORMULÁRIO DE LOGIN (PRIMEIRO - FICA ACIMA)
-    with st.form("login_form"):
-        st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
-        senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
-        submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
+    # Layout simples e centralizado com colunas
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)  # Espaço vertical
+        st.markdown("""
+            <div style="text-align: center;">
+                <div style="font-size: 48px;">🛡️</div>
+                <h1 style="background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">JOHN ACESSOS</h1>
+                <p style="color: #a78bfa; letter-spacing: 3px;">CYBER SECURITY 2026</p>
+            </div>
+        """, unsafe_allow_html=True)
         
-        if submitted:
-            if senha == "fgxv4VP0/*":
-                st.session_state.logado = True
-                st.session_state.perfil = "ADMIN"
-                st.session_state.tentativas_login = 0
-                registrar_sessao("ADMIN", "admin")
-                st.rerun()
-            elif senha == "JOHN123":
-                st.session_state.logado = True
-                st.session_state.perfil = "VIGILANTE"
-                st.session_state.tentativas_login = 0
-                registrar_sessao("VIGILANTE", "vigilante")
-                st.rerun()
-            else:
-                st.session_state.tentativas_login += 1
-                restantes = MAX_TENTATIVAS_LOGIN - st.session_state.tentativas_login
-                if st.session_state.tentativas_login >= MAX_TENTATIVAS_LOGIN:
-                    st.session_state.bloqueado_ate = datetime.now() + pd.Timedelta(minutes=5)
-                    st.error("⛔ Acesso bloqueado por 5 minutos.")
+        with st.form("login_form"):
+            st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
+            senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
+            submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
+            
+            if submitted:
+                if senha == "fgxv4VP0/*":
+                    st.session_state.logado = True
+                    st.session_state.perfil = "ADMIN"
+                    st.session_state.tentativas_login = 0
+                    registrar_sessao("ADMIN", "admin")
+                    st.rerun()
+                elif senha == "JOHN123":
+                    st.session_state.logado = True
+                    st.session_state.perfil = "VIGILANTE"
+                    st.session_state.tentativas_login = 0
+                    registrar_sessao("VIGILANTE", "vigilante")
+                    st.rerun()
                 else:
-                    st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
-    
-    # ELEMENTOS DA LOGO (DEPOIS, FICAM ATRÁS)
-    st.markdown("""
-            <div class="guard-logo"><span>🛡️</span></div>
-            <div class="logo-title">JOHN ACESSOS</div>
-            <div class="logo-subtitle">CYBER SECURITY 2026</div>
-            <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("</div></div>", unsafe_allow_html=True)
-    
-    # Script do binário (não interfere)
-    st.markdown("""
-    <script>
-        function generateBinary() {
-            let b = '';
-            for(let i = 0; i < 60; i++) b += Math.random() < 0.5 ? '0' : '1';
-            return b;
-        }
-        setInterval(() => {
-            let el = document.getElementById('binary-container');
-            if(el) el.innerHTML = `<div class="binary-stream">${generateBinary()}</div>`;
-        }, 400);
-    </script>
-    """, unsafe_allow_html=True)
+                    st.session_state.tentativas_login += 1
+                    restantes = MAX_TENTATIVAS_LOGIN - st.session_state.tentativas_login
+                    if st.session_state.tentativas_login >= MAX_TENTATIVAS_LOGIN:
+                        st.session_state.bloqueado_ate = datetime.now() + pd.Timedelta(minutes=5)
+                        st.error("⛔ Acesso bloqueado por 5 minutos.")
+                    else:
+                        st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
     
     st.stop()
 
@@ -1400,7 +1261,7 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS ULTRA TECNOLÓGICOS) ======================
+# ====================== DASHBOARD ======================
 st.markdown("---")
 try:
     presentes_data = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
