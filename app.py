@@ -33,12 +33,10 @@ st.set_page_config(
 # ====================== CSS: TORNAR A TOP BAR TRANSPARENTE ======================
 st.markdown("""
 <style>
-    /* Torna o fundo do header transparente */
     header[data-testid="stHeader"] {
         background: transparent !important;
         box-shadow: none !important;
     }
-    /* Ajusta a cor dos ícones para branco */
     header[data-testid="stHeader"] button {
         color: white !important;
     }
@@ -46,7 +44,6 @@ st.markdown("""
         margin-top: 0 !important;
         padding-top: 0 !important;
     }
-    /* Efeito para o avatar */
     .avatar-container {
         text-align: center;
         margin-bottom: 20px;
@@ -80,30 +77,29 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== FUNÇÕES DE STORAGE PARA AVATAR ======================
-def init_avatar_bucket():
-    try:
-        buckets = supabase.storage.list_buckets()
-        if not any(b['name'] == 'security_avatar' for b in buckets):
-            supabase.storage.create_bucket('security_avatar', {'public': True})
-        return True
-    except Exception as e:
-        st.error(f"Erro ao configurar storage para avatar: {e}")
-        return False
-
-def upload_avatar_to_storage(uploaded_file):
-    try:
-        init_avatar_bucket()
-        ext = uploaded_file.name.split('.')[-1]
-        file_name = f"avatar_{uuid.uuid4().hex}.{ext}"
-        supabase.storage.from_('security_avatar').upload(file_name, uploaded_file.getvalue())
-        return supabase.storage.from_('security_avatar').get_public_url(file_name)
-    except Exception as e:
-        st.error(f"Erro no upload do avatar: {e}")
-        return None
+# ====================== FUNÇÕES PARA AVATAR (USANDO BASE64) ======================
+def compress_avatar_image(uploaded_file, max_size_kb=200):
+    """Reduz a imagem do avatar para caber no banco (máx 200KB)."""
+    img = Image.open(uploaded_file)
+    if img.mode in ('RGBA', 'LA', 'P'):
+        img = img.convert('RGB')
+    # Redimensiona para no máximo 400x400
+    img.thumbnail((400, 400), Image.Resampling.LANCZOS)
+    buffer = io.BytesIO()
+    quality = 85
+    while True:
+        buffer.seek(0)
+        img.save(buffer, format='JPEG', quality=quality, optimize=True)
+        size_kb = buffer.tell() / 1024
+        if size_kb <= max_size_kb or quality <= 20:
+            break
+        quality -= 10
+    b64_str = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/jpeg;base64,{b64_str}"
 
 def get_avatar_url():
-    padrao_url = "https://placehold.co/400x400/0a0a2a/white?text=SEGURANÇA"
+    """Recupera avatar do banco (Base64) ou retorna imagem padrão."""
+    padrao_url = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a2a'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='10'%3ESEGURANÇA%3C/text%3E%3C/svg%3E"
     try:
         result = supabase.table("app_config").select("value").eq("key", "avatar_url").execute()
         if result.data and result.data[0]['value']:
@@ -122,7 +118,7 @@ def save_avatar_url(url):
         st.session_state.avatar_url = url
         return True
     except Exception as e:
-        st.error(f"Erro ao salvar URL do avatar: {e}")
+        st.error(f"Erro ao salvar avatar: {e}")
         return False
 
 # ====================== FUNÇÕES DE GERENCIAMENTO DE SESSÃO ======================
@@ -421,15 +417,6 @@ def sanitizar_texto(texto):
         return texto
     return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
 
-# ====================== CARREGAR IMAGENS ======================
-def carregar_imagem(nome):
-    try:
-        return Image.open(nome)
-    except:
-        return None
-
-IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png")
-
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -546,7 +533,7 @@ with col4:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== SIDEBAR COM AVATAR ======================
+# ====================== SIDEBAR ======================
 with st.sidebar:
     st.markdown(f"""
     <div class="avatar-container">
@@ -796,22 +783,22 @@ if st.session_state.perfil == "ADMIN":
         st.markdown("Envie uma imagem realista de segurança patrimonial (recomendado 4K).")
         uploaded_avatar = st.file_uploader("Escolha uma imagem (PNG/JPG)", type=["png","jpg","jpeg"], key="upload_avatar")
         if uploaded_avatar:
-            with st.spinner("Enviando imagem..."):
-                url = upload_avatar_to_storage(uploaded_avatar)
-                if url:
-                    if save_avatar_url(url):
-                        st.session_state.avatar_url = url
+            with st.spinner("Processando imagem..."):
+                try:
+                    avatar_base64 = compress_avatar_image(uploaded_avatar)
+                    if save_avatar_url(avatar_base64):
+                        st.session_state.avatar_url = avatar_base64
                         st.success("✅ Avatar atualizado com sucesso!")
                         st.rerun()
                     else:
-                        st.error("Erro ao salvar URL.")
-                else:
-                    st.error("Falha no upload.")
+                        st.error("Erro ao salvar avatar.")
+                except Exception as e:
+                    st.error(f"Erro ao processar imagem: {e}")
         st.markdown("---")
         st.markdown("**Imagem atual:**")
         st.image(st.session_state.avatar_url, width=120, caption="Avatar atual")
         if st.button("↺ Restaurar Avatar Padrão", key="reset_avatar"):
-            padrao_url = "https://placehold.co/400x400/0a0a2a/white?text=SEGURANÇA"
+            padrao_url = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a2a'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='10'%3ESEGURANÇA%3C/text%3E%3C/svg%3E"
             if save_avatar_url(padrao_url):
                 st.session_state.avatar_url = padrao_url
                 st.success("Avatar restaurado para o padrão!")
