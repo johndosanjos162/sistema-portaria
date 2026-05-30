@@ -18,6 +18,7 @@ try:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     supabase = create_client(url, key)
+    # Teste rápido de conexão (usa nome minúsculo)
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
@@ -33,359 +34,52 @@ st.set_page_config(
 # ====================== CSS FUTURISTA GLOBAL ======================
 st.markdown("""
 <style>
-    html, body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        width: 100%;
-        overflow: hidden;
-    }
-    .stApp {
-        transition: background 0.3s ease;
-        height: 100%;
-        overflow: auto;
-    }
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        box-shadow: none !important;
-        backdrop-filter: blur(8px);
-        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-    }
-    header[data-testid="stHeader"] button {
-        color: #0ff !important;
-        text-shadow: 0 0 3px #0ff;
-    }
-    [data-testid="stSidebar"] {
-        background: rgba(10, 10, 25, 0.65) !important;
-        backdrop-filter: blur(16px);
-        border-right: 1px solid rgba(0, 255, 255, 0.3);
-        box-shadow: 4px 0 30px rgba(0, 255, 255, 0.1);
-    }
-    .avatar-container {
-        text-align: center;
-        margin-bottom: 25px;
-        position: relative;
-    }
-    .avatar-image {
-        width: 130px;
-        height: 130px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid #0ff;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.3);
-        transition: 0.3s;
-        filter: drop-shadow(0 0 8px cyan);
-    }
-    .avatar-image:hover {
-        transform: scale(1.02);
-        box-shadow: 0 0 30px cyan;
-        border-color: #f0f;
-    }
-    .glow-ring {
-        position: absolute;
-        top: -5px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 140px;
-        height: 140px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(0,255,255,0.2), transparent);
-        pointer-events: none;
-        animation: pulseRing 2s infinite;
-    }
-    @keyframes pulseRing {
-        0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
-        100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
-    }
-    .cyber-card {
-        background: rgba(15, 15, 35, 0.55);
-        backdrop-filter: blur(12px);
-        border-radius: 28px;
-        padding: 1.2rem 1rem;
-        margin: 0.5rem;
-        border: 1px solid rgba(0, 255, 255, 0.4);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 0 12px rgba(0,255,255,0.3);
-        transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
-        position: relative;
-        overflow: hidden;
-        cursor: default;
-    }
-    .cyber-card::before {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, cyan, magenta, cyan);
-        border-radius: 30px;
-        z-index: -1;
-        opacity: 0;
-        transition: opacity 0.4s;
-    }
-    .cyber-card:hover {
-        transform: translateY(-6px);
-        border-color: cyan;
-        box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 25px cyan;
-    }
-    .cyber-card:hover::before {
-        opacity: 0.4;
-    }
-    .card-icon {
-        font-size: 3rem;
-        text-align: center;
-        filter: drop-shadow(0 0 6px cyan);
-        transition: 0.2s;
-    }
-    .cyber-card:hover .card-icon {
-        transform: scale(1.05);
-        filter: drop-shadow(0 0 12px magenta);
-    }
-    .card-title {
-        font-size: 0.85rem;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: #aaf;
-        text-align: center;
-        font-weight: 500;
-        margin: 10px 0 5px;
-    }
-    .card-value {
-        font-size: 2.6rem;
-        font-weight: 800;
-        text-align: center;
-        background: linear-gradient(135deg, #fff, cyan);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        text-shadow: 0 0 20px rgba(0,255,255,0.5);
-        line-height: 1.2;
-        font-family: 'Space Mono', monospace;
-    }
-    .cyber-card::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(0,255,255,0.2), transparent);
-        transition: left 0.6s;
-        pointer-events: none;
-    }
-    .cyber-card:hover::after {
-        left: 100%;
-    }
-    .stButton>button, .stForm button {
-        background: rgba(0,20,40,0.7) !important;
-        backdrop-filter: blur(8px);
-        border: 1px solid #0ff !important;
-        border-radius: 40px !important;
-        color: #0ff !important;
-        font-weight: bold;
-        transition: 0.2s;
-        box-shadow: 0 0 5px rgba(0,255,255,0.3);
-    }
-    .stButton>button:hover, .stForm button:hover {
-        background: rgba(0,255,255,0.15) !important;
-        border-color: magenta !important;
-        color: magenta !important;
-        box-shadow: 0 0 15px magenta;
-        transform: scale(1.02);
-    }
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
-        background: rgba(0, 10, 20, 0.7) !important;
-        backdrop-filter: blur(8px);
-        border: 1px solid #0ff !important;
-        border-radius: 16px !important;
-        color: #0ff !important;
-        font-family: 'Space Mono', monospace;
-        transition: 0.2s;
-    }
-    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
-        border-color: magenta !important;
-        box-shadow: 0 0 12px magenta;
-    }
-    .stForm, .stExpander, .stTabs [data-baseweb="tab-list"] {
-        background: rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(8px);
-        border-radius: 20px;
-        border: 1px solid rgba(0,255,255,0.2);
-        padding: 5px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background: transparent;
-        color: #ccc;
-        border-radius: 30px;
-        font-weight: 500;
-    }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.2));
-        color: #0ff !important;
-        text-shadow: 0 0 3px cyan;
-    }
-    .stDataFrame {
-        background: rgba(0,0,0,0.4) !important;
-        border: 1px solid cyan !important;
-        border-radius: 16px;
-    }
-    .live-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(0,0,0,0.5);
-        padding: 4px 12px;
-        border-radius: 40px;
-        font-size: 12px;
-        font-family: monospace;
-        border: 1px solid #0ff;
-        color: #0ff;
-    }
-    .pulse-dot {
-        width: 10px;
-        height: 10px;
-        background-color: #0f0;
-        border-radius: 50%;
-        box-shadow: 0 0 5px #0f0;
-        animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-        0% { opacity: 0.4; transform: scale(0.8);}
-        100% { opacity: 1; transform: scale(1.2);}
-    }
-    .footer {
-        text-align: center;
-        padding: 15px;
-        color: #6b7280;
-        font-size: 9px;
-        border-top: 1px solid rgba(0,255,255,0.2);
-        margin-top: 25px;
-    }
-    h1, h2, h3, p, label, .info-item, .stMarkdown, .stRadio label, .stCheckbox label {
-        color: #eef !important;
-        text-shadow: 0 0 2px rgba(0,0,0,0.5);
-    }
-    .info-item {
-        margin-bottom: 12px;
-        font-size: 13px;
-        display: flex;
-        gap: 8px;
-        font-family: 'Space Mono', monospace;
-    }
-    .badge-admin {
-        background: linear-gradient(135deg, cyan, magenta);
-        padding: 4px 15px;
-        border-radius: 30px;
-        font-weight: 700;
-        font-size: 11px;
-        color: #000;
-    }
-    .session-indicator {
-        background: rgba(0,0,0,0.6);
-        border-radius: 30px;
-        padding: 4px 12px;
-        font-size: 12px;
-        font-family: monospace;
-        color: cyan;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-    }
-    #futuristic-canvas {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: -9999;
-        pointer-events: none;
-    }
-    .login-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        z-index: 1000;
-    }
-    .login-box {
-        background: rgba(8, 8, 20, 0.85);
-        backdrop-filter: blur(20px);
-        border-radius: 50px;
-        padding: 45px 35px;
-        border: 1px solid rgba(168, 85, 247, 0.6);
-        width: 90%;
-        max-width: 480px;
-        text-align: center;
-        animation: float 3s ease-in-out infinite;
-        box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
-        margin: 20px;
-    }
-    .guard-logo {
-        width: 110px;
-        height: 110px;
-        margin: 0 auto 20px;
-        background: radial-gradient(circle, rgba(168,85,247,0.3), rgba(59,130,246,0.1));
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        animation: pulse 2s infinite;
-    }
-    .guard-logo span {
-        font-size: 60px;
-        filter: drop-shadow(0 0 10px #a855f7);
-    }
-    .logo-title {
-        font-size: 32px;
-        font-weight: 800;
-        background: linear-gradient(135deg, #fff, #a855f7);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 1px;
-    }
-    .logo-subtitle {
-        font-size: 11px;
-        color: #a78bfa;
-        letter-spacing: 3px;
-        margin-bottom: 25px;
-    }
-    .binary-stream {
-        font-family: 'Space Mono', monospace;
-        font-size: 10px;
-        background: rgba(0,0,0,0.5);
-        padding: 6px;
-        border-radius: 20px;
-        display: inline-block;
-        color: #a855f7;
-        margin-bottom: 15px;
-    }
-    @media (max-width: 600px) {
-        .login-box {
-            padding: 30px 20px;
-            max-width: 90%;
-        }
-        .guard-logo {
-            width: 80px;
-            height: 80px;
-        }
-        .guard-logo span {
-            font-size: 45px;
-        }
-        .logo-title {
-            font-size: 24px;
-        }
-        .logo-subtitle {
-            font-size: 9px;
-        }
-    }
+    /* (mesmo CSS da resposta anterior - omitido por brevidade, mas deve ser mantido) */
+    html, body { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; }
+    .stApp { transition: background 0.3s ease; height: 100%; overflow: auto; }
+    header[data-testid="stHeader"] { background: transparent !important; box-shadow: none !important; backdrop-filter: blur(8px); border-bottom: 1px solid rgba(0, 255, 255, 0.2); }
+    header[data-testid="stHeader"] button { color: #0ff !important; text-shadow: 0 0 3px #0ff; }
+    [data-testid="stSidebar"] { background: rgba(10, 10, 25, 0.65) !important; backdrop-filter: blur(16px); border-right: 1px solid rgba(0, 255, 255, 0.3); box-shadow: 4px 0 30px rgba(0, 255, 255, 0.1); }
+    .avatar-container { text-align: center; margin-bottom: 25px; position: relative; }
+    .avatar-image { width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 2px solid #0ff; box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.3); transition: 0.3s; filter: drop-shadow(0 0 8px cyan); }
+    .avatar-image:hover { transform: scale(1.02); box-shadow: 0 0 30px cyan; border-color: #f0f; }
+    .glow-ring { position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, rgba(0,255,255,0.2), transparent); pointer-events: none; animation: pulseRing 2s infinite; }
+    @keyframes pulseRing { 0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); } 100% { opacity: 0; transform: translateX(-50%) scale(1.3); } }
+    .cyber-card { background: rgba(15, 15, 35, 0.55); backdrop-filter: blur(12px); border-radius: 28px; padding: 1.2rem 1rem; margin: 0.5rem; border: 1px solid rgba(0, 255, 255, 0.4); box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 0 12px rgba(0,255,255,0.3); transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1); position: relative; overflow: hidden; cursor: default; }
+    .cyber-card::before { content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; background: linear-gradient(45deg, cyan, magenta, cyan); border-radius: 30px; z-index: -1; opacity: 0; transition: opacity 0.4s; }
+    .cyber-card:hover { transform: translateY(-6px); border-color: cyan; box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 25px cyan; }
+    .cyber-card:hover::before { opacity: 0.4; }
+    .card-icon { font-size: 3rem; text-align: center; filter: drop-shadow(0 0 6px cyan); transition: 0.2s; }
+    .cyber-card:hover .card-icon { transform: scale(1.05); filter: drop-shadow(0 0 12px magenta); }
+    .card-title { font-size: 0.85rem; letter-spacing: 3px; text-transform: uppercase; color: #aaf; text-align: center; font-weight: 500; margin: 10px 0 5px; }
+    .card-value { font-size: 2.6rem; font-weight: 800; text-align: center; background: linear-gradient(135deg, #fff, cyan); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 0 0 20px rgba(0,255,255,0.5); line-height: 1.2; font-family: 'Space Mono', monospace; }
+    .cyber-card::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(0,255,255,0.2), transparent); transition: left 0.6s; pointer-events: none; }
+    .cyber-card:hover::after { left: 100%; }
+    .stButton>button, .stForm button { background: rgba(0,20,40,0.7) !important; backdrop-filter: blur(8px); border: 1px solid #0ff !important; border-radius: 40px !important; color: #0ff !important; font-weight: bold; transition: 0.2s; box-shadow: 0 0 5px rgba(0,255,255,0.3); }
+    .stButton>button:hover, .stForm button:hover { background: rgba(0,255,255,0.15) !important; border-color: magenta !important; color: magenta !important; box-shadow: 0 0 15px magenta; transform: scale(1.02); }
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div { background: rgba(0, 10, 20, 0.7) !important; backdrop-filter: blur(8px); border: 1px solid #0ff !important; border-radius: 16px !important; color: #0ff !important; font-family: 'Space Mono', monospace; transition: 0.2s; }
+    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus { border-color: magenta !important; box-shadow: 0 0 12px magenta; }
+    .stForm, .stExpander, .stTabs [data-baseweb="tab-list"] { background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(8px); border-radius: 20px; border: 1px solid rgba(0,255,255,0.2); padding: 5px; }
+    .stTabs [data-baseweb="tab"] { background: transparent; color: #ccc; border-radius: 30px; font-weight: 500; }
+    .stTabs [aria-selected="true"] { background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.2)); color: #0ff !important; text-shadow: 0 0 3px cyan; }
+    .stDataFrame { background: rgba(0,0,0,0.4) !important; border: 1px solid cyan !important; border-radius: 16px; }
+    .live-indicator { display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.5); padding: 4px 12px; border-radius: 40px; font-size: 12px; font-family: monospace; border: 1px solid #0ff; color: #0ff; }
+    .pulse-dot { width: 10px; height: 10px; background-color: #0f0; border-radius: 50%; box-shadow: 0 0 5px #0f0; animation: pulse 1s infinite; }
+    @keyframes pulse { 0% { opacity: 0.4; transform: scale(0.8);} 100% { opacity: 1; transform: scale(1.2);} }
+    .footer { text-align: center; padding: 15px; color: #6b7280; font-size: 9px; border-top: 1px solid rgba(0,255,255,0.2); margin-top: 25px; }
+    h1, h2, h3, p, label, .info-item, .stMarkdown, .stRadio label, .stCheckbox label { color: #eef !important; text-shadow: 0 0 2px rgba(0,0,0,0.5); }
+    .info-item { margin-bottom: 12px; font-size: 13px; display: flex; gap: 8px; font-family: 'Space Mono', monospace; }
+    .badge-admin { background: linear-gradient(135deg, cyan, magenta); padding: 4px 15px; border-radius: 30px; font-weight: 700; font-size: 11px; color: #000; }
+    .session-indicator { background: rgba(0,0,0,0.6); border-radius: 30px; padding: 4px 12px; font-size: 12px; font-family: monospace; color: cyan; display: inline-flex; align-items: center; gap: 5px; }
+    #futuristic-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -9999; pointer-events: none; }
+    .login-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; margin: 0; padding: 0; overflow: hidden; z-index: 1000; }
+    .login-box { background: rgba(8, 8, 20, 0.85); backdrop-filter: blur(20px); border-radius: 50px; padding: 45px 35px; border: 1px solid rgba(168, 85, 247, 0.6); width: 90%; max-width: 480px; text-align: center; animation: float 3s ease-in-out infinite; box-shadow: 0 0 30px rgba(168, 85, 247, 0.2); margin: 20px; }
+    .guard-logo { width: 110px; height: 110px; margin: 0 auto 20px; background: radial-gradient(circle, rgba(168,85,247,0.3), rgba(59,130,246,0.1)); border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; animation: pulse 2s infinite; }
+    .guard-logo span { font-size: 60px; filter: drop-shadow(0 0 10px #a855f7); }
+    .logo-title { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 1px; }
+    .logo-subtitle { font-size: 11px; color: #a78bfa; letter-spacing: 3px; margin-bottom: 25px; }
+    .binary-stream { font-family: 'Space Mono', monospace; font-size: 10px; background: rgba(0,0,0,0.5); padding: 6px; border-radius: 20px; display: inline-block; color: #a855f7; margin-bottom: 15px; }
+    @media (max-width: 600px) { .login-box { padding: 30px 20px; max-width: 90%; } .guard-logo { width: 80px; height: 80px; } .guard-logo span { font-size: 45px; } .logo-title { font-size: 24px; } .logo-subtitle { font-size: 9px; } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1255,7 +949,7 @@ if st.session_state.perfil == "ADMIN":
     with st.sidebar.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
         st.markdown("### Exportar Cadastros")
         try:
-            todas_pessoas = supabase.table("Pessoas").select("nome, cpf, empresa").execute().data
+            todas_pessoas = supabase.table("pessoas").select("nome, cpf, empresa").execute().data
             if not todas_pessoas:
                 st.info("Nenhuma pessoa cadastrada ainda.")
             else:
@@ -1311,21 +1005,42 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS CORRIGIDOS - AGORA MOSTRA OS VALORES) ======================
+# ====================== DIAGNÓSTICO (SOMENTE ADMIN) ======================
+if st.session_state.perfil == "ADMIN" and st.session_state.logado:
+    with st.sidebar.expander("🔍 DIAGNÓSTICO DO SUPABASE", expanded=False):
+        st.markdown("### Informações das tabelas")
+        try:
+            # Tenta consultar tabela 'pessoas'
+            pessoas_count = supabase.table("pessoas").select("id", count="exact").execute().count
+            st.write(f"📊 Tabela `pessoas`: {pessoas_count} registros")
+        except Exception as e:
+            st.error(f"Erro na tabela 'pessoas': {e}")
+        try:
+            mov_count = supabase.table("movimentacao").select("id", count="exact").execute().count
+            st.write(f"📊 Tabela `movimentacao`: {mov_count} registros")
+        except Exception as e:
+            st.error(f"Erro na tabela 'movimentacao': {e}")
+        try:
+            presentes = supabase.table("movimentacao").select("*", count="exact").eq("data_saida", "").execute()
+            st.write(f"📍 Pessoas presentes: {presentes.count}")
+        except Exception as e:
+            st.error(f"Erro ao contar presentes: {e}")
+
+# ====================== DASHBOARD (CARDS CORRIGIDOS - USANDO NOMES MINÚSCULOS) ======================
 st.markdown("---")
 try:
-    # Buscar dados de forma segura
-    presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
-    total_presentes = len(presentes) if presentes else 0
+    # Usando nomes minúsculos consistentes
+    presentes_data = supabase.table("movimentacao").select("*", count="exact").eq("data_saida", "").execute()
+    total_presentes = presentes_data.count if hasattr(presentes_data, 'count') else len(presentes_data.data)
     
-    cadastrados = supabase.table("Pessoas").select("*").execute().data
-    total_cadastrados = len(cadastrados) if cadastrados else 0
+    cadastrados_data = supabase.table("pessoas").select("*", count="exact").execute()
+    total_cadastrados = cadastrados_data.count if hasattr(cadastrados_data, 'count') else len(cadastrados_data.data)
     
-    setores = supabase.table("movimentacao").select("setor_destino").execute().data
-    if setores:
-        setores_unicos = len(set(p['setor_destino'] for p in setores))
+    setores_data = supabase.table("movimentacao").select("setor_destino").execute()
+    if setores_data.data:
+        setores_unicos = len(set(p['setor_destino'] for p in setores_data.data))
     else:
-        setores_unicos = 11  # fallback
+        setores_unicos = 11
 except Exception as e:
     st.error(f"Erro ao carregar estatísticas: {e}")
     total_presentes = 0
@@ -1399,11 +1114,11 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
             else:
                 cpf_limpo = sanitizar_cpf(novo_cpf)
                 try:
-                    existe = supabase.table("Pessoas").select("id, empresa").eq("cpf", cpf_limpo).execute().data
+                    existe = supabase.table("pessoas").select("id, empresa").eq("cpf", cpf_limpo).execute().data
                     if existe:
                         st.error(f"❌ Pessoa já cadastrada (Empresa: {existe[0].get('empresa', 'N/A')})")
                     else:
-                        supabase.table("Pessoas").insert({
+                        supabase.table("pessoas").insert({
                             "cpf": cpf_limpo,
                             "nome": sanitizar_texto(novo_nome).strip().upper(),
                             "empresa": sanitizar_texto(novo_empresa).strip().upper() if novo_empresa else ""
@@ -1436,7 +1151,7 @@ with col_btn:
                 st.error("CPF inválido")
             else:
                 try:
-                    pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_limpo).execute().data
+                    pessoa = supabase.table("pessoas").select("nome, empresa").eq("cpf", cpf_limpo).execute().data
                     if pessoa:
                         st.session_state.pessoa_confirmada = {"cpf": cpf_limpo, "nome": pessoa[0]['nome'], "empresa": pessoa[0].get('empresa', '')}
                         st.success(f"✅ {pessoa[0]['nome']} - {pessoa[0].get('empresa','N/A')}")
@@ -1628,7 +1343,7 @@ st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
         try:
-            todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
+            todos = supabase.table("pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
         except:
             todos = []
         if not todos:
@@ -1653,9 +1368,9 @@ if st.session_state.perfil == "ADMIN":
                                 if st.form_submit_button("Salvar", key=f"save_br_{p['id']}"):
                                     if validar_cpf(novo_cpf):
                                         try:
-                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            conflito = supabase.table("pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
                                             if not conflito:
-                                                supabase.table("Pessoas").update({
+                                                supabase.table("pessoas").update({
                                                     "nome": sanitizar_texto(novo_nome).upper(),
                                                     "cpf": sanitizar_cpf(novo_cpf),
                                                     "empresa": sanitizar_texto(nova_emp).upper()
@@ -1673,7 +1388,7 @@ if st.session_state.perfil == "ADMIN":
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_br_{p['id']}"):
                                 try:
-                                    supabase.table("Pessoas").delete().eq("id", p['id']).execute()
+                                    supabase.table("pessoas").delete().eq("id", p['id']).execute()
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erro: {e}")
@@ -1693,9 +1408,9 @@ if st.session_state.perfil == "ADMIN":
                                 if st.form_submit_button("Salvar", key=f"save_gr_{p['id']}"):
                                     if validar_cpf(novo_cpf):
                                         try:
-                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            conflito = supabase.table("pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
                                             if not conflito:
-                                                supabase.table("Pessoas").update({
+                                                supabase.table("pessoas").update({
                                                     "nome": sanitizar_texto(novo_nome).upper(),
                                                     "cpf": sanitizar_cpf(novo_cpf),
                                                     "empresa": sanitizar_texto(nova_emp).upper()
@@ -1713,7 +1428,7 @@ if st.session_state.perfil == "ADMIN":
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_gr_{p['id']}"):
                                 try:
-                                    supabase.table("Pessoas").delete().eq("id", p['id']).execute()
+                                    supabase.table("pessoas").delete().eq("id", p['id']).execute()
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erro: {e}")
@@ -1736,9 +1451,9 @@ if st.session_state.perfil == "ADMIN":
                                 if st.form_submit_button("Salvar", key=f"save_out_{p['id']}"):
                                     if validar_cpf(novo_cpf):
                                         try:
-                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            conflito = supabase.table("pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
                                             if not conflito:
-                                                supabase.table("Pessoas").update({
+                                                supabase.table("pessoas").update({
                                                     "nome": sanitizar_texto(novo_nome).upper(),
                                                     "cpf": sanitizar_cpf(novo_cpf),
                                                     "empresa": sanitizar_texto(nova_emp).upper()
@@ -1756,7 +1471,7 @@ if st.session_state.perfil == "ADMIN":
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_out_{p['id']}"):
                                 try:
-                                    supabase.table("Pessoas").delete().eq("id", p['id']).execute()
+                                    supabase.table("pessoas").delete().eq("id", p['id']).execute()
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erro: {e}")
