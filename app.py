@@ -30,9 +30,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== CSS: TORNAR A TOP BAR TRANSPARENTE ======================
+# ====================== CSS E JS PERSONALIZADOS ======================
 st.markdown("""
 <style>
+    /* --- TOP BAR TRANSPARENTE --- */
     header[data-testid="stHeader"] {
         background: transparent !important;
         box-shadow: none !important;
@@ -44,6 +45,8 @@ st.markdown("""
         margin-top: 0 !important;
         padding-top: 0 !important;
     }
+    
+    /* --- AVATAR STYLES --- */
     .avatar-container {
         text-align: center;
         margin-bottom: 20px;
@@ -74,52 +77,119 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
         margin-top: 10px;
     }
+    
+    /* --- CARDS FUTURISTAS (GLASSMORPHISM) --- */
+    .glass-card {
+        background: rgba(20, 20, 40, 0.55);
+        backdrop-filter: blur(12px);
+        border-radius: 24px;
+        padding: 1.5rem 1rem;
+        margin: 0.5rem;
+        border: 1px solid rgba(0, 170, 255, 0.4);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 15px rgba(0, 170, 255, 0.3);
+        transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        position: relative;
+        overflow: hidden;
+        cursor: default;
+    }
+    .glass-card::before {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, #00aaff, #a855f7, #00aaff);
+        border-radius: 26px;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.4s;
+    }
+    .glass-card:hover {
+        transform: translateY(-6px);
+        border-color: rgba(0, 170, 255, 0.8);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 25px #00aaff;
+    }
+    .glass-card:hover::before {
+        opacity: 0.5;
+    }
+    .card-icon {
+        font-size: 2.8rem;
+        text-align: center;
+        margin-bottom: 0.5rem;
+        filter: drop-shadow(0 0 5px #00aaff);
+        transition: 0.2s;
+    }
+    .glass-card:hover .card-icon {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 12px #00aaff);
+    }
+    .card-title {
+        font-size: 0.85rem;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #a0c0ff;
+        text-align: center;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    .card-value {
+        font-size: 2.8rem;
+        font-weight: 800;
+        text-align: center;
+        background: linear-gradient(135deg, #fff, #a855f7);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        text-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+        line-height: 1.2;
+        font-family: 'Space Mono', monospace;
+    }
+    /* Efeito holográfico sutil */
+    .glass-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0, 170, 255, 0.2), transparent);
+        transition: left 0.6s;
+        pointer-events: none;
+    }
+    .glass-card:hover::after {
+        left: 100%;
+    }
+    
+    /* Ajustes para os cards dentro da grid do Streamlit */
+    div[data-testid="column"] {
+        padding: 0 6px;
+    }
 </style>
+
+<script>
+    // Animação dos contadores: quando o documento carregar, encontrar elementos .card-value e animar do zero até o valor final
+    document.addEventListener("DOMContentLoaded", function() {
+        const counters = document.querySelectorAll(".card-value");
+        counters.forEach(counter => {
+            const updateCount = () => {
+                const target = parseInt(counter.getAttribute("data-target"));
+                const current = parseInt(counter.innerText.replace(/[^0-9]/g, '')) || 0;
+                const increment = Math.ceil(target / 30);
+                if (current < target) {
+                    let next = current + increment;
+                    if (next > target) next = target;
+                    counter.innerText = next;
+                    setTimeout(updateCount, 30);
+                } else {
+                    counter.innerText = target;
+                }
+            };
+            updateCount();
+        });
+    });
+</script>
 """, unsafe_allow_html=True)
-
-# ====================== FUNÇÕES PARA AVATAR (USANDO BASE64) ======================
-def compress_avatar_image(uploaded_file, max_size_kb=200):
-    """Reduz a imagem do avatar para caber no banco (máx 200KB)."""
-    img = Image.open(uploaded_file)
-    if img.mode in ('RGBA', 'LA', 'P'):
-        img = img.convert('RGB')
-    # Redimensiona para no máximo 400x400
-    img.thumbnail((400, 400), Image.Resampling.LANCZOS)
-    buffer = io.BytesIO()
-    quality = 85
-    while True:
-        buffer.seek(0)
-        img.save(buffer, format='JPEG', quality=quality, optimize=True)
-        size_kb = buffer.tell() / 1024
-        if size_kb <= max_size_kb or quality <= 20:
-            break
-        quality -= 10
-    b64_str = base64.b64encode(buffer.getvalue()).decode()
-    return f"data:image/jpeg;base64,{b64_str}"
-
-def get_avatar_url():
-    """Recupera avatar do banco (Base64) ou retorna imagem padrão."""
-    padrao_url = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a2a'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='10'%3ESEGURANÇA%3C/text%3E%3C/svg%3E"
-    try:
-        result = supabase.table("app_config").select("value").eq("key", "avatar_url").execute()
-        if result.data and result.data[0]['value']:
-            return result.data[0]['value']
-    except:
-        pass
-    return padrao_url
-
-def save_avatar_url(url):
-    try:
-        supabase.table("app_config").upsert({
-            "key": "avatar_url",
-            "value": url,
-            "updated_at": datetime.now().isoformat()
-        }).execute()
-        st.session_state.avatar_url = url
-        return True
-    except Exception as e:
-        st.error(f"Erro ao salvar avatar: {e}")
-        return False
 
 # ====================== FUNÇÕES DE GERENCIAMENTO DE SESSÃO ======================
 def registrar_sessao(perfil, usuario="admin"):
@@ -183,6 +253,47 @@ def encerrar_outras_sessoes():
         except:
             return False
     return False
+
+# ====================== FUNÇÕES DE AVATAR (BASE64) ======================
+def compress_avatar_image(uploaded_file, max_size_kb=200):
+    img = Image.open(uploaded_file)
+    if img.mode in ('RGBA', 'LA', 'P'):
+        img = img.convert('RGB')
+    img.thumbnail((400, 400), Image.Resampling.LANCZOS)
+    buffer = io.BytesIO()
+    quality = 85
+    while True:
+        buffer.seek(0)
+        img.save(buffer, format='JPEG', quality=quality, optimize=True)
+        size_kb = buffer.tell() / 1024
+        if size_kb <= max_size_kb or quality <= 20:
+            break
+        quality -= 10
+    b64_str = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/jpeg;base64,{b64_str}"
+
+def get_avatar_url():
+    padrao_url = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a2a'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='10'%3ESEGURANÇA%3C/text%3E%3C/svg%3E"
+    try:
+        result = supabase.table("app_config").select("value").eq("key", "avatar_url").execute()
+        if result.data and result.data[0]['value']:
+            return result.data[0]['value']
+    except:
+        pass
+    return padrao_url
+
+def save_avatar_url(url):
+    try:
+        supabase.table("app_config").upsert({
+            "key": "avatar_url",
+            "value": url,
+            "updated_at": datetime.now().isoformat()
+        }).execute()
+        st.session_state.avatar_url = url
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar avatar: {e}")
+        return False
 
 # ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA ======================
 def compress_image_to_base64(uploaded_file, max_size_kb=500):
@@ -416,6 +527,15 @@ def sanitizar_texto(texto):
     if not texto:
         return texto
     return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
+
+# ====================== CARREGAR IMAGENS ======================
+def carregar_imagem(nome):
+    try:
+        return Image.open(nome)
+    except:
+        return None
+
+IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png")
 
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
@@ -804,7 +924,7 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD ======================
+# ====================== DASHBOARD (CARDS FUTURISTAS) ======================
 st.markdown("---")
 try:
     pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
@@ -814,15 +934,31 @@ except:
     total_presentes = 0
     total_colaboradores = 0
 
+# Ícones e títulos dos cards
+cards_data = [
+    {"icon": "👥", "title": "PRESENTES", "value": total_presentes, "id": "card1"},
+    {"icon": "📊", "title": "CADASTRADOS", "value": total_colaboradores, "id": "card2"},
+    {"icon": "🏛️", "title": "SETORES", "value": 11, "id": "card3"},
+    {"icon": "📹", "title": "CFTV", "value": "24/7", "id": "card4"}
+]
+
 col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown(f'<div class="admin-card"><div style="display:flex;justify-content:space-between;"><div><div class="card-title">📍 PRESENTES</div><div class="card-value">{total_presentes}</div></div><div style="font-size:22px;">👥</div></div></div>', unsafe_allow_html=True)
-with col2:
-    st.markdown(f'<div class="admin-card"><div><div class="card-title">📋 CADASTRADOS</div><div class="card-value">{total_colaboradores}</div></div><div style="font-size:22px;">📊</div></div>', unsafe_allow_html=True)
-with col3:
-    st.markdown('<div class="admin-card"><div><div class="card-title">🏥 SETORES</div><div class="card-value">11</div></div><div style="font-size:22px;">🏛️</div></div>', unsafe_allow_html=True)
-with col4:
-    st.markdown('<div class="admin-card"><div><div class="card-title">🎥 CFTV</div><div class="card-value">24/7</div></div><div style="font-size:22px;">📹</div></div>', unsafe_allow_html=True)
+cols = [col1, col2, col3, col4]
+
+for idx, card in enumerate(cards_data):
+    with cols[idx]:
+        # Se o valor for numérico, define data-target para animação; caso contrário, texto normal.
+        if isinstance(card["value"], int):
+            value_display = f'<div class="card-value" data-target="{card["value"]}">0</div>'
+        else:
+            value_display = f'<div class="card-value">{card["value"]}</div>'
+        st.markdown(f"""
+        <div class="glass-card">
+            <div class="card-icon">{card["icon"]}</div>
+            <div class="card-title">{card["title"]}</div>
+            {value_display}
+        </div>
+        """, unsafe_allow_html=True)
 
 # ====================== CADASTRO ======================
 st.markdown("---")
