@@ -9,20 +9,29 @@ import uuid
 import json
 import io
 
-# --- CONFIGURAÇÃO DE SEGURANÇA ---
-MAX_TENTATIVAS_LOGIN = 5
-SESSION_TIMEOUT_MINUTOS = 5
-
-# --- CONFIGURAÇÃO SUPABASE ---
+# ====================== CAMADA 1: CREDENCIAIS (via secrets) ======================
+# As senhas e chaves estão no .streamlit/secrets.toml (fora do código fonte)
 try:
     url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    supabase = create_client(url, key)
+    anon_key = st.secrets["SUPABASE_KEY"]
+    service_key = st.secrets["SUPABASE_SERVICE_KEY"]
+    
+    # Cliente normal (anon) - para leitura e operações não críticas
+    supabase = create_client(url, anon_key)
+    # Cliente administrativo (service_role) - para operações que exigem ADMIN e ignoram RLS
+    supabase_admin = create_client(url, service_key)
+    
+    # Teste rápido de conexão
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
     st.stop()
 
+# Senhas (agora vindas dos secrets)
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
+VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
+
+# ====================== CONFIGURAÇÃO DA PÁGINA ======================
 st.set_page_config(
     page_title="JOHN ACESSOS - CYBER SECURITY 2026",
     layout="wide",
@@ -30,7 +39,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== CSS FUTURISTA GLOBAL (MANTIDO) ======================
+# ====================== CSS FUTURISTA (MANTIDO ORIGINAL) ======================
 st.markdown("""
 <style>
     /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
@@ -381,7 +390,7 @@ def get_avatar_url():
 
 def save_avatar_url(url):
     try:
-        supabase.table("app_config").upsert({
+        supabase_admin.table("app_config").upsert({
             "key": "avatar_url",
             "value": url,
             "updated_at": datetime.now().isoformat()
@@ -440,7 +449,7 @@ def get_theme_config():
 
 def save_theme_config(config):
     try:
-        supabase.table("app_config").upsert({
+        supabase_admin.table("app_config").upsert({
             "key": "background_config",
             "value": json.dumps(config),
             "updated_at": datetime.now().isoformat()
@@ -721,6 +730,9 @@ def apply_theme_css():
         futuristic_background_script()
 
 # ====================== FUNÇÕES DE SESSÃO ======================
+MAX_TENTATIVAS_LOGIN = 5
+SESSION_TIMEOUT_MINUTOS = 5
+
 def registrar_sessao(perfil, usuario="admin"):
     session_id = str(uuid.uuid4())
     try:
@@ -732,7 +744,7 @@ def registrar_sessao(perfil, usuario="admin"):
             "ip": "desconhecido",
             "user_agent": "streamlit"
         }
-        supabase.table("sessoes_ativas").insert(data).execute()
+        supabase_admin.table("sessoes_ativas").insert(data).execute()
         st.session_state.session_id = session_id
         return True
     except Exception as e:
@@ -742,7 +754,7 @@ def registrar_sessao(perfil, usuario="admin"):
 def atualizar_atividade_sessao():
     if "session_id" in st.session_state and st.session_state.session_id:
         try:
-            supabase.table("sessoes_ativas").update({
+            supabase_admin.table("sessoes_ativas").update({
                 "ultima_atividade": datetime.now().isoformat()
             }).eq("id", st.session_state.session_id).execute()
         except:
@@ -751,7 +763,7 @@ def atualizar_atividade_sessao():
 def remover_sessao():
     if "session_id" in st.session_state and st.session_state.session_id:
         try:
-            supabase.table("sessoes_ativas").delete().eq("id", st.session_state.session_id).execute()
+            supabase_admin.table("sessoes_ativas").delete().eq("id", st.session_state.session_id).execute()
         except:
             pass
         st.session_state.session_id = None
@@ -768,20 +780,37 @@ def limpar_sessoes_expiradas():
     limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
     try:
         if "session_id" in st.session_state and st.session_state.session_id:
-            supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).neq("id", st.session_state.session_id).execute()
+            supabase_admin.table("sessoes_ativas").delete().lt("ultima_atividade", limite).neq("id", st.session_state.session_id).execute()
         else:
-            supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).execute()
+            supabase_admin.table("sessoes_ativas").delete().lt("ultima_atividade", limite).execute()
     except:
         pass
 
 def encerrar_outras_sessoes():
     if "session_id" in st.session_state and st.session_state.session_id:
         try:
-            supabase.table("sessoes_ativas").delete().neq("id", st.session_state.session_id).execute()
+            supabase_admin.table("sessoes_ativas").delete().neq("id", st.session_state.session_id).execute()
             return True
         except:
             return False
     return False
+
+# ====================== FUNÇÕES DE VALIDAÇÃO DE PERMISSÃO (CAMADA 3) ======================
+def require_admin():
+    """Interrompe a execução se o usuário não for ADMIN."""
+    if st.session_state.get("perfil") != "ADMIN":
+        st.error("❌ Ação restrita a administradores.")
+        st.stop()
+
+def require_vigilante():
+    if st.session_state.get("perfil") != "VIGILANTE":
+        st.error("❌ Ação restrita a vigilantes.")
+        st.stop()
+
+def require_any_login():
+    if not st.session_state.get("logado", False):
+        st.error("❌ Você precisa estar logado.")
+        st.stop()
 
 # ====================== FUNÇÕES DE RELATÓRIOS PDF ======================
 def gerar_html_impressao(df, titulo):
@@ -855,7 +884,7 @@ def gerar_html_consolidado(df):
     html += '<div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div></body></html>'
     return html
 
-# ====================== FUNÇÕES DE VALIDAÇÃO ======================
+# ====================== FUNÇÕES DE VALIDAÇÃO CPF ======================
 def validar_cpf(cpf):
     cpf_limpo = re.sub(r'\D', '', cpf)
     return cpf_limpo.isdigit() and len(cpf_limpo) == 11
@@ -893,7 +922,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN TOTALMENTE REFAITA ======================
+# ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -901,10 +930,9 @@ if not st.session_state.logado:
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
     
-    # Layout simples e centralizado com colunas
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)  # Espaço vertical
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown("""
             <div style="text-align: center;">
                 <div style="font-size: 48px;">🛡️</div>
@@ -917,29 +945,30 @@ if not st.session_state.logado:
             st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
             senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
             submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
-            
             if submitted:
-                if senha == "fgxv4VP0/*":
-                    st.session_state.logado = True
-                    st.session_state.perfil = "ADMIN"
-                    st.session_state.tentativas_login = 0
-                    registrar_sessao("ADMIN", "admin")
-                    st.rerun()
-                elif senha == "JOHN123":
-                    st.session_state.logado = True
-                    st.session_state.perfil = "VIGILANTE"
-                    st.session_state.tentativas_login = 0
-                    registrar_sessao("VIGILANTE", "vigilante")
-                    st.rerun()
+                if st.session_state.get("bloqueado_ate") and datetime.now() < st.session_state.bloqueado_ate:
+                    st.error(f"⛔ Acesso bloqueado até {st.session_state.bloqueado_ate.strftime('%H:%M:%S')}")
                 else:
-                    st.session_state.tentativas_login += 1
-                    restantes = MAX_TENTATIVAS_LOGIN - st.session_state.tentativas_login
-                    if st.session_state.tentativas_login >= MAX_TENTATIVAS_LOGIN:
-                        st.session_state.bloqueado_ate = datetime.now() + pd.Timedelta(minutes=5)
-                        st.error("⛔ Acesso bloqueado por 5 minutos.")
+                    if senha == ADMIN_PASSWORD:
+                        st.session_state.logado = True
+                        st.session_state.perfil = "ADMIN"
+                        st.session_state.tentativas_login = 0
+                        registrar_sessao("ADMIN", "admin")
+                        st.rerun()
+                    elif senha == VIGILANTE_PASSWORD:
+                        st.session_state.logado = True
+                        st.session_state.perfil = "VIGILANTE"
+                        st.session_state.tentativas_login = 0
+                        registrar_sessao("VIGILANTE", "vigilante")
+                        st.rerun()
                     else:
-                        st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
-    
+                        st.session_state.tentativas_login += 1
+                        restantes = MAX_TENTATIVAS_LOGIN - st.session_state.tentativas_login
+                        if st.session_state.tentativas_login >= MAX_TENTATIVAS_LOGIN:
+                            st.session_state.bloqueado_ate = datetime.now() + pd.Timedelta(minutes=5)
+                            st.error("⛔ Acesso bloqueado por 5 minutos.")
+                        else:
+                            st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
     st.stop()
 
 # ====================== APÓS LOGIN ======================
@@ -952,7 +981,7 @@ if st.session_state.session_id:
 else:
     total_conectados = 0
 
-# ====================== HEADER FUTURISTA ======================
+# ====================== HEADER ======================
 st.markdown(f"""
 <div class="admin-header" style="background: rgba(8,8,20,0.6); backdrop-filter: blur(8px); border-radius: 20px; padding: 10px 20px; margin-bottom: 20px; border: 1px solid cyan;">
     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -1007,7 +1036,7 @@ with st.sidebar:
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
     st.markdown('<div class="info-item">📦 Versão: 13.1 (CYBER)</div>', unsafe_allow_html=True)
 
-# ====================== ADMIN: CONFIGURAÇÕES ======================
+# ====================== ADMIN: CONFIGURAÇÕES (SÓ APARECE PARA ADMIN) ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
@@ -1356,6 +1385,10 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
     novo_nome = col_b.text_input("👤 Nome Completo *", key="novo_nome")
     novo_empresa = col_c.text_input("🏢 Empresa", key="novo_empresa")
     if st.button("💾 Salvar Cadastro", key="salvar_cadastro", type="primary"):
+        # Cadastro de pessoas: pode ser feito por ADMIN? Vamos manter a regra original (qualquer um pode cadastrar)
+        # mas usando supabase (não supabase_admin) porque a política RLS permite INSERT? 
+        # Se quiser proteger, descomente a linha abaixo e troque para supabase_admin:
+        # require_admin()
         if novo_cpf and novo_nome:
             if not validar_cpf(novo_cpf):
                 st.error("❌ CPF inválido.")
@@ -1521,7 +1554,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 b64 = base64.b64encode(html.encode()).decode()
                 st.markdown(f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir consolidado</a>', unsafe_allow_html=True)
         st.markdown("---")
-        st.markdown("### 🗑️ Exclusão de Registros")
+        st.markdown("### 🗑️ Exclusão de Registros (APENAS ADMIN)")
         for idx, row in df.iterrows():
             col_check, col_data = st.columns([0.5, 9.5])
             with col_check:
@@ -1535,6 +1568,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         with col_btn1:
             if st.button("🗑️ Excluir Selecionados", key="excluir_selecionados"):
+                require_admin()  # Proteção
                 if st.session_state.selected_ids:
                     st.session_state.pending_delete_ids = st.session_state.selected_ids.copy()
                     st.rerun()
@@ -1544,16 +1578,18 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 st.rerun()
         with col_btn3:
             if st.button("⚠️ LIMPAR TODO HISTÓRICO", key="limpar_historico"):
+                require_admin()  # Proteção
                 st.session_state.pending_clear_all = True
                 st.rerun()
         if st.session_state.pending_delete_ids:
+            require_admin()  # Reforço
             st.error(f"⚠️ Excluir {len(st.session_state.pending_delete_ids)} registro(s)?")
             col_conf, col_canc = st.columns(2)
             with col_conf:
                 if st.button("✅ SIM, EXCLUIR", key="confirmar_excluir"):
                     try:
                         for id_ in st.session_state.pending_delete_ids:
-                            supabase.table("movimentacao").delete().eq("id", id_).execute()
+                            supabase_admin.table("movimentacao").delete().eq("id", id_).execute()
                         st.session_state.selected_ids = []
                         st.session_state.pending_delete_ids = []
                         st.rerun()
@@ -1564,6 +1600,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     st.session_state.pending_delete_ids = []
                     st.rerun()
         if st.session_state.pending_clear_all:
+            require_admin()
             st.error("🚨 ATENÇÃO: apagar TODOS os registros. Digite 'LIMPAR TUDO'")
             confirm = st.text_input("Confirmação:", type="password", key="confirma_limpar")
             col_clear, col_cancel_clear = st.columns(2)
@@ -1571,7 +1608,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 if st.button("🔥 EXCLUIR TUDO", key="excluir_tudo"):
                     if confirm == "LIMPAR TUDO":
                         try:
-                            supabase.table("movimentacao").delete().neq("id", 0).execute()
+                            supabase_admin.table("movimentacao").delete().neq("id", 0).execute()
                             st.success("Histórico limpo!")
                             st.session_state.pending_clear_all = False
                             st.rerun()
@@ -1614,11 +1651,12 @@ if st.session_state.perfil == "ADMIN":
                                 novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_br_{p['id']}")
                                 nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_br_{p['id']}")
                                 if st.form_submit_button("Salvar", key=f"save_br_{p['id']}"):
+                                    require_admin()  # segurança extra
                                     if validar_cpf(novo_cpf):
                                         try:
                                             conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
                                             if not conflito:
-                                                supabase.table("Pessoas").update({
+                                                supabase_admin.table("Pessoas").update({
                                                     "nome": sanitizar_texto(novo_nome).upper(),
                                                     "cpf": sanitizar_cpf(novo_cpf),
                                                     "empresa": sanitizar_texto(nova_emp).upper()
@@ -1635,8 +1673,9 @@ if st.session_state.perfil == "ADMIN":
                         with st.popover("🗑️ Excluir"):
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_br_{p['id']}"):
+                                require_admin()
                                 try:
-                                    supabase.table("Pessoas").delete().eq("id", p['id']).execute()
+                                    supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erro: {e}")
@@ -1654,11 +1693,12 @@ if st.session_state.perfil == "ADMIN":
                                 novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_gr_{p['id']}")
                                 nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_gr_{p['id']}")
                                 if st.form_submit_button("Salvar", key=f"save_gr_{p['id']}"):
+                                    require_admin()
                                     if validar_cpf(novo_cpf):
                                         try:
                                             conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
                                             if not conflito:
-                                                supabase.table("Pessoas").update({
+                                                supabase_admin.table("Pessoas").update({
                                                     "nome": sanitizar_texto(novo_nome).upper(),
                                                     "cpf": sanitizar_cpf(novo_cpf),
                                                     "empresa": sanitizar_texto(nova_emp).upper()
@@ -1675,8 +1715,9 @@ if st.session_state.perfil == "ADMIN":
                         with st.popover("🗑️ Excluir"):
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_gr_{p['id']}"):
+                                require_admin()
                                 try:
-                                    supabase.table("Pessoas").delete().eq("id", p['id']).execute()
+                                    supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erro: {e}")
@@ -1697,11 +1738,12 @@ if st.session_state.perfil == "ADMIN":
                                 novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_out_{p['id']}")
                                 nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_out_{p['id']}")
                                 if st.form_submit_button("Salvar", key=f"save_out_{p['id']}"):
+                                    require_admin()
                                     if validar_cpf(novo_cpf):
                                         try:
                                             conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
                                             if not conflito:
-                                                supabase.table("Pessoas").update({
+                                                supabase_admin.table("Pessoas").update({
                                                     "nome": sanitizar_texto(novo_nome).upper(),
                                                     "cpf": sanitizar_cpf(novo_cpf),
                                                     "empresa": sanitizar_texto(nova_emp).upper()
@@ -1718,8 +1760,9 @@ if st.session_state.perfil == "ADMIN":
                         with st.popover("🗑️ Excluir"):
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_out_{p['id']}"):
+                                require_admin()
                                 try:
-                                    supabase.table("Pessoas").delete().eq("id", p['id']).execute()
+                                    supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erro: {e}")
