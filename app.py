@@ -6,6 +6,7 @@ from PIL import Image
 import base64
 import re
 import uuid
+import json
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
 MAX_TENTATIVAS_LOGIN = 5
@@ -87,6 +88,46 @@ def encerrar_outras_sessoes():
             print(f"Erro ao encerrar outras sessões: {e}")
             return False
     return False
+
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (BACKGROUND) ======================
+def get_background_config():
+    """Retorna a configuração atual do background (dict). Se não existir, cria padrão."""
+    try:
+        result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
+        if result.data:
+            return json.loads(result.data[0]['value'])
+    except Exception as e:
+        print(f"Erro ao ler config: {e}")
+    # Configuração padrão (gradiente original)
+    return {
+        "type": "gradient",
+        "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
+        "apply_to_login": False
+    }
+
+def save_background_config(config):
+    """Salva a configuração do background no Supabase."""
+    try:
+        # Tenta atualizar se existe
+        supabase.table("app_config").update({
+            "value": json.dumps(config),
+            "updated_at": datetime.now().isoformat()
+        }).eq("key", "background_config").execute()
+    except:
+        # Se não existe, insere
+        try:
+            supabase.table("app_config").insert({
+                "key": "background_config",
+                "value": json.dumps(config),
+                "updated_at": datetime.now().isoformat()
+            }).execute()
+        except Exception as e:
+            print(f"Erro ao salvar config: {e}")
+    st.session_state.background_config = config
+
+# Carregar configuração no session_state (se ainda não)
+if "background_config" not in st.session_state:
+    st.session_state.background_config = get_background_config()
 
 # ====================== FUNÇÕES PARA GERAR HTML E PDF ======================
 def gerar_html_impressao(df, titulo):
@@ -330,6 +371,20 @@ IMAGEM_LOGIN = carregar_imagem("login_image.png", "Login")
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png", "Sidebar")
 IMAGEM_HEADER = carregar_imagem("header_logo.png", "Header")
 
+# ====================== CSS DINÂMICO PARA BACKGROUND ======================
+def apply_background_css(config=None):
+    if config is None:
+        config = st.session_state.get("background_config", get_background_config())
+    bg_style = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
+    css = f"""
+    <style>
+    .stApp {{
+        background: {bg_style};
+    }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
 # ====================== CABEÇALHOS DE SEGURANÇA ======================
 st.markdown("""
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';">
@@ -337,7 +392,7 @@ st.markdown("""
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 """, unsafe_allow_html=True)
 
-# ====================== DESIGN BASE (CSS) ======================
+# ====================== DESIGN BASE (CSS) - EXCETO BACKGROUND (que será dinâmico) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
@@ -371,11 +426,8 @@ st.markdown("""
     100% { box-shadow: 0 0 5px #0ff; }
 }
 
-.stApp {
-    background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);
-    font-family: 'Inter', 'Space Mono', monospace;
-}
-
+/* O background do .stApp será aplicado dinamicamente via JavaScript */
+/* Os demais estilos permanecem */
 [data-testid="stSidebar"] {
     background: rgba(8, 8, 20, 0.85);
     backdrop-filter: blur(12px);
@@ -627,6 +679,58 @@ else:
 st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="info-item">📦 Versão: 13.1 (TECH)</div>', unsafe_allow_html=True)
 
+# ====================== FUNÇÃO "MANAGE APP" (SOMENTE ADMIN) ======================
+if st.session_state.get("perfil") == "ADMIN" and st.session_state.get("logado"):
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
+        st.markdown("### 🔧 Ferramentas Administrativas")
+        total_ativas = contar_sessoes_ativas()
+        st.metric("👥 Sessões ativas", total_ativas)
+        if st.button("🔒 Encerrar outras sessões", use_container_width=True):
+            if encerrar_outras_sessoes():
+                st.success("✅ Todas as outras sessões foram encerradas!")
+                st.rerun()
+            else:
+                st.error("❌ Erro ao encerrar outras sessões.")
+        if st.button("🧹 Limpar sessões expiradas", use_container_width=True):
+            limpar_sessoes_expiradas()
+            st.success("✅ Sessões expiradas removidas!")
+            st.rerun()
+        st.markdown("---")
+        st.caption("Ações disponíveis apenas para o administrador.")
+
+    # Ícone de configurações de tema (engrenagem)
+    st.sidebar.markdown("---")
+    if st.sidebar.button("⚙️ Configurar Tema (Background)", use_container_width=True):
+        # Abrir popover para configurações
+        with st.popover("🎨 Configurações de Fundo", use_container_width=True):
+            config = st.session_state.background_config.copy()
+            tipo = st.selectbox("Tipo de fundo:", ["Gradiente (padrão)", "Cor sólida", "Imagem via URL"], index=0 if config['type']=='gradient' else 1 if config['type']=='solid' else 2)
+            if tipo == "Gradiente (padrão)":
+                novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+                novo_tipo = "gradient"
+            elif tipo == "Cor sólida":
+                cor = st.color_picker("Escolha uma cor", value=config.get('value', '#0a0a1a') if config['type']=='solid' else '#0a0a1a')
+                novo_valor = cor
+                novo_tipo = "solid"
+            else:  # Imagem via URL
+                url_img = st.text_input("URL da imagem (ex: https://exemplo.com/fundo.jpg)", value=config.get('value', '') if config['type']=='url' else '')
+                if url_img:
+                    novo_valor = f"url('{url_img}') center/cover no-repeat fixed"
+                else:
+                    novo_valor = config.get('value', 'radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)')
+                novo_tipo = "url"
+            aplicar_login = st.checkbox("Aplicar também na tela de login", value=config.get('apply_to_login', False))
+            if st.button("💾 Salvar configuração"):
+                nova_config = {
+                    "type": novo_tipo,
+                    "value": novo_valor,
+                    "apply_to_login": aplicar_login
+                }
+                save_background_config(nova_config)
+                st.success("✅ Configuração salva! Recarregue a página para aplicar.")
+                st.rerun()
+
 # ====================== SESSÃO (INICIALIZAÇÃO) ======================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -651,28 +755,21 @@ if "pessoa_confirmada" not in st.session_state:
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 
-# ====================== FUNÇÃO "MANAGE APP" (SOMENTE ADMIN) ======================
-if st.session_state.get("perfil") == "ADMIN" and st.session_state.get("logado"):
-    st.sidebar.markdown("---")
-    with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
-        st.markdown("### 🔧 Ferramentas Administrativas")
-        total_ativas = contar_sessoes_ativas()
-        st.metric("👥 Sessões ativas", total_ativas)
-        if st.button("🔒 Encerrar outras sessões", use_container_width=True):
-            if encerrar_outras_sessoes():
-                st.success("✅ Todas as outras sessões foram encerradas!")
-                st.rerun()
-            else:
-                st.error("❌ Erro ao encerrar outras sessões.")
-        if st.button("🧹 Limpar sessões expiradas", use_container_width=True):
-            limpar_sessoes_expiradas()
-            st.success("✅ Sessões expiradas removidas!")
-            st.rerun()
-        st.markdown("---")
-        st.caption("Ações disponíveis apenas para o administrador.")
-
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
+    # Aplica background na tela de login se a configuração permitir
+    if st.session_state.background_config.get("apply_to_login", False):
+        apply_background_css(st.session_state.background_config)
+    else:
+        # Fundo padrão (mantido do CSS original, mas vamos forçar o radial padrão)
+        st.markdown("""
+        <style>
+        .stApp {
+            background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
     if st.session_state.bloqueado_ate and datetime.now() < st.session_state.bloqueado_ate:
         st.error(f"⛔ Muitas tentativas inválidas. Tente novamente após {st.session_state.bloqueado_ate.strftime('%H:%M:%S')}")
         st.stop()
@@ -885,6 +982,9 @@ if not st.session_state.logado:
     st.stop()
 
 # ====================== APÓS LOGIN ======================
+# Aplica o background configurado para o app (após login)
+apply_background_css(st.session_state.background_config)
+
 if st.session_state.session_id:
     atualizar_atividade_sessao()
     limpar_sessoes_expiradas()
