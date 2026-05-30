@@ -24,235 +24,284 @@ except Exception as e:
     st.stop()
 
 st.set_page_config(
-    page_title="JOHN ACESSOS - ACESSO DE DADOS",
+    page_title="JOHN ACESSOS - CYBER SECURITY 2026",
     layout="wide",
-    page_icon="👮‍♂️",
+    page_icon="🛡️",
     initial_sidebar_state="expanded"
 )
 
-# ====================== CSS E JS PERSONALIZADOS ======================
+# ====================== CSS FUTURISTA GLOBAL ======================
 st.markdown("""
 <style>
-    /* --- TOP BAR TRANSPARENTE --- */
+    /* RESET E BACKGROUND */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    .stApp {
+        transition: background 0.3s ease;
+    }
+    /* TOP BAR TRANSPARENTE */
     header[data-testid="stHeader"] {
         background: transparent !important;
         box-shadow: none !important;
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
     }
     header[data-testid="stHeader"] button {
-        color: white !important;
+        color: #0ff !important;
+        text-shadow: 0 0 3px #0ff;
     }
-    .stApp {
-        margin-top: 0 !important;
-        padding-top: 0 !important;
+    /* SIDEBAR GLASS */
+    [data-testid="stSidebar"] {
+        background: rgba(10, 10, 25, 0.65) !important;
+        backdrop-filter: blur(16px);
+        border-right: 1px solid rgba(0, 255, 255, 0.3);
+        box-shadow: 4px 0 30px rgba(0, 255, 255, 0.1);
     }
-    
-    /* --- AVATAR STYLES --- */
+    /* AVATAR FUTURISTA */
     .avatar-container {
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
+        position: relative;
     }
     .avatar-image {
-        width: 120px;
-        height: 120px;
+        width: 130px;
+        height: 130px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid #00aaff;
-        box-shadow: 0 0 15px rgba(0, 170, 255, 0.6), inset 0 0 5px rgba(0, 170, 255, 0.3);
+        border: 2px solid #0ff;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.3);
         transition: 0.3s;
+        filter: drop-shadow(0 0 8px cyan);
     }
     .avatar-image:hover {
-        box-shadow: 0 0 25px rgba(0, 170, 255, 0.9);
         transform: scale(1.02);
+        box-shadow: 0 0 30px cyan;
+        border-color: #f0f;
     }
-    .sidebar-header {
-        text-align: center;
-        padding: 25px 10px;
-        border-bottom: 1px solid rgba(100,0,255,0.5);
+    .glow-ring {
+        position: absolute;
+        top: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(0,255,255,0.2), transparent);
+        pointer-events: none;
+        animation: pulseRing 2s infinite;
     }
-    .sidebar-title {
-        font-size: 22px;
-        font-weight: 800;
-        background: linear-gradient(135deg, #a855f7, #3b82f6);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-top: 10px;
+    @keyframes pulseRing {
+        0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
+        100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
     }
-    
-    /* --- CARDS FUTURISTAS (GLASSMORPHISM) --- */
-    .glass-card {
-        background: rgba(20, 20, 40, 0.55);
+    /* CARDS GLASSMORPHISM + NEON */
+    .cyber-card {
+        background: rgba(15, 15, 35, 0.55);
         backdrop-filter: blur(12px);
-        border-radius: 24px;
-        padding: 1.5rem 1rem;
+        border-radius: 28px;
+        padding: 1.2rem 1rem;
         margin: 0.5rem;
-        border: 1px solid rgba(0, 170, 255, 0.4);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), 0 0 15px rgba(0, 170, 255, 0.3);
-        transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 0 12px rgba(0,255,255,0.3);
+        transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
         position: relative;
         overflow: hidden;
         cursor: default;
     }
-    .glass-card::before {
+    .cyber-card::before {
         content: '';
         position: absolute;
         top: -2px;
         left: -2px;
         right: -2px;
         bottom: -2px;
-        background: linear-gradient(45deg, #00aaff, #a855f7, #00aaff);
-        border-radius: 26px;
+        background: linear-gradient(45deg, cyan, magenta, cyan);
+        border-radius: 30px;
         z-index: -1;
         opacity: 0;
         transition: opacity 0.4s;
     }
-    .glass-card:hover {
+    .cyber-card:hover {
         transform: translateY(-6px);
-        border-color: rgba(0, 170, 255, 0.8);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3), 0 0 25px #00aaff;
+        border-color: cyan;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 25px cyan;
     }
-    .glass-card:hover::before {
-        opacity: 0.5;
+    .cyber-card:hover::before {
+        opacity: 0.4;
     }
     .card-icon {
-        font-size: 2.8rem;
+        font-size: 3rem;
         text-align: center;
-        margin-bottom: 0.5rem;
-        filter: drop-shadow(0 0 5px #00aaff);
+        filter: drop-shadow(0 0 6px cyan);
         transition: 0.2s;
     }
-    .glass-card:hover .card-icon {
+    .cyber-card:hover .card-icon {
         transform: scale(1.05);
-        filter: drop-shadow(0 0 12px #00aaff);
+        filter: drop-shadow(0 0 12px magenta);
     }
     .card-title {
         font-size: 0.85rem;
-        letter-spacing: 2px;
+        letter-spacing: 3px;
         text-transform: uppercase;
-        color: #a0c0ff;
+        color: #aaf;
         text-align: center;
         font-weight: 500;
-        margin-bottom: 0.5rem;
+        margin: 10px 0 5px;
     }
     .card-value {
-        font-size: 2.8rem;
+        font-size: 2.6rem;
         font-weight: 800;
         text-align: center;
-        background: linear-gradient(135deg, #fff, #a855f7);
+        background: linear-gradient(135deg, #fff, cyan);
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
-        text-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+        text-shadow: 0 0 20px rgba(0,255,255,0.5);
         line-height: 1.2;
         font-family: 'Space Mono', monospace;
     }
-    /* Efeito holográfico sutil */
-    .glass-card::after {
+    /* Efeito holográfico no hover */
+    .cyber-card::after {
         content: '';
         position: absolute;
         top: 0;
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(0, 170, 255, 0.2), transparent);
+        background: linear-gradient(90deg, transparent, rgba(0,255,255,0.2), transparent);
         transition: left 0.6s;
         pointer-events: none;
     }
-    .glass-card:hover::after {
+    .cyber-card:hover::after {
         left: 100%;
     }
-    
-    /* Ajustes para os cards dentro da grid do Streamlit */
-    div[data-testid="column"] {
-        padding: 0 6px;
+    /* BOTÕES NEON */
+    .stButton>button, .stForm button {
+        background: rgba(0,20,40,0.7) !important;
+        backdrop-filter: blur(8px);
+        border: 1px solid #0ff !important;
+        border-radius: 40px !important;
+        color: #0ff !important;
+        font-weight: bold;
+        transition: 0.2s;
+        box-shadow: 0 0 5px rgba(0,255,255,0.3);
+    }
+    .stButton>button:hover, .stForm button:hover {
+        background: rgba(0,255,255,0.15) !important;
+        border-color: magenta !important;
+        color: magenta !important;
+        box-shadow: 0 0 15px magenta;
+        transform: scale(1.02);
+    }
+    /* INPUTS FUTURISTAS */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
+        background: rgba(0, 10, 20, 0.7) !important;
+        backdrop-filter: blur(8px);
+        border: 1px solid #0ff !important;
+        border-radius: 16px !important;
+        color: #0ff !important;
+        font-family: 'Space Mono', monospace;
+        transition: 0.2s;
+    }
+    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
+        border-color: magenta !important;
+        box-shadow: 0 0 12px magenta;
+    }
+    /* FORM CONTAINERS */
+    .stForm, .stExpander, .stTabs [data-baseweb="tab-list"] {
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(8px);
+        border-radius: 20px;
+        border: 1px solid rgba(0,255,255,0.2);
+        padding: 5px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        color: #ccc;
+        border-radius: 30px;
+        font-weight: 500;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.2));
+        color: #0ff !important;
+        text-shadow: 0 0 3px cyan;
+    }
+    /* TABELAS E HISTÓRICO */
+    .stDataFrame {
+        background: rgba(0,0,0,0.4) !important;
+        border: 1px solid cyan !important;
+        border-radius: 16px;
+    }
+    /* INDICADORES EM TEMPO REAL */
+    .live-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0,0,0,0.5);
+        padding: 4px 12px;
+        border-radius: 40px;
+        font-size: 12px;
+        font-family: monospace;
+        border: 1px solid #0ff;
+        color: #0ff;
+    }
+    .pulse-dot {
+        width: 10px;
+        height: 10px;
+        background-color: #0f0;
+        border-radius: 50%;
+        box-shadow: 0 0 5px #0f0;
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 0.4; transform: scale(0.8);}
+        100% { opacity: 1; transform: scale(1.2);}
+    }
+    /* FOOTER */
+    .footer {
+        text-align: center;
+        padding: 15px;
+        color: #6b7280;
+        font-size: 9px;
+        border-top: 1px solid rgba(0,255,255,0.2);
+        margin-top: 25px;
+    }
+    /* TEXTOS GERAIS */
+    h1, h2, h3, p, label, .info-item, .stMarkdown, .stRadio label, .stCheckbox label {
+        color: #eef !important;
+        text-shadow: 0 0 2px rgba(0,0,0,0.5);
+    }
+    .info-item {
+        margin-bottom: 12px;
+        font-size: 13px;
+        display: flex;
+        gap: 8px;
+        font-family: 'Space Mono', monospace;
+    }
+    .badge-admin {
+        background: linear-gradient(135deg, cyan, magenta);
+        padding: 4px 15px;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 11px;
+        color: #000;
+    }
+    .session-indicator {
+        background: rgba(0,0,0,0.6);
+        border-radius: 30px;
+        padding: 4px 12px;
+        font-size: 12px;
+        font-family: monospace;
+        color: cyan;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
     }
 </style>
-
-<script>
-    // Animação dos contadores: quando o documento carregar, encontrar elementos .card-value e animar do zero até o valor final
-    document.addEventListener("DOMContentLoaded", function() {
-        const counters = document.querySelectorAll(".card-value");
-        counters.forEach(counter => {
-            const updateCount = () => {
-                const target = parseInt(counter.getAttribute("data-target"));
-                const current = parseInt(counter.innerText.replace(/[^0-9]/g, '')) || 0;
-                const increment = Math.ceil(target / 30);
-                if (current < target) {
-                    let next = current + increment;
-                    if (next > target) next = target;
-                    counter.innerText = next;
-                    setTimeout(updateCount, 30);
-                } else {
-                    counter.innerText = target;
-                }
-            };
-            updateCount();
-        });
-    });
-</script>
 """, unsafe_allow_html=True)
-
-# ====================== FUNÇÕES DE GERENCIAMENTO DE SESSÃO ======================
-def registrar_sessao(perfil, usuario="admin"):
-    session_id = str(uuid.uuid4())
-    try:
-        data = {
-            "id": session_id,
-            "usuario": usuario,
-            "perfil": perfil,
-            "ultima_atividade": datetime.now().isoformat(),
-            "ip": "desconhecido",
-            "user_agent": "streamlit"
-        }
-        supabase.table("sessoes_ativas").insert(data).execute()
-        st.session_state.session_id = session_id
-        return True
-    except Exception as e:
-        st.error(f"Erro ao registrar sessão: {e}")
-        return False
-
-def atualizar_atividade_sessao():
-    if "session_id" in st.session_state and st.session_state.session_id:
-        try:
-            supabase.table("sessoes_ativas").update({
-                "ultima_atividade": datetime.now().isoformat()
-            }).eq("id", st.session_state.session_id).execute()
-        except:
-            pass
-
-def remover_sessao():
-    if "session_id" in st.session_state and st.session_state.session_id:
-        try:
-            supabase.table("sessoes_ativas").delete().eq("id", st.session_state.session_id).execute()
-        except:
-            pass
-        st.session_state.session_id = None
-
-def contar_sessoes_ativas():
-    limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
-    try:
-        result = supabase.table("sessoes_ativas").select("id", count="exact").gte("ultima_atividade", limite).execute()
-        return result.count
-    except:
-        return 0
-
-def limpar_sessoes_expiradas():
-    limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
-    try:
-        if "session_id" in st.session_state and st.session_state.session_id:
-            supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).neq("id", st.session_state.session_id).execute()
-        else:
-            supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).execute()
-    except:
-        pass
-
-def encerrar_outras_sessoes():
-    if "session_id" in st.session_state and st.session_state.session_id:
-        try:
-            supabase.table("sessoes_ativas").delete().neq("id", st.session_state.session_id).execute()
-            return True
-        except:
-            return False
-    return False
 
 # ====================== FUNÇÕES DE AVATAR (BASE64) ======================
 def compress_avatar_image(uploaded_file, max_size_kb=200):
@@ -295,7 +344,7 @@ def save_avatar_url(url):
         st.error(f"Erro ao salvar avatar: {e}")
         return False
 
-# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA ======================
+# ====================== FUNÇÕES DE TEMA ======================
 def compress_image_to_base64(uploaded_file, max_size_kb=500):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -427,23 +476,91 @@ def apply_theme_css():
         .stApp {
             background: transparent !important;
         }
-        .admin-card, .admin-header, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div, .stTabs [data-baseweb="tab-list"], .stTabs [data-baseweb="tab"] {
+        .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div, .stTabs [data-baseweb="tab-list"], .stTabs [data-baseweb="tab"] {
             background: rgba(20, 20, 40, 0.7) !important;
             backdrop-filter: blur(6px);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        h1, h2, h3, p, label, .card-title, .card-value, .info-item, .stMarkdown, .stRadio label, .stCheckbox label, .stTextInput label, .stSelectbox label {
-            color: #ffffff !important;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-        [data-testid="stSidebar"] {
-            background: rgba(8, 8, 20, 0.75) !important;
-            backdrop-filter: blur(8px);
+            border: 1px solid rgba(0,255,255,0.3);
         }
         </style>
         """, unsafe_allow_html=True)
 
-# ====================== FUNÇÕES DE RELATÓRIOS (PDF) ======================
+# ====================== FUNÇÕES DE SESSÃO ======================
+def registrar_sessao(perfil, usuario="admin"):
+    session_id = str(uuid.uuid4())
+    try:
+        data = {
+            "id": session_id,
+            "usuario": usuario,
+            "perfil": perfil,
+            "ultima_atividade": datetime.now().isoformat(),
+            "ip": "desconhecido",
+            "user_agent": "streamlit"
+        }
+        supabase.table("sessoes_ativas").insert(data).execute()
+        st.session_state.session_id = session_id
+        return True
+    except Exception as e:
+        st.error(f"Erro ao registrar sessão: {e}")
+        return False
+
+def atualizar_atividade_sessao():
+    if "session_id" in st.session_state and st.session_state.session_id:
+        try:
+            supabase.table("sessoes_ativas").update({
+                "ultima_atividade": datetime.now().isoformat()
+            }).eq("id", st.session_state.session_id).execute()
+        except:
+            pass
+
+def remover_sessao():
+    if "session_id" in st.session_state and st.session_state.session_id:
+        try:
+            supabase.table("sessoes_ativas").delete().eq("id", st.session_state.session_id).execute()
+        except:
+            pass
+        st.session_state.session_id = None
+
+def contar_sessoes_ativas():
+    limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
+    try:
+        result = supabase.table("sessoes_ativas").select("id", count="exact").gte("ultima_atividade", limite).execute()
+        return result.count
+    except:
+        return 0
+
+def limpar_sessoes_expiradas():
+    limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
+    try:
+        if "session_id" in st.session_state and st.session_state.session_id:
+            supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).neq("id", st.session_state.session_id).execute()
+        else:
+            supabase.table("sessoes_ativas").delete().lt("ultima_atividade", limite).execute()
+    except:
+        pass
+
+def encerrar_outras_sessoes():
+    if "session_id" in st.session_state and st.session_state.session_id:
+        try:
+            supabase.table("sessoes_ativas").delete().neq("id", st.session_state.session_id).execute()
+            return True
+        except:
+            return False
+    return False
+
+# ====================== VALIDAÇÃO ======================
+def validar_cpf(cpf):
+    cpf_limpo = re.sub(r'\D', '', cpf)
+    return cpf_limpo.isdigit() and len(cpf_limpo) == 11
+
+def sanitizar_cpf(cpf):
+    return re.sub(r'\D', '', cpf)
+
+def sanitizar_texto(texto):
+    if not texto:
+        return texto
+    return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
+
+# ====================== RELATÓRIOS PDF ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
@@ -515,28 +632,6 @@ def gerar_html_consolidado(df):
     html += '<div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div></body></html>'
     return html
 
-# ====================== FUNÇÕES DE VALIDAÇÃO ======================
-def validar_cpf(cpf):
-    cpf_limpo = re.sub(r'\D', '', cpf)
-    return cpf_limpo.isdigit() and len(cpf_limpo) == 11
-
-def sanitizar_cpf(cpf):
-    return re.sub(r'\D', '', cpf)
-
-def sanitizar_texto(texto):
-    if not texto:
-        return texto
-    return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
-
-# ====================== CARREGAR IMAGENS ======================
-def carregar_imagem(nome):
-    try:
-        return Image.open(nome)
-    except:
-        return None
-
-IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png")
-
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -583,9 +678,9 @@ if not st.session_state.logado:
     .binary-stream{font-family:'Space Mono',monospace;font-size:10px;background:rgba(0,0,0,0.5);padding:6px;border-radius:20px;display:inline-block;color:#a855f7;margin-bottom:15px;}
     </style>
     <div class="login-container"><div class="login-box">
-    <div class="guard-logo"><span>👮‍♂️🔒</span></div>
+    <div class="guard-logo"><span>🛡️</span></div>
     <div class="logo-title">JOHN ACESSOS</div>
-    <div class="logo-subtitle">ACESSO DE DADOS</div>
+    <div class="logo-subtitle">CYBER SECURITY 2026</div>
     <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     <script>function generateBinary(){let b='';for(let i=0;i<60;i++)b+=Math.random()<0.5?'0':'1';return b;}
     setInterval(()=>{let el=document.getElementById('binary-container');if(el)el.innerHTML=`<div class="binary-stream">${generateBinary()}</div>`;},400);</script>
@@ -593,7 +688,7 @@ if not st.session_state.logado:
     with st.form("login_form"):
         st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
         senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
-        submitted = st.form_submit_button("👮‍♂️ ACESSAR SISTEMA", use_container_width=True)
+        submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
@@ -628,17 +723,21 @@ if st.session_state.session_id:
 else:
     total_conectados = 0
 
-# ====================== CABEÇALHO PERSONALIZADO COM AVATAR ======================
+# ====================== HEADER FUTURISTA ======================
 st.markdown(f"""
-<div class="admin-header">
+<div class="admin-header" style="background: rgba(8,8,20,0.6); backdrop-filter: blur(8px); border-radius: 20px; padding: 10px 20px; margin-bottom: 20px; border: 1px solid cyan;">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; gap:10px; align-items:center;">
-            <div style="width:36px;height:36px;">
-                <img src="{st.session_state.avatar_url}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid #00aaff; box-shadow:0 0 5px #00aaff;">
+        <div style="display:flex; gap:15px; align-items:center;">
+            <div style="width:45px;height:45px;">
+                <img src="{st.session_state.avatar_url}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:1px solid cyan; box-shadow:0 0 8px cyan;">
             </div>
-            <div><h1 style="margin:0;font-size:16px;">JOHN ACESSOS - ACESSO DE DADOS</h1><p style="margin:0;color:#a78bfa;font-size:8px;">SEGURANÇA E PROTEÇÃO</p></div>
+            <div><h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1><p style="margin:0;color:#aaf;font-size:10px;">MONITORAMENTO INTELIGENTE • ACESSO DE DADOS</p></div>
         </div>
-        <div style="display:flex; gap:15px; align-items:center;">{f'<div class="session-indicator">{"⚠️" if total_conectados > 1 else ""} 👥 {total_conectados}</div>'}<div class="badge-admin">👑 {st.session_state.perfil}</div></div>
+        <div style="display:flex; gap:15px; align-items:center;">
+            <div class="live-indicator"><span class="pulse-dot"></span> LIVE</div>
+            <div class="session-indicator">👥 {total_conectados}</div>
+            <div class="badge-admin">👑 {st.session_state.perfil}</div>
+        </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -657,18 +756,19 @@ with col4:
 with st.sidebar:
     st.markdown(f"""
     <div class="avatar-container">
+        <div class="glow-ring"></div>
         <img src="{st.session_state.avatar_url}" class="avatar-image">
-        <div class="sidebar-title">👮‍♂️ JOHN ACESSOS</div>
-        <p style="color:#a78bfa; font-size:9px;">ACESSO DE DADOS</p>
+        <div class="sidebar-title" style="font-size: 20px; margin-top: 12px;">👮‍♂️ JOHN ACESSOS</div>
+        <p style="color:#0ff; font-size: 9px; letter-spacing: 2px;">CYBER SECURITY 2026</p>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown("---")
     st.markdown("### ⚡ ESTADO")
-    st.markdown('<div class="info-item">🟢 REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">🤖 MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">🗄️ DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item"><span style="color:#0ff;">●</span> MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item"><span style="color:#f0f;">●</span> CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item"><span style="color:#ff0;">●</span> DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### 📡 INFO")
     if st.session_state.get("perfil"):
@@ -676,7 +776,7 @@ with st.sidebar:
     else:
         st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">📦 Versão: 13.1 (TECH)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item">📦 Versão: 13.1 (CYBER)</div>', unsafe_allow_html=True)
 
 # ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
@@ -699,7 +799,7 @@ if st.session_state.perfil == "ADMIN":
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
-        st.markdown("### Personalizar Fundo - Aplica para todos os usuários")
+        st.markdown("### Personalizar Fundo - Aplica para todos")
         config_atual = st.session_state.theme_config
         tipo_atual = config_atual.get("type", "gradient")
         opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (URL)"]
@@ -795,13 +895,13 @@ if st.session_state.perfil == "ADMIN":
         st.markdown("**Prévia:**")
         if novo_tipo == "gradient":
             preview_style = novo_valor
-            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid cyan;"></div>', unsafe_allow_html=True)
         elif novo_tipo == "solid":
             preview_style = novo_valor
-            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid cyan;"></div>', unsafe_allow_html=True)
         elif novo_tipo == "url":
             preview_style = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid cyan;"></div>', unsafe_allow_html=True)
         else:  # video
             if novo_valor:
                 if novo_mime == "image/gif":
@@ -841,7 +941,7 @@ if st.session_state.perfil == "ADMIN":
                 }
                 if save_theme_config(nova_config):
                     apply_theme_css()
-                    st.success("✅ Tema global salvo e aplicado! Todos os usuários verão este tema.")
+                    st.success("✅ Tema global salvo e aplicado!")
                 else:
                     st.error("Erro ao salvar tema global.")
         with col_btn2:
@@ -900,7 +1000,7 @@ if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("🖼️ Configurar Avatar (Segurança)", expanded=False):
         st.markdown("### Personalizar Imagem do Perfil")
-        st.markdown("Envie uma imagem realista de segurança patrimonial (recomendado 4K).")
+        st.markdown("Envie uma imagem realista de segurança (4K recomendado).")
         uploaded_avatar = st.file_uploader("Escolha uma imagem (PNG/JPG)", type=["png","jpg","jpeg"], key="upload_avatar")
         if uploaded_avatar:
             with st.spinner("Processando imagem..."):
@@ -924,7 +1024,7 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS FUTURISTAS) ======================
+# ====================== DASHBOARD (CARDS CYBER) ======================
 st.markdown("---")
 try:
     pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
@@ -934,12 +1034,11 @@ except:
     total_presentes = 0
     total_colaboradores = 0
 
-# Ícones e títulos dos cards
 cards_data = [
-    {"icon": "👥", "title": "PRESENTES", "value": total_presentes, "id": "card1"},
-    {"icon": "📊", "title": "CADASTRADOS", "value": total_colaboradores, "id": "card2"},
-    {"icon": "🏛️", "title": "SETORES", "value": 11, "id": "card3"},
-    {"icon": "📹", "title": "CFTV", "value": "24/7", "id": "card4"}
+    {"icon": "👥", "title": "PRESENTES", "value": total_presentes},
+    {"icon": "📊", "title": "CADASTRADOS", "value": total_colaboradores},
+    {"icon": "🏛️", "title": "SETORES ATIVOS", "value": 11},
+    {"icon": "🛡️", "title": "SEGURANÇA", "value": "24/7"}
 ]
 
 col1, col2, col3, col4 = st.columns(4)
@@ -947,18 +1046,52 @@ cols = [col1, col2, col3, col4]
 
 for idx, card in enumerate(cards_data):
     with cols[idx]:
-        # Se o valor for numérico, define data-target para animação; caso contrário, texto normal.
         if isinstance(card["value"], int):
             value_display = f'<div class="card-value" data-target="{card["value"]}">0</div>'
+            # Injetar script para animação
+            st.markdown(f"""
+            <div class="cyber-card">
+                <div class="card-icon">{card["icon"]}</div>
+                <div class="card-title">{card["title"]}</div>
+                {value_display}
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            value_display = f'<div class="card-value">{card["value"]}</div>'
-        st.markdown(f"""
-        <div class="glass-card">
-            <div class="card-icon">{card["icon"]}</div>
-            <div class="card-title">{card["title"]}</div>
-            {value_display}
-        </div>
-        """, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="cyber-card">
+                <div class="card-icon">{card["icon"]}</div>
+                <div class="card-title">{card["title"]}</div>
+                <div class="card-value">{card["value"]}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+# Script para animar contadores
+st.markdown("""
+<script>
+    function animateCounters() {
+        const counters = document.querySelectorAll('.card-value');
+        counters.forEach(counter => {
+            const target = parseInt(counter.getAttribute('data-target'));
+            if (target && !counter.dataset.animated) {
+                counter.dataset.animated = 'true';
+                let current = 0;
+                const increment = Math.ceil(target / 30);
+                const update = () => {
+                    current += increment;
+                    if (current >= target) {
+                        counter.innerText = target;
+                    } else {
+                        counter.innerText = current;
+                        requestAnimationFrame(update);
+                    }
+                };
+                requestAnimationFrame(update);
+            }
+        });
+    }
+    document.addEventListener('DOMContentLoaded', animateCounters);
+</script>
+""", unsafe_allow_html=True)
 
 # ====================== CADASTRO ======================
 st.markdown("---")
@@ -1343,6 +1476,6 @@ apply_theme_css()
 st.markdown("---")
 st.markdown("""
 <div class="footer">
-    👮‍♂️ JOHN ACESSOS - ACESSO DE DADOS | Segurança e Proteção de Dados | Monitoramento de Sessões
+    🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
 </div>
 """, unsafe_allow_html=True)
