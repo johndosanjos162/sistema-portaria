@@ -220,25 +220,20 @@ def apply_theme_css():
             media_html = f'<video autoplay muted playsinline {loop_attr} style="width: 100%; height: 100%; object-fit: {adjust};"><source src="{media_url}" type="{mime_type}"></video>'
         st.markdown(container_div + media_html + "</div>", unsafe_allow_html=True)
         
-        # Ajustes de contraste SEM escurecer o vídeo
         st.markdown("""
         <style>
-        /* Remove o overlay escuro sobre o app */
         .stApp {
             background: transparent !important;
         }
-        /* Garante que os cards e elementos tenham fundo semi-transparente para legibilidade */
         .admin-card, .admin-header, .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div, .stTabs [data-baseweb="tab-list"], .stTabs [data-baseweb="tab"] {
             background: rgba(20, 20, 40, 0.7) !important;
             backdrop-filter: blur(6px);
             border: 1px solid rgba(255,255,255,0.2);
         }
-        /* Textos com sombra e cor clara para contraste */
         h1, h2, h3, p, label, .card-title, .card-value, .info-item, .stMarkdown, .stRadio label, .stCheckbox label, .stTextInput label, .stSelectbox label {
             color: #ffffff !important;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
-        /* Sidebar mantém seu estilo original, mas com maior transparência */
         [data-testid="stSidebar"] {
             background: rgba(8, 8, 20, 0.75) !important;
             backdrop-filter: blur(8px);
@@ -692,6 +687,46 @@ if st.session_state.perfil == "ADMIN":
                 st.session_state.theme_config = get_theme_config()
                 apply_theme_css()
                 st.success("Tema recarregado do Supabase!")
+
+# ====================== NOVA FUNÇÃO: EXPORTAR DADOS DE PESSOAS CADASTRADAS (SOMENTE ADMIN) ======================
+if st.session_state.perfil == "ADMIN":
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
+        st.markdown("### Exportar Cadastros")
+        try:
+            # Buscar todas as pessoas
+            todas_pessoas = supabase.table("Pessoas").select("nome, cpf, empresa").execute().data
+            if not todas_pessoas:
+                st.info("Nenhuma pessoa cadastrada ainda.")
+            else:
+                df_todas = pd.DataFrame(todas_pessoas)
+                # Obter lista única de empresas (excluindo vazios)
+                empresas = sorted([e for e in df_todas['empresa'].unique() if e and e.strip()])
+                opcoes_empresa = ["Todos"] + empresas
+                empresa_selecionada = st.selectbox("Filtrar por unidade (empresa):", opcoes_empresa, key="export_empresa")
+                
+                if empresa_selecionada == "Todos":
+                    df_export = df_todas.copy()
+                    st.write(f"Total de registros: {len(df_export)}")
+                else:
+                    df_export = df_todas[df_todas['empresa'] == empresa_selecionada].copy()
+                    st.write(f"Total de registros para {empresa_selecionada}: {len(df_export)}")
+                
+                if not df_export.empty:
+                    # Gerar CSV
+                    csv = df_export.to_csv(index=False, encoding='utf-8-sig')
+                    nome_arquivo = f"cadastros_{empresa_selecionada.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                    st.download_button(
+                        label="📥 Baixar CSV",
+                        data=csv,
+                        file_name=nome_arquivo,
+                        mime="text/csv",
+                        key="download_csv_pessoas"
+                    )
+                else:
+                    st.warning("Nenhum registro para o filtro selecionado.")
+        except Exception as e:
+            st.error(f"Erro ao carregar dados: {e}")
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
