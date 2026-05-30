@@ -38,7 +38,6 @@ st.markdown("""
         margin: 0;
         padding: 0;
         height: 100%;
-        width: 100%;
         overflow: hidden;
     }
     .stApp {
@@ -313,33 +312,28 @@ st.markdown("""
         z-index: -9999;
         pointer-events: none;
     }
-    /* --- LOGIN CENTRALIZADO, SEM ROLAGEM, RESPONSIVO --- */
+    /* --- LOGIN CENTRALIZADO E SEM ROLAGEM --- */
     .login-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
         display: flex;
         justify-content: center;
         align-items: center;
+        height: 100vh;
+        width: 100%;
         margin: 0;
         padding: 0;
         overflow: hidden;
-        z-index: 1000;
     }
     .login-box {
-        background: rgba(8, 8, 20, 0.85);
+        background: rgba(8,8,20,0.7);
         backdrop-filter: blur(20px);
         border-radius: 50px;
         padding: 45px 35px;
-        border: 1px solid rgba(168, 85, 247, 0.6);
-        width: 90%;
+        border: 1px solid rgba(168,85,247,0.6);
+        width: 100%;
         max-width: 480px;
         text-align: center;
         animation: float 3s ease-in-out infinite;
-        box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
-        margin: 20px;
+        box-shadow: 0 0 30px rgba(168,85,247,0.2);
     }
     .guard-logo {
         width: 110px;
@@ -380,26 +374,6 @@ st.markdown("""
         display: inline-block;
         color: #a855f7;
         margin-bottom: 15px;
-    }
-    /* Responsividade */
-    @media (max-width: 600px) {
-        .login-box {
-            padding: 30px 20px;
-            max-width: 90%;
-        }
-        .guard-logo {
-            width: 80px;
-            height: 80px;
-        }
-        .guard-logo span {
-            font-size: 45px;
-        }
-        .logo-title {
-            font-size: 24px;
-        }
-        .logo-subtitle {
-            font-size: 9px;
-        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -949,7 +923,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN (CENTRALIZADA, SEM ROLAGEM, RESPONSIVA) ======================
+# ====================== TELA DE LOGIN (CENTRALIZADA SEM SCROLL) ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -957,6 +931,7 @@ if not st.session_state.logado:
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
     
+    # Força o container de login a ocupar a tela toda sem scroll
     st.markdown("""
     <div class="login-container">
         <div class="login-box">
@@ -966,6 +941,7 @@ if not st.session_state.logado:
             <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     """, unsafe_allow_html=True)
     
+    # Script para o binário flutuante
     st.markdown("""
     <script>
         function generateBinary() {
@@ -1074,7 +1050,7 @@ with st.sidebar:
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
     st.markdown('<div class="info-item">📦 Versão: 13.1 (CYBER)</div>', unsafe_allow_html=True)
 
-# ====================== ADMIN: CONFIGURAÇÕES (MANTIDO) ======================
+# ====================== ADMIN: CONFIGURAÇÕES (MANTIDO IDÊNTICO AO ANTERIOR) ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
