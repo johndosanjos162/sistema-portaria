@@ -1387,7 +1387,7 @@ if st.session_state.perfil == "ADMIN":
             funcionarios_outros = [p for p in todos if p.get('empresa', '').upper() not in ["BRASANITAS", "GRSA"]]
 
             # Abas para cada categoria
-            aba1, aba2, aba3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 OUTROS (Prestadores/Serviços)"])
+            aba1, aba2, aba3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 OUTROS (Prestadores De Serviços / C.C)"])
 
             with aba1:
                 st.markdown(f"**Total:** {len(funcionarios_brasanitas)} funcionários")
