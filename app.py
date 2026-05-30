@@ -30,71 +30,24 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== CSS E JS PARA REMOVER TOP BAR E CRIAR DRAWER ======================
-# Esconde o cabeçalho padrão do Streamlit e o sidebar (inicialmente)
-# Adiciona um botão flutuante e controla o drawer via JavaScript
+# ====================== CSS: TORNAR A TOP BAR TRANSPARENTE ======================
 st.markdown("""
 <style>
-    /* Esconde o header padrão do Streamlit */
+    /* Torna o fundo do header transparente */
     header[data-testid="stHeader"] {
-        display: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
     }
-    /* Ajusta o corpo para preencher a tela sem o header */
+    /* Ajusta a cor dos ícones para branco (para contraste em fundos escuros) */
+    header[data-testid="stHeader"] button {
+        color: white !important;
+    }
+    /* Garante que o conteúdo do app não fique sobreposto pelo header */
     .stApp {
         margin-top: 0 !important;
         padding-top: 0 !important;
     }
-    /* Esconde o sidebar padrão inicialmente (drawer fechado) */
-    [data-testid="stSidebar"] {
-        visibility: hidden;
-        width: 0 !important;
-        transition: width 0.3s ease;
-    }
-    /* Quando a classe 'drawer-open' é adicionada ao body, o sidebar aparece */
-    body.drawer-open [data-testid="stSidebar"] {
-        visibility: visible;
-        width: 26rem !important;
-    }
-    /* Botão flutuante da engrenagem */
-    .gear-button {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        background: rgba(30,30,50,0.8);
-        backdrop-filter: blur(8px);
-        border: 1px solid #a855f7;
-        border-radius: 50%;
-        width: 48px;
-        height: 48px;
-        font-size: 28px;
-        text-align: center;
-        line-height: 48px;
-        cursor: pointer;
-        transition: 0.3s;
-        color: white;
-        box-shadow: 0 0 10px rgba(168,85,247,0.3);
-    }
-    .gear-button:hover {
-        transform: scale(1.05);
-        background: #a855f7;
-        box-shadow: 0 0 20px #a855f7;
-    }
 </style>
-<script>
-    // Função para alternar o drawer (sidebar)
-    function toggleDrawer() {
-        document.body.classList.toggle('drawer-open');
-    }
-    // Adiciona o botão de engrenagem ao DOM
-    window.addEventListener('load', function() {
-        const btn = document.createElement('div');
-        btn.innerHTML = '⚙️';
-        btn.className = 'gear-button';
-        btn.onclick = toggleDrawer;
-        document.body.appendChild(btn);
-    });
-</script>
 """, unsafe_allow_html=True)
 
 # ====================== FUNÇÕES DE GERENCIAMENTO DE SESSÃO ======================
@@ -402,7 +355,7 @@ def carregar_imagem(nome):
 
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png")
 
-# ====================== CSS BASE ======================
+# ====================== CSS BASE (SEM BACKGROUND FIXO) ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
@@ -434,10 +387,26 @@ h1, h2, h3 { font-family: 'Inter', sans-serif; color: #e9d5ff; }
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== SIDEBAR (AGORA É UM DRAWER OCULTO) ======================
-# O conteúdo do sidebar será exibido dentro do drawer.
-# Ele é o mesmo de antes, mas agora não fica visível até clicar na engrenagem.
-# Vamos usar o st.sidebar normalmente, pois o CSS já o esconde inicialmente.
+# ====================== SIDEBAR ======================
+if IMAGEM_SIDEBAR:
+    st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
+else:
+    st.sidebar.markdown('<div class="sidebar-header"><div class="sidebar-title">👮‍♂️ JOHN ACESSOS</div><p style="color:#a78bfa; font-size:9px;">ACESSO DE DADOS</p></div>', unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ⚡ ESTADO")
+st.sidebar.markdown('<div class="info-item">🟢 REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🤖 MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🗄️ DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📡 INFO")
+if st.session_state.get("perfil"):
+    st.sidebar.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
+else:
+    st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 13.1 (TECH)</div>', unsafe_allow_html=True)
 
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
@@ -529,252 +498,20 @@ if st.session_state.session_id:
 else:
     total_conectados = 0
 
-# ====================== SIDEBAR (DRAWER) COM CONFIGURAÇÕES ======================
-# Todo o conteúdo que antes estava na sidebar agora vai dentro do st.sidebar
-# Como o CSS já o esconde inicialmente, ele só aparece quando o drawer é aberto.
-with st.sidebar:
-    # Logo ou título
-    if IMAGEM_SIDEBAR:
-        st.image(IMAGEM_SIDEBAR, use_container_width=True)
-    else:
-        st.markdown('<div class="sidebar-header"><div class="sidebar-title">👮‍♂️ JOHN ACESSOS</div><p style="color:#a78bfa; font-size:9px;">ACESSO DE DADOS</p></div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
-    st.markdown("### ⚡ ESTADO")
-    st.markdown('<div class="info-item">🟢 REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">🤖 MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">🗄️ DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
-    st.markdown("---")
-    st.markdown("### 📡 INFO")
-    if st.session_state.get("perfil"):
-        st.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
-    st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">📦 Versão: 13.1 (TECH)</div>', unsafe_allow_html=True)
-    
-    # Ferramentas ADMIN (se for administrador)
-    if st.session_state.perfil == "ADMIN":
-        st.markdown("---")
-        with st.expander("⚙️ MANAGE APP", expanded=False):
-            st.markdown("### 🔧 Ferramentas Administrativas")
-            total_ativas = contar_sessoes_ativas()
-            st.metric("👥 Sessões ativas", total_ativas)
-            if st.button("🔒 Encerrar outras sessões", use_container_width=True, key="encerrar_sessoes"):
-                if encerrar_outras_sessoes():
-                    st.success("✅ Todas as outras sessões foram encerradas!")
-                    st.rerun()
-                else:
-                    st.error("❌ Erro ao encerrar outras sessões.")
-            if st.button("🧹 Limpar sessões expiradas", use_container_width=True, key="limpar_sessoes"):
-                limpar_sessoes_expiradas()
-                st.success("✅ Sessões expiradas removidas!")
-                st.rerun()
-            st.caption("Ações disponíveis apenas para o administrador.")
-        
-        st.markdown("---")
-        with st.expander("🎨 Configurar Tema (Global)", expanded=False):
-            st.markdown("### Personalizar Fundo - Aplica para todos os usuários")
-            config_atual = st.session_state.theme_config
-            tipo_atual = config_atual.get("type", "gradient")
-            opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (URL)"]
-            idx_map = {"gradient":0, "solid":1, "url":2, "image_upload":3, "video":4}
-            idx = idx_map.get(tipo_atual, 0)
-            tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
-            
-            novo_valor = config_atual.get("value", "")
-            novo_tipo = tipo_atual
-            novo_mime = config_atual.get("mime_type", "")
-            video_loop = config_atual.get("video_loop", True)
-            
-            if tipo == "Gradiente padrão":
-                novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-                novo_tipo = "gradient"
-            elif tipo == "Cor sólida":
-                cor_padrao = config_atual.get("value", "#0a0a1a") if tipo_atual == "solid" else "#0a0a1a"
-                cor = st.color_picker("Escolha a cor", value=cor_padrao, key="cor_picker")
-                novo_valor = cor
-                novo_tipo = "solid"
-            elif tipo == "Imagem (URL)":
-                url_padrao = ""
-                if tipo_atual == "url" and config_atual.get("value", "").startswith("url('"):
-                    match = re.search(r"url\('([^']+)'", config_atual.get("value", ""))
-                    if match:
-                        url_padrao = match.group(1)
-                url_img = st.text_input("URL da imagem", value=url_padrao, key="url_img", placeholder="https://exemplo.com/imagem.jpg")
-                if url_img and (url_img.startswith('http://') or url_img.startswith('https://')):
-                    novo_valor = url_img
-                    novo_tipo = "url"
-                elif url_img:
-                    st.error("URL inválida. Use http:// ou https://")
-                    novo_valor = config_atual.get("value", "")
-                    novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-                else:
-                    novo_valor = config_atual.get("value", "")
-                    novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-            elif tipo == "Imagem (upload)":
-                uploaded_file = st.file_uploader("Escolha uma imagem (PNG, JPG, JPEG, GIF)", type=["png","jpg","jpeg","gif"], key="upload_img")
-                if uploaded_file:
-                    with st.spinner("Processando imagem..."):
-                        try:
-                            imagem_data_url = compress_image_to_base64(uploaded_file)
-                            novo_valor = imagem_data_url
-                            novo_tipo = "url"
-                            st.success("✅ Imagem carregada e comprimida com sucesso!")
-                            st.image(uploaded_file, width=200, caption="Imagem carregada")
-                        except Exception as e:
-                            st.error(f"Erro ao processar imagem: {e}")
-                            novo_valor = config_atual.get("value", "")
-                            novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-                else:
-                    if tipo_atual == "url" and config_atual.get("value", "").startswith("data:image"):
-                        novo_valor = config_atual.get("value")
-                        novo_tipo = "url"
-                    else:
-                        novo_valor = config_atual.get("value", "")
-                        novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-            else:  # Animação (URL)
-                url_padrao = ""
-                if tipo_atual == "video":
-                    url_padrao = config_atual.get("value", "")
-                url_media = st.text_input("URL do vídeo/GIF (MP4/GIF)", value=url_padrao, key="url_video", placeholder="https://exemplo.com/video.mp4")
-                video_loop = st.checkbox("Reproduzir em loop infinito", value=config_atual.get("video_loop", True), key="video_loop")
-                if url_media and (url_media.startswith('http://') or url_media.startswith('https://')):
-                    novo_valor = url_media
-                    novo_tipo = "video"
-                    if url_media.lower().endswith('.gif'):
-                        novo_mime = "image/gif"
-                    else:
-                        novo_mime = "video/mp4"
-                    st.success("✅ URL de mídia configurada!")
-                elif url_media:
-                    st.error("URL inválida. Use http:// ou https://")
-                    novo_valor = config_atual.get("value", "")
-                    novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-                else:
-                    novo_valor = config_atual.get("value", "")
-                    novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-            
-            ajuste_opcoes = ["cover", "contain", "stretch"]
-            if novo_tipo in ["url", "video"]:
-                st.markdown("---")
-                st.markdown("#### Ajustes da mídia")
-                ajuste_atual = config_atual.get("image_adjust", "cover")
-                posicao_atual = config_atual.get("image_position", "center")
-                novo_ajuste = st.selectbox("Modo de ajuste:", ajuste_opcoes, index=ajuste_opcoes.index(ajuste_atual) if ajuste_atual in ajuste_opcoes else 0, key="ajuste_imagem")
-                nova_posicao = st.selectbox("Posição (para imagens fixas):", ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"], index=3 if posicao_atual == "center" else 0, key="posicao_imagem")
-            else:
-                novo_ajuste = "cover"
-                nova_posicao = "center"
-            
-            st.markdown("**Prévia:**")
-            if novo_tipo == "gradient":
-                preview_style = novo_valor
-                st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
-            elif novo_tipo == "solid":
-                preview_style = novo_valor
-                st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
-            elif novo_tipo == "url":
-                preview_style = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-                st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
-            else:  # video
-                if novo_valor:
-                    if novo_mime == "image/gif":
-                        st.markdown(f'<img src="{novo_valor}" style="width:100%; max-height:100px; object-fit:cover; border-radius:8px;">', unsafe_allow_html=True)
-                    else:
-                        st.video(novo_valor, format="video/mp4")
-                else:
-                    st.info("Informe uma URL para prévia")
-            
-            aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
-            col_btn1, col_btn2, col_btn3 = st.columns(3)
-            with col_btn1:
-                if st.button("💾 Salvar e Aplicar Tema (Global)", key="salvar_tema_global"):
-                    if novo_tipo == "gradient":
-                        valor_final = novo_valor
-                    elif novo_tipo == "solid":
-                        valor_final = novo_valor
-                    elif novo_tipo == "url":
-                        if novo_valor:
-                            valor_final = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed"
-                        else:
-                            valor_final = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-                            novo_tipo = "gradient"
-                    else:  # video
-                        valor_final = novo_valor if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-                        if not novo_valor:
-                            novo_tipo = "gradient"
-                    
-                    nova_config = {
-                        "type": novo_tipo,
-                        "value": valor_final,
-                        "apply_to_login": aplicar_login,
-                        "image_adjust": novo_ajuste,
-                        "image_position": nova_posicao,
-                        "mime_type": novo_mime if novo_tipo == "video" else "",
-                        "video_loop": video_loop if novo_tipo == "video" else True
-                    }
-                    if save_theme_config(nova_config):
-                        apply_theme_css()
-                        st.success("✅ Tema global salvo e aplicado!")
-                    else:
-                        st.error("Erro ao salvar tema global.")
-            with col_btn2:
-                if st.button("↺ Restaurar Padrão", key="reset_tema_global"):
-                    padrao = {
-                        "type": "gradient",
-                        "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
-                        "apply_to_login": False,
-                        "image_adjust": "cover",
-                        "image_position": "center",
-                        "mime_type": "",
-                        "video_loop": True
-                    }
-                    if save_theme_config(padrao):
-                        apply_theme_css()
-                        st.success("Tema restaurado para o padrão global!")
-            with col_btn3:
-                if st.button("🔄 Recarregar Tema do Banco", key="reload_tema"):
-                    st.session_state.theme_config = get_theme_config()
-                    apply_theme_css()
-                    st.success("Tema recarregado do Supabase!")
-        
-        st.markdown("---")
-        with st.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
-            st.markdown("### Exportar Cadastros")
-            try:
-                todas_pessoas = supabase.table("Pessoas").select("nome, cpf, empresa").execute().data
-                if not todas_pessoas:
-                    st.info("Nenhuma pessoa cadastrada ainda.")
-                else:
-                    df_todas = pd.DataFrame(todas_pessoas)
-                    empresas = sorted([e for e in df_todas['empresa'].unique() if e and e.strip()])
-                    opcoes_empresa = ["Todos"] + empresas
-                    empresa_selecionada = st.selectbox("Filtrar por unidade (empresa):", opcoes_empresa, key="export_empresa")
-                    if empresa_selecionada == "Todos":
-                        df_export = df_todas.copy()
-                        st.write(f"Total de registros: {len(df_export)}")
-                    else:
-                        df_export = df_todas[df_todas['empresa'] == empresa_selecionada].copy()
-                        st.write(f"Total de registros para {empresa_selecionada}: {len(df_export)}")
-                    if not df_export.empty:
-                        csv = df_export.to_csv(index=False, encoding='utf-8-sig')
-                        nome_arquivo = f"cadastros_{empresa_selecionada.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-                        st.download_button(
-                            label="📥 Baixar CSV",
-                            data=csv,
-                            file_name=nome_arquivo,
-                            mime="text/csv",
-                            key="download_csv_pessoas"
-                        )
-                    else:
-                        st.warning("Nenhum registro para o filtro selecionado.")
-            except Exception as e:
-                st.error(f"Erro ao carregar dados: {e}")
+# ====================== CABEÇALHO PERSONALIZADO (OPCIONAL) ======================
+# Se quiser manter o título e badge, pode deixar; se não, remova este bloco.
+st.markdown(f"""
+<div class="admin-header">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,#a855f7,#3b82f6);border-radius:50%;display:flex;align-items:center;justify-content:center;"><span style="font-size:20px;">👮‍♂️</span></div>
+            <div><h1 style="margin:0;font-size:16px;">JOHN ACESSOS - ACESSO DE DADOS</h1><p style="margin:0;color:#a78bfa;font-size:8px;">SEGURANÇA E PROTEÇÃO</p></div>
+        </div>
+        <div style="display:flex; gap:15px; align-items:center;">{f'<div class="session-indicator">{"⚠️" if total_conectados > 1 else ""} 👥 {total_conectados}</div>'}<div class="badge-admin">👑 {st.session_state.perfil}</div></div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# ====================== CORPO PRINCIPAL DO APP ======================
-# Botões de Atualizar e Sair (agora no corpo principal)
 col1, col2, col3, col4 = st.columns([6,1,1,1])
 with col3:
     if st.button("🔄 ATUALIZAR", key="btn_atualizar", use_container_width=True):
@@ -784,6 +521,225 @@ with col4:
         remover_sessao()
         st.session_state.logado = False
         st.rerun()
+
+# ====================== ADMIN: MANAGE APP E TEMA GLOBAL ======================
+if st.session_state.perfil == "ADMIN":
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
+        st.markdown("### 🔧 Ferramentas Administrativas")
+        total_ativas = contar_sessoes_ativas()
+        st.metric("👥 Sessões ativas", total_ativas)
+        if st.button("🔒 Encerrar outras sessões", use_container_width=True, key="encerrar_sessoes"):
+            if encerrar_outras_sessoes():
+                st.success("✅ Todas as outras sessões foram encerradas!")
+                st.rerun()
+            else:
+                st.error("❌ Erro ao encerrar outras sessões.")
+        if st.button("🧹 Limpar sessões expiradas", use_container_width=True, key="limpar_sessoes"):
+            limpar_sessoes_expiradas()
+            st.success("✅ Sessões expiradas removidas!")
+            st.rerun()
+        st.caption("Ações disponíveis apenas para o administrador.")
+    
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
+        st.markdown("### Personalizar Fundo - Aplica para todos os usuários")
+        config_atual = st.session_state.theme_config
+        tipo_atual = config_atual.get("type", "gradient")
+        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (URL)"]
+        idx_map = {"gradient":0, "solid":1, "url":2, "image_upload":3, "video":4}
+        idx = idx_map.get(tipo_atual, 0)
+        tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
+        
+        novo_valor = config_atual.get("value", "")
+        novo_tipo = tipo_atual
+        novo_mime = config_atual.get("mime_type", "")
+        video_loop = config_atual.get("video_loop", True)
+        
+        if tipo == "Gradiente padrão":
+            novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+            novo_tipo = "gradient"
+        elif tipo == "Cor sólida":
+            cor_padrao = config_atual.get("value", "#0a0a1a") if tipo_atual == "solid" else "#0a0a1a"
+            cor = st.color_picker("Escolha a cor", value=cor_padrao, key="cor_picker")
+            novo_valor = cor
+            novo_tipo = "solid"
+        elif tipo == "Imagem (URL)":
+            url_padrao = ""
+            if tipo_atual == "url" and config_atual.get("value", "").startswith("url('"):
+                match = re.search(r"url\('([^']+)'", config_atual.get("value", ""))
+                if match:
+                    url_padrao = match.group(1)
+            url_img = st.text_input("URL da imagem", value=url_padrao, key="url_img", placeholder="https://exemplo.com/imagem.jpg")
+            if url_img and (url_img.startswith('http://') or url_img.startswith('https://')):
+                novo_valor = url_img
+                novo_tipo = "url"
+            elif url_img:
+                st.error("URL inválida. Use http:// ou https://")
+                novo_valor = config_atual.get("value", "")
+                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+            else:
+                novo_valor = config_atual.get("value", "")
+                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+        elif tipo == "Imagem (upload)":
+            uploaded_file = st.file_uploader("Escolha uma imagem (PNG, JPG, JPEG, GIF)", type=["png","jpg","jpeg","gif"], key="upload_img")
+            if uploaded_file:
+                with st.spinner("Processando imagem..."):
+                    try:
+                        imagem_data_url = compress_image_to_base64(uploaded_file)
+                        novo_valor = imagem_data_url
+                        novo_tipo = "url"
+                        st.success("✅ Imagem carregada e comprimida com sucesso!")
+                        st.image(uploaded_file, width=200, caption="Imagem carregada")
+                    except Exception as e:
+                        st.error(f"Erro ao processar imagem: {e}")
+                        novo_valor = config_atual.get("value", "")
+                        novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+            else:
+                if tipo_atual == "url" and config_atual.get("value", "").startswith("data:image"):
+                    novo_valor = config_atual.get("value")
+                    novo_tipo = "url"
+                else:
+                    novo_valor = config_atual.get("value", "")
+                    novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+        else:  # Animação (URL)
+            url_padrao = ""
+            if tipo_atual == "video":
+                url_padrao = config_atual.get("value", "")
+            url_media = st.text_input("URL do vídeo/GIF (MP4/GIF)", value=url_padrao, key="url_video", placeholder="https://exemplo.com/video.mp4")
+            video_loop = st.checkbox("Reproduzir em loop infinito", value=config_atual.get("video_loop", True), key="video_loop")
+            if url_media and (url_media.startswith('http://') or url_media.startswith('https://')):
+                novo_valor = url_media
+                novo_tipo = "video"
+                if url_media.lower().endswith('.gif'):
+                    novo_mime = "image/gif"
+                else:
+                    novo_mime = "video/mp4"
+                st.success("✅ URL de mídia configurada!")
+            elif url_media:
+                st.error("URL inválida. Use http:// ou https://")
+                novo_valor = config_atual.get("value", "")
+                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+            else:
+                novo_valor = config_atual.get("value", "")
+                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+        
+        ajuste_opcoes = ["cover", "contain", "stretch"]
+        if novo_tipo in ["url", "video"]:
+            st.markdown("---")
+            st.markdown("#### Ajustes da mídia")
+            ajuste_atual = config_atual.get("image_adjust", "cover")
+            posicao_atual = config_atual.get("image_position", "center")
+            novo_ajuste = st.selectbox("Modo de ajuste:", ajuste_opcoes, index=ajuste_opcoes.index(ajuste_atual) if ajuste_atual in ajuste_opcoes else 0, key="ajuste_imagem")
+            nova_posicao = st.selectbox("Posição (para imagens fixas):", ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"], index=3 if posicao_atual == "center" else 0, key="posicao_imagem")
+        else:
+            novo_ajuste = "cover"
+            nova_posicao = "center"
+        
+        st.markdown("**Prévia:**")
+        if novo_tipo == "gradient":
+            preview_style = novo_valor
+            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+        elif novo_tipo == "solid":
+            preview_style = novo_valor
+            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+        elif novo_tipo == "url":
+            preview_style = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+        else:  # video
+            if novo_valor:
+                if novo_mime == "image/gif":
+                    st.markdown(f'<img src="{novo_valor}" style="width:100%; max-height:100px; object-fit:cover; border-radius:8px;">', unsafe_allow_html=True)
+                else:
+                    st.video(novo_valor, format="video/mp4")
+            else:
+                st.info("Informe uma URL para prévia")
+        
+        aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
+        with col_btn1:
+            if st.button("💾 Salvar e Aplicar Tema (Global)", key="salvar_tema_global"):
+                if novo_tipo == "gradient":
+                    valor_final = novo_valor
+                elif novo_tipo == "solid":
+                    valor_final = novo_valor
+                elif novo_tipo == "url":
+                    if novo_valor:
+                        valor_final = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed"
+                    else:
+                        valor_final = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+                        novo_tipo = "gradient"
+                else:  # video
+                    valor_final = novo_valor if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+                    if not novo_valor:
+                        novo_tipo = "gradient"
+                
+                nova_config = {
+                    "type": novo_tipo,
+                    "value": valor_final,
+                    "apply_to_login": aplicar_login,
+                    "image_adjust": novo_ajuste,
+                    "image_position": nova_posicao,
+                    "mime_type": novo_mime if novo_tipo == "video" else "",
+                    "video_loop": video_loop if novo_tipo == "video" else True
+                }
+                if save_theme_config(nova_config):
+                    apply_theme_css()
+                    st.success("✅ Tema global salvo e aplicado! Todos os usuários verão este tema.")
+                else:
+                    st.error("Erro ao salvar tema global.")
+        with col_btn2:
+            if st.button("↺ Restaurar Padrão", key="reset_tema_global"):
+                padrao = {
+                    "type": "gradient",
+                    "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
+                    "apply_to_login": False,
+                    "image_adjust": "cover",
+                    "image_position": "center",
+                    "mime_type": "",
+                    "video_loop": True
+                }
+                if save_theme_config(padrao):
+                    apply_theme_css()
+                    st.success("Tema restaurado para o padrão global!")
+        with col_btn3:
+            if st.button("🔄 Recarregar Tema do Banco", key="reload_tema"):
+                st.session_state.theme_config = get_theme_config()
+                apply_theme_css()
+                st.success("Tema recarregado do Supabase!")
+    
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
+        st.markdown("### Exportar Cadastros")
+        try:
+            todas_pessoas = supabase.table("Pessoas").select("nome, cpf, empresa").execute().data
+            if not todas_pessoas:
+                st.info("Nenhuma pessoa cadastrada ainda.")
+            else:
+                df_todas = pd.DataFrame(todas_pessoas)
+                empresas = sorted([e for e in df_todas['empresa'].unique() if e and e.strip()])
+                opcoes_empresa = ["Todos"] + empresas
+                empresa_selecionada = st.selectbox("Filtrar por unidade (empresa):", opcoes_empresa, key="export_empresa")
+                if empresa_selecionada == "Todos":
+                    df_export = df_todas.copy()
+                    st.write(f"Total de registros: {len(df_export)}")
+                else:
+                    df_export = df_todas[df_todas['empresa'] == empresa_selecionada].copy()
+                    st.write(f"Total de registros para {empresa_selecionada}: {len(df_export)}")
+                if not df_export.empty:
+                    csv = df_export.to_csv(index=False, encoding='utf-8-sig')
+                    nome_arquivo = f"cadastros_{empresa_selecionada.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                    st.download_button(
+                        label="📥 Baixar CSV",
+                        data=csv,
+                        file_name=nome_arquivo,
+                        mime="text/csv",
+                        key="download_csv_pessoas"
+                    )
+                else:
+                    st.warning("Nenhum registro para o filtro selecionado.")
+        except Exception as e:
+            st.error(f"Erro ao carregar dados: {e}")
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
@@ -1183,7 +1139,6 @@ if st.session_state.perfil == "ADMIN":
                                     st.error(f"Erro: {e}")
                     st.divider()
 
-# Reaplicar o tema ao final
 apply_theme_css()
 
 st.markdown("---")
