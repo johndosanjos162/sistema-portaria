@@ -17,10 +17,9 @@ try:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     supabase = create_client(url, key)
-    # Teste rápido de conexão
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
-    st.error(f"❌ Erro de conexão com Supabase: {e}\nVerifique secrets e se o projeto está ativo.")
+    st.error(f"❌ Erro de conexão com Supabase: {e}")
     st.stop()
 
 st.set_page_config(
@@ -93,51 +92,27 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (CORRIGIDAS) ======================
-def get_background_config():
-    """Carrega configuração do tema (prioriza session_state, fallback para padrão)."""
-    config_padrao = {
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA ======================
+def get_theme_config():
+    """Retorna a configuração de tema salva no session_state."""
+    padrao = {
         "type": "gradient",
         "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
         "apply_to_login": False
     }
-    # Primeiro, verifica session_state
-    if "tema_config" in st.session_state:
-        return st.session_state.tema_config
-    # Se não, tenta carregar do Supabase
-    try:
-        result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
-        if result.data:
-            config = json.loads(result.data[0]['value'])
-            st.session_state.tema_config = config
-            return config
-    except:
-        pass
-    st.session_state.tema_config = config_padrao
-    return config_padrao
+    if "theme_config" not in st.session_state:
+        st.session_state.theme_config = padrao.copy()
+    return st.session_state.theme_config
 
-def save_background_config(config):
-    """Salva configuração no session_state e no Supabase (opcional)."""
-    st.session_state.tema_config = config
-    try:
-        supabase.table("app_config").upsert({
-            "key": "background_config",
-            "value": json.dumps(config),
-            "updated_at": datetime.now().isoformat()
-        }).execute()
-    except Exception as e:
-        st.error(f"Erro ao salvar tema no servidor: {e}")
+def save_theme_config(config):
+    """Salva a configuração no session_state."""
+    st.session_state.theme_config = config
     return True
 
-def apply_background_css(config=None):
-    """Aplica o CSS de fundo de forma segura."""
-    if config is None:
-        config = st.session_state.get("tema_config", get_background_config())
+def apply_theme_css():
+    """Aplica o CSS de fundo (sem JavaScript, apenas CSS)."""
+    config = get_theme_config()
     bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-    # Garantir que bg_value é uma string simples (sem quebras de linha)
-    bg_value = bg_value.strip()
-    # Escapar caracteres para colocar no CSS (já que o CSS aceita aspas simples/duplas)
-    # Mas aqui vamos colocar no style, então não precisa escapar tanto
     css = f"""
     <style>
     .stApp, .stApp > header, .stApp > div {{
@@ -245,7 +220,7 @@ def carregar_imagem(nome):
 
 IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png")
 
-# ====================== CSS BASE (SEM BACKGROUND FIXO) ======================
+# ====================== CSS BASE ======================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
@@ -319,13 +294,15 @@ if "pessoa_confirmada" not in st.session_state:
     st.session_state.pessoa_confirmada = None
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
-if "tema_config" not in st.session_state:
-    st.session_state.tema_config = get_background_config()
+
+# Inicializa tema
+get_theme_config()  # garante que existe
 
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
-    if st.session_state.tema_config.get("apply_to_login", False):
-        apply_background_css(st.session_state.tema_config)
+    theme = get_theme_config()
+    if theme.get("apply_to_login", False):
+        apply_theme_css()
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
     if st.session_state.bloqueado_ate and datetime.now() < st.session_state.bloqueado_ate:
@@ -378,7 +355,7 @@ if not st.session_state.logado:
     st.stop()
 
 # ====================== APÓS LOGIN ======================
-apply_background_css(st.session_state.tema_config)
+apply_theme_css()
 
 if st.session_state.session_id:
     atualizar_atividade_sessao()
@@ -432,7 +409,7 @@ if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema", expanded=False):
         st.markdown("### Personalizar Fundo")
-        config_atual = st.session_state.tema_config.copy()
+        config_atual = get_theme_config()
         tipo_atual = config_atual.get("type", "gradient")
         opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)"]
         idx = 0 if tipo_atual == "gradient" else 1 if tipo_atual == "solid" else 2
@@ -449,7 +426,10 @@ if st.session_state.perfil == "ADMIN":
             novo_valor = cor
             novo_tipo = "solid"
         else:  # URL
-            url_padrao = config_atual.get("value", "") if tipo_atual == "url" else ""
+            # Limpa valor anterior se for URL
+            url_padrao = ""
+            if tipo_atual == "url" and config_atual.get("value", "").startswith("url('"):
+                url_padrao = config_atual.get("value", "").replace("url('", "").replace("') center/cover no-repeat fixed", "")
             url_img = st.text_input("URL da imagem", value=url_padrao, key="url_img", placeholder="https://exemplo.com/imagem.jpg")
             if url_img and (url_img.startswith('http://') or url_img.startswith('https://')):
                 novo_valor = f"url('{url_img}') center/cover no-repeat fixed"
@@ -469,16 +449,16 @@ if st.session_state.perfil == "ADMIN":
         aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            if st.button("💾 Salvar e Aplicar Tema", key="salvar_tema"):
+            if st.button("💾 Aplicar Tema", key="aplicar_tema"):
                 nova_config = {"type": novo_tipo, "value": novo_valor, "apply_to_login": aplicar_login}
-                save_background_config(nova_config)
-                apply_background_css(nova_config)
-                st.success("✅ Tema aplicado! (não precisa recarregar)")
+                save_theme_config(nova_config)
+                apply_theme_css()
+                st.success("✅ Tema aplicado!")
         with col_btn2:
             if st.button("↺ Restaurar Padrão", key="reset_tema"):
                 padrao = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
-                save_background_config(padrao)
-                apply_background_css(padrao)
+                save_theme_config(padrao)
+                apply_theme_css()
                 st.success("Tema restaurado para o padrão!")
 
 # ====================== DASHBOARD ======================
