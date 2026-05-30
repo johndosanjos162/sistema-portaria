@@ -991,7 +991,6 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
                 # Verificar se CPF já existe
                 existe = supabase.table("Pessoas").select("id, empresa").eq("cpf", cpf_limpo).execute().data
                 if existe:
-                    # CPF já cadastrado
                     empresa_existente = existe[0].get('empresa', 'N/A')
                     st.error(f"❌ Pessoa já cadastrada com este CPF (Empresa atual: {empresa_existente}). Utilize a gestão de cadastros para editar ou excluir.")
                 else:
@@ -1372,7 +1371,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     else:
         st.info("📭 Nenhum registro encontrado no histórico.")
 
-# ====================== GESTÃO DE CADASTROS DE PESSOAS ======================
+# ====================== GESTÃO DE CADASTROS DE PESSOAS (COM EDIÇÃO) ======================
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
@@ -1387,16 +1386,44 @@ if st.session_state.perfil == "ADMIN":
             funcionarios_outros = [p for p in todos if p.get('empresa', '').upper() not in ["BRASANITAS", "GRSA"]]
 
             # Abas para cada categoria
-            aba1, aba2, aba3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 OUTROS (Prestadores De Serviços / C.C)"])
+            aba1, aba2, aba3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 OUTROS (Prestadores/Serviços)"])
 
             with aba1:
                 st.markdown(f"**Total:** {len(funcionarios_brasanitas)} funcionários")
                 if funcionarios_brasanitas:
                     for pessoa in funcionarios_brasanitas:
-                        col1, col2, col3 = st.columns([4, 2, 1])
+                        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
                         col1.markdown(f"**👤 {pessoa['nome']}**")
                         col2.markdown(f"📄 CPF: {pessoa['cpf']}")
                         with col3:
+                            with st.popover("✏️ Editar", use_container_width=True):
+                                with st.form(key=f"edit_brasanitas_{pessoa['id']}"):
+                                    novo_nome = st.text_input("Nome", value=pessoa['nome'])
+                                    novo_cpf = st.text_input("CPF", value=pessoa['cpf'])
+                                    nova_empresa = st.text_input("Empresa", value=pessoa.get('empresa', ''))
+                                    if st.form_submit_button("💾 Salvar alterações"):
+                                        if not novo_nome or not novo_cpf:
+                                            st.error("Nome e CPF são obrigatórios.")
+                                        elif not validar_cpf(novo_cpf):
+                                            st.error("CPF inválido.")
+                                        else:
+                                            cpf_limpo = sanitizar_cpf(novo_cpf)
+                                            # Verificar se o novo CPF já pertence a outro registro
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", cpf_limpo).neq("id", pessoa['id']).execute().data
+                                            if conflito:
+                                                st.error("Este CPF já está cadastrado para outra pessoa.")
+                                            else:
+                                                try:
+                                                    supabase.table("Pessoas").update({
+                                                        "nome": sanitizar_texto(novo_nome).strip().upper(),
+                                                        "cpf": cpf_limpo,
+                                                        "empresa": sanitizar_texto(nova_empresa).strip().upper() if nova_empresa else ""
+                                                    }).eq("id", pessoa['id']).execute()
+                                                    st.success("✅ Cadastro atualizado!")
+                                                    st.rerun()
+                                                except Exception as e:
+                                                    st.error(f"Erro ao atualizar: {e}")
+                        with col4:
                             with st.popover("🗑️ Excluir", use_container_width=True):
                                 st.warning(f"Tem certeza que deseja excluir **{pessoa['nome']}**?")
                                 if st.button("✅ Confirmar exclusão", key=f"del_brasanitas_{pessoa['id']}"):
@@ -1414,10 +1441,37 @@ if st.session_state.perfil == "ADMIN":
                 st.markdown(f"**Total:** {len(funcionarios_grsa)} funcionários")
                 if funcionarios_grsa:
                     for pessoa in funcionarios_grsa:
-                        col1, col2, col3 = st.columns([4, 2, 1])
+                        col1, col2, col3, col4 = st.columns([3, 2, 1, 1])
                         col1.markdown(f"**👤 {pessoa['nome']}**")
                         col2.markdown(f"📄 CPF: {pessoa['cpf']}")
                         with col3:
+                            with st.popover("✏️ Editar", use_container_width=True):
+                                with st.form(key=f"edit_grsa_{pessoa['id']}"):
+                                    novo_nome = st.text_input("Nome", value=pessoa['nome'])
+                                    novo_cpf = st.text_input("CPF", value=pessoa['cpf'])
+                                    nova_empresa = st.text_input("Empresa", value=pessoa.get('empresa', ''))
+                                    if st.form_submit_button("💾 Salvar alterações"):
+                                        if not novo_nome or not novo_cpf:
+                                            st.error("Nome e CPF são obrigatórios.")
+                                        elif not validar_cpf(novo_cpf):
+                                            st.error("CPF inválido.")
+                                        else:
+                                            cpf_limpo = sanitizar_cpf(novo_cpf)
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", cpf_limpo).neq("id", pessoa['id']).execute().data
+                                            if conflito:
+                                                st.error("Este CPF já está cadastrado para outra pessoa.")
+                                            else:
+                                                try:
+                                                    supabase.table("Pessoas").update({
+                                                        "nome": sanitizar_texto(novo_nome).strip().upper(),
+                                                        "cpf": cpf_limpo,
+                                                        "empresa": sanitizar_texto(nova_empresa).strip().upper() if nova_empresa else ""
+                                                    }).eq("id", pessoa['id']).execute()
+                                                    st.success("✅ Cadastro atualizado!")
+                                                    st.rerun()
+                                                except Exception as e:
+                                                    st.error(f"Erro ao atualizar: {e}")
+                        with col4:
                             with st.popover("🗑️ Excluir", use_container_width=True):
                                 st.warning(f"Tem certeza que deseja excluir **{pessoa['nome']}**?")
                                 if st.button("✅ Confirmar exclusão", key=f"del_grsa_{pessoa['id']}"):
@@ -1442,11 +1496,38 @@ if st.session_state.perfil == "ADMIN":
                         st.caption(f"Mostrando {len(filtrados)} de {len(funcionarios_outros)} resultados")
 
                     for pessoa in filtrados:
-                        col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
+                        col1, col2, col3, col4, col5 = st.columns([2, 2, 2, 1, 1])
                         col1.markdown(f"**👤 {pessoa['nome']}**")
                         col2.markdown(f"📄 CPF: {pessoa['cpf']}")
                         col3.markdown(f"🏢 Empresa: {pessoa.get('empresa', 'N/A')}")
                         with col4:
+                            with st.popover("✏️ Editar", use_container_width=True):
+                                with st.form(key=f"edit_outros_{pessoa['id']}"):
+                                    novo_nome = st.text_input("Nome", value=pessoa['nome'])
+                                    novo_cpf = st.text_input("CPF", value=pessoa['cpf'])
+                                    nova_empresa = st.text_input("Empresa", value=pessoa.get('empresa', ''))
+                                    if st.form_submit_button("💾 Salvar alterações"):
+                                        if not novo_nome or not novo_cpf:
+                                            st.error("Nome e CPF são obrigatórios.")
+                                        elif not validar_cpf(novo_cpf):
+                                            st.error("CPF inválido.")
+                                        else:
+                                            cpf_limpo = sanitizar_cpf(novo_cpf)
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", cpf_limpo).neq("id", pessoa['id']).execute().data
+                                            if conflito:
+                                                st.error("Este CPF já está cadastrado para outra pessoa.")
+                                            else:
+                                                try:
+                                                    supabase.table("Pessoas").update({
+                                                        "nome": sanitizar_texto(novo_nome).strip().upper(),
+                                                        "cpf": cpf_limpo,
+                                                        "empresa": sanitizar_texto(nova_empresa).strip().upper() if nova_empresa else ""
+                                                    }).eq("id", pessoa['id']).execute()
+                                                    st.success("✅ Cadastro atualizado!")
+                                                    st.rerun()
+                                                except Exception as e:
+                                                    st.error(f"Erro ao atualizar: {e}")
+                        with col5:
                             with st.popover("🗑️ Excluir", use_container_width=True):
                                 st.warning(f"Tem certeza que deseja excluir **{pessoa['nome']}**?")
                                 if st.button("✅ Confirmar exclusão", key=f"del_outros_{pessoa['id']}"):
