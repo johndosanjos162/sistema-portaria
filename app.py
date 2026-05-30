@@ -30,7 +30,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== CSS + JS FUTURISTA GLOBAL (BOTÕES AVANÇADOS) ======================
+# ====================== CSS GLOBAL ======================
 st.markdown("""
 <style>
     /* RESET E BACKGROUND */
@@ -62,7 +62,7 @@ st.markdown("""
         border-right: 1px solid rgba(0, 255, 255, 0.3);
         box-shadow: 4px 0 30px rgba(0, 255, 255, 0.1);
     }
-    /* AVATAR E ESTILOS GLOBAIS (mantidos) */
+    /* AVATAR */
     .avatar-container {
         text-align: center;
         margin-bottom: 25px;
@@ -99,7 +99,7 @@ st.markdown("""
         0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
         100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
     }
-    /* CARDS (st.metric) mantidos */
+    /* CARDS (st.metric) */
     div[data-testid="metric-container"] {
         background: rgba(15, 15, 35, 0.55);
         backdrop-filter: blur(12px);
@@ -139,9 +139,9 @@ st.markdown("""
     div[data-testid="metric-container"] .stMetricDelta {
         display: none;
     }
-    /* ================== BOTÕES FUTURISTAS ================== */
-    /* Estilos base para todos os botões Streamlit */
-    .stButton > button, .stForm button {
+    /* ================== BOTÕES FUTURISTAS (APENAS DENTRO DO APP, NÃO NO LOGIN) ================== */
+    /* Estilos para botões dentro do conteúdo principal (após login) */
+    .main .stButton > button, .main .stForm button, .stApp .stButton > button:not(.login-button) {
         position: relative;
         background: rgba(0, 20, 40, 0.7) !important;
         backdrop-filter: blur(12px);
@@ -157,7 +157,7 @@ st.markdown("""
         z-index: 1;
     }
     /* Efeito de vidro líquido + brilho */
-    .stButton > button::before, .stForm button::before {
+    .main .stButton > button::before, .stApp .stForm button::before {
         content: '';
         position: absolute;
         top: 0;
@@ -168,18 +168,18 @@ st.markdown("""
         transition: left 0.5s;
         z-index: -1;
     }
-    .stButton > button:hover::before, .stForm button:hover::before {
+    .main .stButton > button:hover::before, .stApp .stForm button:hover::before {
         left: 100%;
     }
-    .stButton > button:hover, .stForm button:hover {
+    .main .stButton > button:hover, .stApp .stForm button:hover {
         transform: scale(1.02);
         border-color: magenta !important;
         color: magenta !important;
         box-shadow: 0 0 20px magenta, 0 0 5px cyan;
         text-shadow: 0 0 5px magenta;
     }
-    /* Botão específico: ATUALIZAR (btn_atualizar) */
-    .stButton > button[key="btn_atualizar"] {
+    /* Botão ATUALIZAR */
+    .main .stButton > button[key="btn_atualizar"] {
         background: linear-gradient(135deg, rgba(0,20,50,0.8), rgba(0,40,80,0.8)) !important;
         border: 1px solid #0ff !important;
         animation: buttonGlow 3s infinite alternate;
@@ -188,34 +188,19 @@ st.markdown("""
         0% { box-shadow: 0 0 5px #0ff; }
         100% { box-shadow: 0 0 20px #0ff, 0 0 5px magenta; }
     }
-    /* Botão SAIR (sair_final) */
-    .stButton > button[key="sair_final"] {
+    /* Botão SAIR */
+    .main .stButton > button[key="sair_final"] {
         background: rgba(40,0,20,0.8) !important;
         border-color: #f0f !important;
         color: #f0f !important;
     }
-    /* Botão CONFIRMAR CPF (confirma_cpf) */
-    .stButton > button[key="confirma_cpf"] {
+    /* Botão CONFIRMAR CPF */
+    .main .stButton > button[key="confirma_cpf"] {
         position: relative;
         overflow: visible;
     }
-    .stButton > button[key="confirma_cpf"]::after {
-        content: '🔍';
-        position: absolute;
-        right: -30px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 18px;
-        opacity: 0;
-        transition: 0.2s;
-    }
-    .stButton > button[key="confirma_cpf"]:hover::after {
-        opacity: 1;
-        right: -40px;
-        filter: drop-shadow(0 0 5px cyan);
-    }
-    /* Botão REGISTRAR ENTRADA (btn_entrada) */
-    .stButton > button[key="btn_entrada"] {
+    /* Botão REGISTRAR ENTRADA */
+    .main .stButton > button[key="btn_entrada"] {
         background: linear-gradient(135deg, #004d1a, #00aa33) !important;
         border-color: #0f0 !important;
         animation: pulseGreen 1.5s infinite;
@@ -224,31 +209,25 @@ st.markdown("""
         0% { box-shadow: 0 0 5px #0f0; }
         100% { box-shadow: 0 0 15px #0f0, 0 0 5px cyan; }
     }
-    /* Botão REGISTRAR SAÍDA (saida_pesquisado, saida_{id}, saida2_{id}) */
-    .stButton > button[key^="sair_pesquisado"], .stButton > button[key^="saida_"] {
+    /* Botões de SAÍDA e EXCLUSÃO */
+    .main .stButton > button[key^="sair_pesquisado"], .main .stButton > button[key^="saida_"] {
         background: rgba(80,0,0,0.8) !important;
         border-color: #f44 !important;
         color: #f88 !important;
     }
-    /* Botão EXCLUIR (excluir_selecionados, confirmar_excluir, del_*, etc.) */
-    .stButton > button[key*="excluir"], .stButton > button[key*="del_"], .stButton > button[key="confirmar_excluir"] {
+    .main .stButton > button[key*="excluir"], .main .stButton > button[key*="del_"], .main .stButton > button[key="confirmar_excluir"] {
         background: linear-gradient(135deg, #330000, #990000) !important;
         border-color: #ff4444 !important;
         transition: 0.2s;
     }
-    .stButton > button[key*="excluir"]:hover {
+    .main .stButton > button[key*="excluir"]:hover {
         background: #ff0000 !important;
         box-shadow: 0 0 25px red;
         color: white !important;
         transform: scale(1.05);
     }
-    /* Botão EDITAR (editar nos popovers) */
-    .stButton > button[key*="Editar"], .stButton > button[key*="edit"] {
-        background: rgba(0,100,150,0.8) !important;
-        border-color: #0af !important;
-    }
-    /* Botão PESQUISAR (buscar_saida) */
-    .stButton > button[key="buscar_saida"] {
+    /* Botão PESQUISAR */
+    .main .stButton > button[key="buscar_saida"] {
         background: rgba(0,50,80,0.9) !important;
         border-color: #0ff !important;
         animation: scanPulse 1s infinite;
@@ -257,24 +236,8 @@ st.markdown("""
         0% { box-shadow: 0 0 5px cyan; }
         100% { box-shadow: 0 0 15px cyan, inset 0 0 5px cyan; }
     }
-    /* Botão LOGIN (submit do formulário de login) */
-    .stForm button[type="submit"] {
-        background: linear-gradient(90deg, #0a2b3e, #1a4b6e) !important;
-        border: 1px solid #0ff !important;
-        animation: loginGlow 2s infinite;
-    }
-    @keyframes loginGlow {
-        0% { box-shadow: 0 0 5px #0ff; }
-        50% { box-shadow: 0 0 25px #0ff, 0 0 10px magenta; }
-        100% { box-shadow: 0 0 5px #0ff; }
-    }
-    /* Botão SALVAR CADASTRO (salvar_cadastro) */
-    .stButton > button[key="salvar_cadastro"] {
-        background: radial-gradient(circle at 30% 10%, #00aaff, #0055aa) !important;
-        border: 1px solid cyan !important;
-    }
-    /* Animação de partículas digitais para todos os botões */
-    .stButton > button:active::after {
+    /* Animação de partículas ao clicar */
+    .main .stButton > button:active::after {
         content: '';
         position: absolute;
         width: 100%;
@@ -289,17 +252,7 @@ st.markdown("""
         0% { transform: scale(0); opacity: 1; }
         100% { transform: scale(2); opacity: 0; }
     }
-    /* Barra de carregamento para botões de ação (simulação) */
-    .stButton > button[data-loading="true"] {
-        background: repeating-linear-gradient(45deg, #0ff, #0ff 10px, #00a 10px, #00a 20px) !important;
-        background-size: 40px 40px !important;
-        animation: loadingMove 0.5s linear infinite;
-    }
-    @keyframes loadingMove {
-        0% { background-position: 0 0; }
-        100% { background-position: 40px 0; }
-    }
-    /* Indicador de sincronização (aparece após clique) */
+    /* Indicador de sincronização (mensagens flutuantes) */
     .sync-indicator {
         position: fixed;
         bottom: 20px;
@@ -322,7 +275,7 @@ st.markdown("""
         85% { opacity: 1; transform: translateX(0); }
         100% { opacity: 0; transform: translateX(20px); }
     }
-    /* Estilos para campos de input (mantidos) */
+    /* Estilos para inputs (mantidos) */
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
         background: rgba(0, 10, 20, 0.7) !important;
         backdrop-filter: blur(8px);
@@ -430,7 +383,7 @@ st.markdown("""
         z-index: -9999;
         pointer-events: none;
     }
-    /* LOGIN LAYOUT (duas colunas) */
+    /* ===== TELA DE LOGIN (SEM ALTERAÇÕES - LAYOUT ANTERIOR) ===== */
     .login-container {
         position: fixed;
         top: 0;
@@ -520,6 +473,20 @@ st.markdown("""
         margin-bottom: 15px;
         border: 1px solid rgba(0,255,255,0.3);
     }
+    /* Botão de login SEM efeitos futuristas (estilo original) */
+    .login-fields .stForm button {
+        background: rgba(0,20,40,0.7) !important;
+        border: 1px solid #0ff !important;
+        color: #0ff !important;
+        animation: none !important;
+        box-shadow: 0 0 5px rgba(0,255,255,0.3) !important;
+    }
+    .login-fields .stForm button:hover {
+        background: rgba(0,255,255,0.15) !important;
+        border-color: magenta !important;
+        color: magenta !important;
+        transform: scale(1.02);
+    }
     .fingerprint-area {
         display: flex;
         justify-content: flex-start;
@@ -555,7 +522,7 @@ st.markdown("""
 </style>
 
 <script>
-    // Adiciona indicadores de sincronização para botões de ação (visual)
+    // Feedback visual para ações dentro do app (não afeta o login)
     function showSyncMessage(message) {
         let div = document.createElement('div');
         div.className = 'sync-indicator';
@@ -564,10 +531,13 @@ st.markdown("""
         setTimeout(() => div.remove(), 2000);
     }
 
-    // Intercepta cliques em botões específicos para mostrar feedback de IA
+    // Intercepta cliques em botões do app (com base no container .main)
     document.addEventListener('click', function(e) {
         let btn = e.target.closest('button');
         if(!btn) return;
+        // Verifica se o botão está dentro da área principal (após login)
+        let isInsideApp = btn.closest('.main') || (btn.closest('.stApp') && !btn.closest('.login-container'));
+        if(!isInsideApp) return;
         let key = btn.getAttribute('key');
         if(key === 'btn_atualizar') {
             showSyncMessage('🔄 Sincronizando dados...');
@@ -579,7 +549,6 @@ st.markdown("""
         }
         if(key === 'confirma_cpf') {
             showSyncMessage('🔍 Analisando CPF...');
-            // Simula verificação IA (apenas visual)
             setTimeout(() => {
                 let cpfInput = document.querySelector('input[key="cpf_entrada"]');
                 if(cpfInput && cpfInput.value.length === 11) {
@@ -605,41 +574,8 @@ st.markdown("""
         if(key === 'reset_tema_global') {
             showSyncMessage('⚙️ Tema restaurado para padrão global');
         }
+        // Efeito de partículas apenas nos botões do app (já garantido pelo CSS)
     });
-
-    // Efeito de partículas ao passar o mouse em botões (opcional)
-    function createParticles(e) {
-        let btn = e.target.closest('button');
-        if(!btn) return;
-        for(let i=0; i<10; i++) {
-            let particle = document.createElement('div');
-            particle.style.position = 'absolute';
-            particle.style.width = '4px';
-            particle.style.height = '4px';
-            particle.style.background = `hsl(${Math.random() * 60 + 180}, 100%, 60%)`;
-            particle.style.borderRadius = '50%';
-            particle.style.left = e.clientX - btn.getBoundingClientRect().left + 'px';
-            particle.style.top = e.clientY - btn.getBoundingClientRect().top + 'px';
-            particle.style.pointerEvents = 'none';
-            particle.style.zIndex = '9999';
-            particle.style.animation = `particleFly 0.6s ease-out forwards`;
-            btn.style.position = 'relative';
-            btn.appendChild(particle);
-            setTimeout(() => particle.remove(), 600);
-        }
-    }
-    document.addEventListener('mouseover', function(e) {
-        if(e.target.closest('button')) createParticles(e);
-    });
-    // Keyframes para partículas
-    let style = document.createElement('style');
-    style.innerHTML = `
-        @keyframes particleFly {
-            0% { transform: translate(0,0) scale(1); opacity: 1; }
-            100% { transform: translate(${Math.random() * 60 - 30}px, ${Math.random() * 40 - 60}px) scale(0); opacity: 0; }
-        }
-    `;
-    document.head.appendChild(style);
 </script>
 """, unsafe_allow_html=True)
 
@@ -1076,7 +1012,7 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE RELATÓRIOS PDF (mantidas) ======================
+# ====================== FUNÇÕES DE RELATÓRIOS PDF ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
@@ -1186,7 +1122,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN ======================
+# ====================== TELA DE LOGIN (SEM ALTERAÇÕES) ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -1350,7 +1286,7 @@ with st.sidebar:
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
     st.markdown('<div class="info-item">📦 Versão: 13.1 (CYBER)</div>', unsafe_allow_html=True)
 
-# ====================== ADMIN: CONFIGURAÇÕES (MANTIDAS) ======================
+# ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
@@ -1604,7 +1540,7 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS) ======================
+# ====================== DASHBOARD ======================
 st.markdown("---")
 try:
     presentes_data = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
