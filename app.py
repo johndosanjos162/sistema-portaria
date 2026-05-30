@@ -1600,7 +1600,7 @@ if st.session_state.perfil == "ADMIN":
             br = [p for p in todos if p.get('empresa', '').upper() == "BRASANITAS"]
             gr = [p for p in todos if p.get('empresa', '').upper() == "GRSA"]
             outros = [p for p in todos if p.get('empresa', '').upper() not in ["BRASANITAS", "GRSA"]]
-            tab1, tab2, tab3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 OUTROS"])
+            tab1, tab2, tab3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 Prestador de serviços / C.C "])
             with tab1:
                 st.markdown(f"**Total:** {len(br)}")
                 for p in br:
