@@ -18,10 +18,9 @@ try:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     supabase = create_client(url, key)
-    # Teste rápido de conexão
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
-    st.error(f"❌ Erro de conexão com Supabase: {e}\nVerifique secrets e se o projeto está ativo.")
+    st.error(f"❌ Erro de conexão com Supabase: {e}")
     st.stop()
 
 st.set_page_config(
@@ -94,9 +93,8 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (PERSISTENTE) ======================
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (CORRIGIDAS) ======================
 def compress_image_to_base64(uploaded_file, max_size_kb=500):
-    """Converte imagem para Base64 com compressão."""
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
         img = img.convert('RGB')
@@ -118,7 +116,6 @@ def compress_image_to_base64(uploaded_file, max_size_kb=500):
     return f"data:image/jpeg;base64,{b64_str}"
 
 def get_theme_config():
-    """Carrega configuração do Supabase (global) com fallback e cria registro padrão se não existir."""
     padrao = {
         "type": "gradient",
         "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
@@ -130,12 +127,10 @@ def get_theme_config():
         result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
         if result.data:
             config = json.loads(result.data[0]['value'])
-            # Garantir que novos campos existam
             config.setdefault("image_adjust", "cover")
             config.setdefault("image_position", "center")
             return config
         else:
-            # Cria o registro padrão no banco
             save_theme_config(padrao)
             return padrao
     except Exception as e:
@@ -143,7 +138,6 @@ def get_theme_config():
         return padrao
 
 def save_theme_config(config):
-    """Salva configuração no Supabase e recarrega no session_state."""
     try:
         supabase.table("app_config").upsert({
             "key": "background_config",
@@ -157,51 +151,63 @@ def save_theme_config(config):
         return False
 
 def apply_theme_css():
-    """Aplica o CSS de fundo a partir da configuração global."""
+    """Aplica o CSS de fundo com seletores amplos + JavaScript fallback."""
     config = st.session_state.get("theme_config", get_theme_config())
     bg_type = config.get("type", "gradient")
     
     if bg_type == "gradient":
         bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-        css = f"""
-        <style>
-        .stApp, .stApp > header, .stApp > div {{
-            background: {bg_value} !important;
-            background-attachment: fixed !important;
-            background-size: cover !important;
-            background-repeat: no-repeat !important;
-            background-position: center !important;
-        }}
-        </style>
-        """
+        bg_css_value = bg_value
+        adjust = "cover"
+        position = "center"
     elif bg_type == "solid":
         bg_value = config.get("value", "#0a0a1a")
-        css = f"""
-        <style>
-        .stApp, .stApp > header, .stApp > div {{
-            background: {bg_value} !important;
-            background-attachment: fixed !important;
-            background-size: cover !important;
-        }}
-        </style>
-        """
-    else:  # image (url ou upload)
+        bg_css_value = bg_value
+        adjust = "cover"
+        position = "center"
+    else:  # imagem
         bg_value = config.get("value", "")
-        if not bg_value:
-            bg_value = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-        adjust = config.get("image_adjust", "cover")
-        position = config.get("image_position", "center")
-        css = f"""
-        <style>
-        .stApp, .stApp > header, .stApp > div {{
-            background: {bg_value} !important;
-            background-attachment: fixed !important;
-            background-size: {adjust} !important;
-            background-repeat: no-repeat !important;
-            background-position: {position} !important;
-        }}
-        </style>
-        """
+        if not bg_value or bg_value.startswith("radial"):
+            bg_css_value = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+            adjust = "cover"
+            position = "center"
+        else:
+            bg_css_value = bg_value
+            adjust = config.get("image_adjust", "cover")
+            position = config.get("image_position", "center")
+    
+    # CSS com seletores específicos
+    css = f"""
+    <style>
+    html, body, .stApp, .stApp > header, .stApp > div, .main, .main > div {{
+        background: {bg_css_value} !important;
+        background-attachment: fixed !important;
+        background-size: {adjust} !important;
+        background-repeat: no-repeat !important;
+        background-position: {position} !important;
+    }}
+    </style>
+    <script>
+        (function() {{
+            var bgValue = "{bg_css_value.replace('"', '\\"')}";
+            var adjust = "{adjust}";
+            var position = "{position}";
+            document.body.style.background = bgValue;
+            document.body.style.backgroundAttachment = "fixed";
+            document.body.style.backgroundSize = adjust;
+            document.body.style.backgroundRepeat = "no-repeat";
+            document.body.style.backgroundPosition = position;
+            var app = document.querySelector('.stApp');
+            if(app) {{
+                app.style.background = bgValue;
+                app.style.backgroundAttachment = "fixed";
+                app.style.backgroundSize = adjust;
+                app.style.backgroundRepeat = "no-repeat";
+                app.style.backgroundPosition = position;
+            }}
+        }})();
+    </script>
+    """
     st.markdown(css, unsafe_allow_html=True)
 
 # ====================== FUNÇÕES DE RELATÓRIOS (PDF) ======================
@@ -373,8 +379,7 @@ if "pessoa_confirmada" not in st.session_state:
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 
-# ========== CARREGAMENTO DO TEMA GLOBAL (PERSISTENTE) ==========
-# Força o carregamento do tema do Supabase a cada execução
+# Carregar tema global do Supabase (força recarga)
 st.session_state.theme_config = get_theme_config()
 
 # ====================== TELA DE LOGIN ======================
@@ -497,7 +502,6 @@ if st.session_state.perfil == "ADMIN":
         
         novo_valor = config_atual.get("value", "")
         novo_tipo = tipo_atual
-        imagem_data_url = None
         
         if tipo == "Gradiente padrão":
             novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
@@ -510,7 +514,6 @@ if st.session_state.perfil == "ADMIN":
         elif tipo == "Imagem (URL)":
             url_padrao = ""
             if tipo_atual == "url" and config_atual.get("value", "").startswith("url('"):
-                # Extrai a URL pura
                 match = re.search(r"url\('([^']+)'", config_atual.get("value", ""))
                 if match:
                     url_padrao = match.group(1)
@@ -547,7 +550,7 @@ if st.session_state.perfil == "ADMIN":
                     novo_valor = config_atual.get("value", "")
                     novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
         
-        # Opções de ajuste apenas se for imagem (tipo url)
+        # Opções de ajuste apenas para imagem
         ajuste_opcoes = ["cover", "contain", "stretch"]
         posicao_opcoes = ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"]
         
@@ -1015,6 +1018,9 @@ if st.session_state.perfil == "ADMIN":
                                 except Exception as e:
                                     st.error(f"Erro: {e}")
                     st.divider()
+
+# Reaplicar o tema novamente ao final (para garantir)
+apply_theme_css()
 
 st.markdown("---")
 st.markdown("""
