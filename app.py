@@ -389,7 +389,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== FUNÇÕES DE AVATAR (BASE64) ======================
+# ====================== FUNÇÕES DE AVATAR ======================
 def compress_avatar_image(uploaded_file, max_size_kb=200):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -932,7 +932,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN (CENTRALIZADA) ======================
+# ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -1311,32 +1311,30 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS CORRIGIDOS) ======================
+# ====================== DASHBOARD (CARDS CORRIGIDOS - AGORA MOSTRA OS VALORES) ======================
 st.markdown("---")
 try:
-    # PRESENTES: pessoas com data_saida vazia
-    pessoas_presentes = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
-    total_presentes = pessoas_presentes.count if hasattr(pessoas_presentes, 'count') else 0
+    # Buscar dados de forma segura
+    presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
+    total_presentes = len(presentes) if presentes else 0
     
-    # CADASTRADOS: total de pessoas
-    total_cadastrados = supabase.table("Pessoas").select("id", count="exact").execute()
-    total_colaboradores = total_cadastrados.count if hasattr(total_cadastrados, 'count') else 0
+    cadastrados = supabase.table("Pessoas").select("*").execute().data
+    total_cadastrados = len(cadastrados) if cadastrados else 0
     
-    # SETORES ATIVOS: quantidade de setores distintos com movimentação
-    setores = supabase.table("movimentacao").select("setor_destino").execute()
-    if setores.data:
-        setores_unicos = len(set(p['setor_destino'] for p in setores.data))
+    setores = supabase.table("movimentacao").select("setor_destino").execute().data
+    if setores:
+        setores_unicos = len(set(p['setor_destino'] for p in setores))
     else:
-        setores_unicos = 11  # fallback para a lista original
+        setores_unicos = 11  # fallback
 except Exception as e:
     st.error(f"Erro ao carregar estatísticas: {e}")
     total_presentes = 0
-    total_colaboradores = 0
+    total_cadastrados = 0
     setores_unicos = 11
 
 cards_data = [
     {"icon": "👥", "title": "PRESENTES", "value": total_presentes},
-    {"icon": "📊", "title": "CADASTRADOS", "value": total_colaboradores},
+    {"icon": "📊", "title": "CADASTRADOS", "value": total_cadastrados},
     {"icon": "🏛️", "title": "SETORES ATIVOS", "value": setores_unicos},
     {"icon": "🛡️", "title": "SEGURANÇA", "value": "24/7"}
 ]
