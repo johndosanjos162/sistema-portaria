@@ -261,7 +261,7 @@ st.markdown("""
         z-index: -9999;
         pointer-events: none;
     }
-    /* Estilos da tela de login - nova logo hexagonal */
+    /* Estilos da tela de login (layout corrigido: logo no topo, campos abaixo) */
     .login-container {
         position: fixed;
         top: 0;
@@ -280,7 +280,7 @@ st.markdown("""
         background: rgba(8, 8, 20, 0.75);
         backdrop-filter: blur(20px);
         border-radius: 56px;
-        padding: 40px 32px;
+        padding: 30px 32px 40px 32px;
         border: 1px solid rgba(0, 255, 255, 0.4);
         width: 90%;
         max-width: 460px;
@@ -288,15 +288,16 @@ st.markdown("""
         animation: float 3s ease-in-out infinite;
         box-shadow: 0 0 40px rgba(0, 255, 255, 0.2), inset 0 0 20px rgba(0,255,255,0.05);
         position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
     .hex-logo {
         width: 90px;
         height: 90px;
-        margin: 0 auto 20px;
+        margin: 0 auto 20px auto;
         position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: block;
     }
     .hex-logo svg {
         width: 100%;
@@ -322,7 +323,7 @@ st.markdown("""
         font-size: 11px;
         color: #aaf;
         letter-spacing: 2px;
-        margin-bottom: 30px;
+        margin-bottom: 25px;
         text-transform: uppercase;
     }
     .binary-stream {
@@ -336,6 +337,41 @@ st.markdown("""
         margin-bottom: 20px;
         border: 1px solid rgba(0,255,255,0.3);
     }
+    .stForm {
+        width: 100%;
+        margin-top: 0;
+    }
+    .stForm > div {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .stTextInput {
+        width: 100%;
+    }
+    .stTextInput > div > div > input {
+        width: 100%;
+        background: rgba(0, 15, 30, 0.7) !important;
+        border: 1px solid cyan !important;
+        border-radius: 40px !important;
+        color: white !important;
+        padding: 12px 20px !important;
+        font-family: 'Space Mono', monospace;
+        margin: 0;
+    }
+    .stForm button {
+        width: 100%;
+        margin-top: 8px;
+    }
+    .fingerprint-area {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 12px;
+        font-size: 13px;
+        color: #aaf;
+        font-family: monospace;
+    }
     @keyframes float {
         0% { transform: translateY(0px); }
         50% { transform: translateY(-6px); }
@@ -343,17 +379,19 @@ st.markdown("""
     }
     @media (max-width: 600px) {
         .login-box {
-            padding: 30px 20px;
+            padding: 20px 20px 30px 20px;
         }
         .hex-logo {
             width: 70px;
             height: 70px;
+            margin-bottom: 15px;
         }
         .logo-title {
             font-size: 24px;
         }
         .logo-subtitle {
             font-size: 9px;
+            margin-bottom: 20px;
         }
     }
 </style>
@@ -902,7 +940,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN (ATUALIZADA - DESIGN CYBER PREMIUM) ======================
+# ====================== TELA DE LOGIN (LAYOUT CORRIGIDO) ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -941,7 +979,7 @@ if not st.session_state.logado:
             </div>
             <div class="logo-title">JOHN ACESSOS</div>
             <div class="logo-subtitle">CYBER SECURITY 2026</div>
-            <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
+            <div id="binary-container" style="text-align:center;"></div>
     """, unsafe_allow_html=True)
     
     st.markdown("""
@@ -963,10 +1001,9 @@ if not st.session_state.logado:
         senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", key="senha_login", label_visibility="collapsed")
         submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
         st.markdown("""
-        <div style="display: flex; justify-content: center; margin-top: 10px; gap: 6px;">
-            <span style="font-size: 22px; filter: drop-shadow(0 0 2px cyan); opacity:0.8;">🔑</span>
-            <span style="font-size: 14px; color: #aaf; font-family: monospace;">ACESSO BIOMÉTRICO</span>
-            <span style="font-size: 22px; filter: drop-shadow(0 0 2px magenta); opacity:0.8;">🖐️</span>
+        <div class="fingerprint-area">
+            <span>🔑 ACESSO BIOMÉTRICO</span>
+            <span>🖐️</span>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1314,7 +1351,7 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS COM st.metric) ======================
+# ====================== DASHBOARD ======================
 st.markdown("---")
 try:
     presentes_data = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
