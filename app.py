@@ -33,7 +33,6 @@ st.set_page_config(
 # ====================== CSS FUTURISTA GLOBAL ======================
 st.markdown("""
 <style>
-    /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
     html, body {
         margin: 0;
         padding: 0;
@@ -98,113 +97,33 @@ st.markdown("""
         0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
         100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
     }
-
-    /* ===== NOVOS CARDS ULTRA TECNOLÓGICOS ===== */
-    .dashboard-card {
-        background: rgba(10, 15, 30, 0.45);
+    /* Cards usando st.metric - estilo glassmorphism premium */
+    div[data-testid="metric-container"] {
+        background: rgba(15, 15, 35, 0.55);
         backdrop-filter: blur(12px);
         border-radius: 28px;
         padding: 1.2rem 1rem;
-        margin: 0.5rem;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 15px rgba(0,255,255,0.2);
-        transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
-        position: relative;
-        overflow: hidden;
-        cursor: default;
-        z-index: 1;
-    }
-    /* Efeito de reflexo dinâmico */
-    .dashboard-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.15), transparent);
-        transition: left 0.6s ease;
-        z-index: 0;
-        pointer-events: none;
-    }
-    .dashboard-card:hover::before {
-        left: 100%;
-    }
-    /* Borda neon animada no hover */
-    .dashboard-card::after {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, cyan, magenta, cyan, #0ff);
-        border-radius: 30px;
-        z-index: -1;
-        opacity: 0;
-        transition: opacity 0.4s;
-    }
-    .dashboard-card:hover::after {
-        opacity: 0.6;
-    }
-    .dashboard-card:hover {
-        transform: translateY(-6px);
-        border-color: rgba(0, 255, 255, 0.8);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 25px cyan;
-    }
-    .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-        position: relative;
-        z-index: 2;
-    }
-    .card-icon {
-        font-size: 2.5rem;
-        filter: drop-shadow(0 0 6px cyan);
-        transition: 0.2s;
-    }
-    .dashboard-card:hover .card-icon {
-        transform: scale(1.05);
-        filter: drop-shadow(0 0 12px magenta);
-    }
-    .status-indicator {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(0,0,0,0.5);
-        padding: 4px 10px;
-        border-radius: 30px;
-        font-size: 0.7rem;
-        font-family: 'Space Mono', monospace;
         border: 1px solid rgba(0, 255, 255, 0.4);
-        backdrop-filter: blur(4px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 0 12px rgba(0,255,255,0.3);
+        transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+        cursor: default;
     }
-    .status-led {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: #0f0;
-        box-shadow: 0 0 6px #0f0;
-        animation: pulseLed 1.2s infinite;
+    div[data-testid="metric-container"]:hover {
+        transform: translateY(-6px);
+        border-color: cyan;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 25px cyan;
     }
-    @keyframes pulseLed {
-        0% { opacity: 0.4; transform: scale(0.8); }
-        100% { opacity: 1; transform: scale(1.2); }
-    }
-    .card-title {
+    div[data-testid="metric-container"] label {
         font-size: 0.85rem;
         letter-spacing: 3px;
         text-transform: uppercase;
         color: #aaf;
         font-weight: 500;
-        margin-bottom: 8px;
-        position: relative;
-        z-index: 2;
+        text-align: center;
+        display: block;
     }
-    .card-value {
-        font-size: 2.8rem;
+    div[data-testid="metric-container"] .stMetricValue {
+        font-size: 2.6rem;
         font-weight: 800;
         background: linear-gradient(135deg, #fff, cyan);
         -webkit-background-clip: text;
@@ -213,22 +132,11 @@ st.markdown("""
         text-shadow: 0 0 20px rgba(0,255,255,0.5);
         line-height: 1.2;
         font-family: 'Space Mono', monospace;
-        margin-bottom: 4px;
-        position: relative;
-        z-index: 2;
+        text-align: center;
     }
-    .card-footer {
-        font-size: 0.7rem;
-        color: rgba(0, 255, 255, 0.7);
-        font-family: monospace;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 8px;
-        position: relative;
-        z-index: 2;
+    div[data-testid="metric-container"] .stMetricDelta {
+        display: none;
     }
-    /* BOTÕES NEON */
     .stButton>button, .stForm button {
         background: rgba(0,20,40,0.7) !important;
         backdrop-filter: blur(8px);
@@ -246,7 +154,6 @@ st.markdown("""
         box-shadow: 0 0 15px magenta;
         transform: scale(1.02);
     }
-    /* INPUTS FUTURISTAS */
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
         background: rgba(0, 10, 20, 0.7) !important;
         backdrop-filter: blur(8px);
@@ -354,6 +261,7 @@ st.markdown("""
         z-index: -9999;
         pointer-events: none;
     }
+    /* Estilos da tela de login - nova logo hexagonal */
     .login-container {
         position: fixed;
         top: 0;
@@ -369,69 +277,77 @@ st.markdown("""
         z-index: 1000;
     }
     .login-box {
-        background: rgba(8, 8, 20, 0.85);
+        background: rgba(8, 8, 20, 0.75);
         backdrop-filter: blur(20px);
-        border-radius: 50px;
-        padding: 45px 35px;
-        border: 1px solid rgba(168, 85, 247, 0.6);
+        border-radius: 56px;
+        padding: 40px 32px;
+        border: 1px solid rgba(0, 255, 255, 0.4);
         width: 90%;
-        max-width: 480px;
+        max-width: 460px;
         text-align: center;
         animation: float 3s ease-in-out infinite;
-        box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
-        margin: 20px;
+        box-shadow: 0 0 40px rgba(0, 255, 255, 0.2), inset 0 0 20px rgba(0,255,255,0.05);
+        position: relative;
     }
-    .guard-logo {
-        width: 110px;
-        height: 110px;
+    .hex-logo {
+        width: 90px;
+        height: 90px;
         margin: 0 auto 20px;
-        background: radial-gradient(circle, rgba(168,85,247,0.3), rgba(59,130,246,0.1));
-        border-radius: 50%;
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
-        position: relative;
-        animation: pulse 2s infinite;
     }
-    .guard-logo span {
-        font-size: 60px;
-        filter: drop-shadow(0 0 10px #a855f7);
+    .hex-logo svg {
+        width: 100%;
+        height: 100%;
+        filter: drop-shadow(0 0 12px cyan);
+        transition: 0.3s;
+    }
+    .hex-logo svg:hover {
+        filter: drop-shadow(0 0 20px magenta);
+        transform: scale(1.02);
     }
     .logo-title {
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 800;
-        background: linear-gradient(135deg, #fff, #a855f7);
+        background: linear-gradient(135deg, #fff, #0ff, #a855f7);
         -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: transparent;
         letter-spacing: 1px;
+        margin-bottom: 5px;
     }
     .logo-subtitle {
         font-size: 11px;
-        color: #a78bfa;
-        letter-spacing: 3px;
-        margin-bottom: 25px;
+        color: #aaf;
+        letter-spacing: 2px;
+        margin-bottom: 30px;
+        text-transform: uppercase;
     }
     .binary-stream {
         font-family: 'Space Mono', monospace;
         font-size: 10px;
-        background: rgba(0,0,0,0.5);
-        padding: 6px;
-        border-radius: 20px;
+        background: rgba(0,0,0,0.4);
+        padding: 6px 12px;
+        border-radius: 30px;
         display: inline-block;
-        color: #a855f7;
-        margin-bottom: 15px;
+        color: cyan;
+        margin-bottom: 20px;
+        border: 1px solid rgba(0,255,255,0.3);
+    }
+    @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-6px); }
+        100% { transform: translateY(0px); }
     }
     @media (max-width: 600px) {
         .login-box {
             padding: 30px 20px;
-            max-width: 90%;
         }
-        .guard-logo {
-            width: 80px;
-            height: 80px;
-        }
-        .guard-logo span {
-            font-size: 45px;
+        .hex-logo {
+            width: 70px;
+            height: 70px;
         }
         .logo-title {
             font-size: 24px;
@@ -986,7 +902,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN ======================
+# ====================== TELA DE LOGIN (ATUALIZADA - DESIGN CYBER PREMIUM) ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -997,7 +913,32 @@ if not st.session_state.logado:
     st.markdown("""
     <div class="login-container">
         <div class="login-box">
-            <div class="guard-logo"><span>🛡️</span></div>
+            <div class="hex-logo">
+                <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#00ffff"/>
+                            <stop offset="100%" stop-color="#a855f7"/>
+                        </linearGradient>
+                        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+                            <feMerge>
+                                <feMergeNode in="offsetblur" />
+                                <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                        </filter>
+                    </defs>
+                    <polygon points="50,5 90,27 90,73 50,95 10,73 10,27" fill="rgba(0,20,40,0.4)" stroke="url(#hexGrad)" stroke-width="2" filter="url(#glow)"/>
+                    <polygon points="50,15 80,32 80,68 50,85 20,68 20,32" fill="url(#hexGrad)" opacity="0.2"/>
+                    <path d="M50 25 L65 32 L65 52 C65 68 50 78 50 78 C50 78 35 68 35 52 L35 32 L50 25Z" fill="rgba(0,255,255,0.3)" stroke="cyan" stroke-width="1.5"/>
+                    <rect x="46" y="48" width="8" height="10" rx="2" fill="white" opacity="0.9"/>
+                    <path d="M44 48 C44 44 56 44 56 48" stroke="white" stroke-width="2" fill="none"/>
+                    <path d="M20 45 L25 45 L25 50 L30 50" stroke="#0ff" stroke-width="1" fill="none" opacity="0.6"/>
+                    <path d="M80 45 L75 45 L75 50 L70 50" stroke="#0ff" stroke-width="1" fill="none" opacity="0.6"/>
+                    <circle cx="30" cy="50" r="1.5" fill="#0ff" opacity="0.8"/>
+                    <circle cx="70" cy="50" r="1.5" fill="#0ff" opacity="0.8"/>
+                </svg>
+            </div>
             <div class="logo-title">JOHN ACESSOS</div>
             <div class="logo-subtitle">CYBER SECURITY 2026</div>
             <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
@@ -1019,8 +960,16 @@ if not st.session_state.logado:
     
     with st.form("login_form"):
         st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
-        senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
+        senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", key="senha_login", label_visibility="collapsed")
         submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
+        st.markdown("""
+        <div style="display: flex; justify-content: center; margin-top: 10px; gap: 6px;">
+            <span style="font-size: 22px; filter: drop-shadow(0 0 2px cyan); opacity:0.8;">🔑</span>
+            <span style="font-size: 14px; color: #aaf; font-family: monospace;">ACESSO BIOMÉTRICO</span>
+            <span style="font-size: 22px; filter: drop-shadow(0 0 2px magenta); opacity:0.8;">🖐️</span>
+        </div>
+        """, unsafe_allow_html=True)
+        
         if submitted:
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
@@ -1365,18 +1314,15 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS ULTRA TECNOLÓGICOS) ======================
+# ====================== DASHBOARD (CARDS COM st.metric) ======================
 st.markdown("---")
 try:
-    # PRESENTES: pessoas com data_saida vazia
     presentes_data = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
     total_presentes = presentes_data.count if hasattr(presentes_data, 'count') else 0
     
-    # CADASTRADOS: total de pessoas
     cadastrados_data = supabase.table("Pessoas").select("id", count="exact").execute()
     total_cadastrados = cadastrados_data.count if hasattr(cadastrados_data, 'count') else 0
     
-    # SETORES ATIVOS: setores distintos na movimentacao
     setores_data = supabase.table("movimentacao").select("setor_destino").execute()
     if setores_data.data:
         setores_unicos = len(set(p['setor_destino'] for p in setores_data.data))
@@ -1388,72 +1334,15 @@ except Exception as e:
     total_cadastrados = 0
     setores_unicos = 11
 
-# Layout dos cards
 col1, col2, col3, col4 = st.columns(4)
-
 with col1:
-    st.markdown(f"""
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon">👥</div>
-            <div class="status-indicator"><span class="status-led"></span> ATIVO</div>
-        </div>
-        <div class="card-title">PRESENTES</div>
-        <div class="card-value">{total_presentes}</div>
-        <div class="card-footer">
-            <span>🟢 ONLINE</span>
-            <span>⏱️ TEMPO REAL</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.metric("👥 PRESENTES", total_presentes)
 with col2:
-    st.markdown(f"""
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon">📊</div>
-            <div class="status-indicator"><span class="status-led"></span> BASE</div>
-        </div>
-        <div class="card-title">CADASTRADOS</div>
-        <div class="card-value">{total_cadastrados}</div>
-        <div class="card-footer">
-            <span>📋 CADASTROS</span>
-            <span>✅ VERIFICADOS</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.metric("📊 CADASTRADOS", total_cadastrados)
 with col3:
-    st.markdown(f"""
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon">🏛️</div>
-            <div class="status-indicator"><span class="status-led"></span> MAPA</div>
-        </div>
-        <div class="card-title">SETORES ATIVOS</div>
-        <div class="card-value">{setores_unicos}</div>
-        <div class="card-footer">
-            <span>📍 ÁREAS</span>
-            <span>🔍 MONITORADAS</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.metric("🏛️ SETORES ATIVOS", setores_unicos)
 with col4:
-    st.markdown(f"""
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon">🛡️</div>
-            <div class="status-indicator"><span class="status-led"></span> 24/7</div>
-        </div>
-        <div class="card-title">SEGURANÇA</div>
-        <div class="card-value">ATIVA</div>
-        <div class="card-footer">
-            <span>🔒 PROTEÇÃO</span>
-            <span>⚡ INTELIGENTE</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.metric("🛡️ SEGURANÇA", "24/7")
 
 # ====================== CADASTRO ======================
 st.markdown("---")
