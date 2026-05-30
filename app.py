@@ -93,7 +93,7 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (CORRIGIDAS) ======================
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA ======================
 def get_background_config():
     config_padrao = {
         "type": "gradient",
@@ -124,11 +124,9 @@ def save_background_config(config):
         return False
 
 def apply_background_css(config=None):
-    """Aplica o CSS de fundo de forma mais robusta"""
     if config is None:
         config = st.session_state.get("background_config", get_background_config())
     bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-    # Injetar CSS com alta prioridade e também forçar via JavaScript
     css = f"""
     <style>
     .stApp, .stApp > header, .stApp > div {{
@@ -140,7 +138,6 @@ def apply_background_css(config=None):
     }}
     </style>
     <script>
-        // Forçar aplicação no body também (fallback)
         document.body.style.background = "{bg_value}";
         document.body.style.backgroundAttachment = "fixed";
         document.body.style.backgroundSize = "cover";
@@ -427,54 +424,55 @@ if st.session_state.perfil == "ADMIN":
         st.caption("Ações disponíveis apenas para o administrador.")
     
     st.sidebar.markdown("---")
-    if st.sidebar.button("🎨 Configurar Tema", use_container_width=True):
-        with st.popover("🎨 Personalizar Fundo", use_container_width=True):
-            config_atual = st.session_state.background_config.copy()
-            tipo_atual = config_atual.get("type", "gradient")
-            opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)"]
-            idx = 0 if tipo_atual == "gradient" else 1 if tipo_atual == "solid" else 2
-            tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
-            novo_valor = config_atual.get("value", "")
-            novo_tipo = tipo_atual
-            
-            if tipo == "Gradiente padrão":
-                novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-                novo_tipo = "gradient"
-            elif tipo == "Cor sólida":
-                cor_padrao = config_atual.get("value", "#0a0a1a") if tipo_atual == "solid" else "#0a0a1a"
-                cor = st.color_picker("Escolha a cor", value=cor_padrao, key="cor_picker")
-                novo_valor = cor
-                novo_tipo = "solid"
-            else:  # URL
-                url_padrao = config_atual.get("value", "") if tipo_atual == "url" else ""
-                url_img = st.text_input("URL da imagem", value=url_padrao, key="url_img", placeholder="https://exemplo.com/imagem.jpg")
-                if url_img:
-                    novo_valor = f"url('{url_img}') center/cover no-repeat fixed"
-                    novo_tipo = "url"
-                else:
-                    novo_valor = config_atual.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-                    novo_tipo = tipo_atual if tipo_atual in ["gradient","solid"] else "gradient"
-            
-            # Exibir pré-visualização
-            st.markdown(f"**Prévia atual:**")
-            st.markdown(f'<div style="width:100%; height:50px; background:{novo_valor}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
-            
-            aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
-            col_btn1, col_btn2 = st.columns(2)
-            with col_btn1:
-                if st.button("💾 Salvar e Aplicar Tema", key="salvar_tema"):
-                    nova_config = {"type": novo_tipo, "value": novo_valor, "apply_to_login": aplicar_login}
-                    if save_background_config(nova_config):
-                        st.success("✅ Tema salvo! Recarregando...")
-                        st.rerun()
-                    else:
-                        st.error("Erro ao salvar. Verifique conexão com Supabase.")
-            with col_btn2:
-                if st.button("↺ Restaurar Padrão", key="reset_tema"):
-                    padrao = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
-                    save_background_config(padrao)
-                    st.success("Tema restaurado para o padrão! Recarregando...")
+    # CORREÇÃO: Usar expander em vez de popover
+    with st.sidebar.expander("🎨 Configurar Tema", expanded=False):
+        st.markdown("### Personalizar Fundo")
+        config_atual = st.session_state.background_config.copy()
+        tipo_atual = config_atual.get("type", "gradient")
+        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)"]
+        idx = 0 if tipo_atual == "gradient" else 1 if tipo_atual == "solid" else 2
+        tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
+        novo_valor = config_atual.get("value", "")
+        novo_tipo = tipo_atual
+        
+        if tipo == "Gradiente padrão":
+            novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+            novo_tipo = "gradient"
+        elif tipo == "Cor sólida":
+            cor_padrao = config_atual.get("value", "#0a0a1a") if tipo_atual == "solid" else "#0a0a1a"
+            cor = st.color_picker("Escolha a cor", value=cor_padrao, key="cor_picker")
+            novo_valor = cor
+            novo_tipo = "solid"
+        else:  # URL
+            url_padrao = config_atual.get("value", "") if tipo_atual == "url" else ""
+            url_img = st.text_input("URL da imagem", value=url_padrao, key="url_img", placeholder="https://exemplo.com/imagem.jpg")
+            if url_img:
+                novo_valor = f"url('{url_img}') center/cover no-repeat fixed"
+                novo_tipo = "url"
+            else:
+                novo_valor = config_atual.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
+                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid"] else "gradient"
+        
+        # Pré-visualização
+        st.markdown("**Prévia:**")
+        st.markdown(f'<div style="width:100%; height:50px; background:{novo_valor}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
+        
+        aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("💾 Salvar e Aplicar Tema", key="salvar_tema"):
+                nova_config = {"type": novo_tipo, "value": novo_valor, "apply_to_login": aplicar_login}
+                if save_background_config(nova_config):
+                    st.success("✅ Tema salvo! Recarregando...")
                     st.rerun()
+                else:
+                    st.error("Erro ao salvar. Verifique conexão com Supabase.")
+        with col_btn2:
+            if st.button("↺ Restaurar Padrão", key="reset_tema"):
+                padrao = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
+                save_background_config(padrao)
+                st.success("Tema restaurado para o padrão! Recarregando...")
+                st.rerun()
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
