@@ -24,796 +24,13 @@ except Exception as e:
     st.stop()
 
 st.set_page_config(
-    page_title="JOHN ACESSOS - CYBER SECURITY 2026",
+    page_title="JOHN ACESSOS - ACESSO DE DADOS",
     layout="wide",
-    page_icon="🛡️",
+    page_icon="👮‍♂️",
     initial_sidebar_state="expanded"
 )
 
-# ====================== CSS FUTURISTA GLOBAL ======================
-st.markdown("""
-<style>
-    /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
-    html, body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        width: 100%;
-        overflow: hidden;
-    }
-    .stApp {
-        transition: background 0.3s ease;
-        height: 100%;
-        overflow: auto;
-    }
-    header[data-testid="stHeader"] {
-        background: transparent !important;
-        box-shadow: none !important;
-        backdrop-filter: blur(8px);
-        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-    }
-    header[data-testid="stHeader"] button {
-        color: #0ff !important;
-        text-shadow: 0 0 3px #0ff;
-    }
-    [data-testid="stSidebar"] {
-        background: rgba(10, 10, 25, 0.65) !important;
-        backdrop-filter: blur(16px);
-        border-right: 1px solid rgba(0, 255, 255, 0.3);
-        box-shadow: 4px 0 30px rgba(0, 255, 255, 0.1);
-    }
-    .avatar-container {
-        text-align: center;
-        margin-bottom: 25px;
-        position: relative;
-    }
-    .avatar-image {
-        width: 130px;
-        height: 130px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid #0ff;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.3);
-        transition: 0.3s;
-        filter: drop-shadow(0 0 8px cyan);
-    }
-    .avatar-image:hover {
-        transform: scale(1.02);
-        box-shadow: 0 0 30px cyan;
-        border-color: #f0f;
-    }
-    .glow-ring {
-        position: absolute;
-        top: -5px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 140px;
-        height: 140px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(0,255,255,0.2), transparent);
-        pointer-events: none;
-        animation: pulseRing 2s infinite;
-    }
-    @keyframes pulseRing {
-        0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
-        100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
-    }
-
-    /* ===== NOVOS CARDS ULTRA TECNOLÓGICOS ===== */
-    .dashboard-card {
-        background: rgba(10, 15, 30, 0.45);
-        backdrop-filter: blur(12px);
-        border-radius: 28px;
-        padding: 1.2rem 1rem;
-        margin: 0.5rem;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 15px rgba(0,255,255,0.2);
-        transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
-        position: relative;
-        overflow: hidden;
-        cursor: default;
-        z-index: 1;
-    }
-    /* Efeito de reflexo dinâmico */
-    .dashboard-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.15), transparent);
-        transition: left 0.6s ease;
-        z-index: 0;
-        pointer-events: none;
-    }
-    .dashboard-card:hover::before {
-        left: 100%;
-    }
-    /* Borda neon animada no hover */
-    .dashboard-card::after {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, cyan, magenta, cyan, #0ff);
-        border-radius: 30px;
-        z-index: -1;
-        opacity: 0;
-        transition: opacity 0.4s;
-    }
-    .dashboard-card:hover::after {
-        opacity: 0.6;
-    }
-    .dashboard-card:hover {
-        transform: translateY(-6px);
-        border-color: rgba(0, 255, 255, 0.8);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 25px cyan;
-    }
-    .card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-        position: relative;
-        z-index: 2;
-    }
-    .card-icon {
-        font-size: 2.5rem;
-        filter: drop-shadow(0 0 6px cyan);
-        transition: 0.2s;
-    }
-    .dashboard-card:hover .card-icon {
-        transform: scale(1.05);
-        filter: drop-shadow(0 0 12px magenta);
-    }
-    .status-indicator {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(0,0,0,0.5);
-        padding: 4px 10px;
-        border-radius: 30px;
-        font-size: 0.7rem;
-        font-family: 'Space Mono', monospace;
-        border: 1px solid rgba(0, 255, 255, 0.4);
-        backdrop-filter: blur(4px);
-    }
-    .status-led {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: #0f0;
-        box-shadow: 0 0 6px #0f0;
-        animation: pulseLed 1.2s infinite;
-    }
-    @keyframes pulseLed {
-        0% { opacity: 0.4; transform: scale(0.8); }
-        100% { opacity: 1; transform: scale(1.2); }
-    }
-    .card-title {
-        font-size: 0.85rem;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: #aaf;
-        font-weight: 500;
-        margin-bottom: 8px;
-        position: relative;
-        z-index: 2;
-    }
-    .card-value {
-        font-size: 2.8rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #fff, cyan);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        text-shadow: 0 0 20px rgba(0,255,255,0.5);
-        line-height: 1.2;
-        font-family: 'Space Mono', monospace;
-        margin-bottom: 4px;
-        position: relative;
-        z-index: 2;
-    }
-    .card-footer {
-        font-size: 0.7rem;
-        color: rgba(0, 255, 255, 0.7);
-        font-family: monospace;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 8px;
-        position: relative;
-        z-index: 2;
-    }
-    /* BOTÕES NEON */
-    .stButton>button, .stForm button {
-        background: rgba(0,20,40,0.7) !important;
-        backdrop-filter: blur(8px);
-        border: 1px solid #0ff !important;
-        border-radius: 40px !important;
-        color: #0ff !important;
-        font-weight: bold;
-        transition: 0.2s;
-        box-shadow: 0 0 5px rgba(0,255,255,0.3);
-    }
-    .stButton>button:hover, .stForm button:hover {
-        background: rgba(0,255,255,0.15) !important;
-        border-color: magenta !important;
-        color: magenta !important;
-        box-shadow: 0 0 15px magenta;
-        transform: scale(1.02);
-    }
-    /* INPUTS FUTURISTAS */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
-        background: rgba(0, 10, 20, 0.7) !important;
-        backdrop-filter: blur(8px);
-        border: 1px solid #0ff !important;
-        border-radius: 16px !important;
-        color: #0ff !important;
-        font-family: 'Space Mono', monospace;
-        transition: 0.2s;
-    }
-    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
-        border-color: magenta !important;
-        box-shadow: 0 0 12px magenta;
-    }
-    .stForm, .stExpander, .stTabs [data-baseweb="tab-list"] {
-        background: rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(8px);
-        border-radius: 20px;
-        border: 1px solid rgba(0,255,255,0.2);
-        padding: 5px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background: transparent;
-        color: #ccc;
-        border-radius: 30px;
-        font-weight: 500;
-    }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.2));
-        color: #0ff !important;
-        text-shadow: 0 0 3px cyan;
-    }
-    .stDataFrame {
-        background: rgba(0,0,0,0.4) !important;
-        border: 1px solid cyan !important;
-        border-radius: 16px;
-    }
-    .live-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(0,0,0,0.5);
-        padding: 4px 12px;
-        border-radius: 40px;
-        font-size: 12px;
-        font-family: monospace;
-        border: 1px solid #0ff;
-        color: #0ff;
-    }
-    .pulse-dot {
-        width: 10px;
-        height: 10px;
-        background-color: #0f0;
-        border-radius: 50%;
-        box-shadow: 0 0 5px #0f0;
-        animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-        0% { opacity: 0.4; transform: scale(0.8);}
-        100% { opacity: 1; transform: scale(1.2);}
-    }
-    .footer {
-        text-align: center;
-        padding: 15px;
-        color: #6b7280;
-        font-size: 9px;
-        border-top: 1px solid rgba(0,255,255,0.2);
-        margin-top: 25px;
-    }
-    h1, h2, h3, p, label, .info-item, .stMarkdown, .stRadio label, .stCheckbox label {
-        color: #eef !important;
-        text-shadow: 0 0 2px rgba(0,0,0,0.5);
-    }
-    .info-item {
-        margin-bottom: 12px;
-        font-size: 13px;
-        display: flex;
-        gap: 8px;
-        font-family: 'Space Mono', monospace;
-    }
-    .badge-admin {
-        background: linear-gradient(135deg, cyan, magenta);
-        padding: 4px 15px;
-        border-radius: 30px;
-        font-weight: 700;
-        font-size: 11px;
-        color: #000;
-    }
-    .session-indicator {
-        background: rgba(0,0,0,0.6);
-        border-radius: 30px;
-        padding: 4px 12px;
-        font-size: 12px;
-        font-family: monospace;
-        color: cyan;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-    }
-    #futuristic-canvas {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: -9999;
-        pointer-events: none;
-    }
-    .login-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        z-index: 1000;
-    }
-    .login-box {
-        background: rgba(8, 8, 20, 0.85);
-        backdrop-filter: blur(20px);
-        border-radius: 50px;
-        padding: 45px 35px;
-        border: 1px solid rgba(168, 85, 247, 0.6);
-        width: 90%;
-        max-width: 480px;
-        text-align: center;
-        animation: float 3s ease-in-out infinite;
-        box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
-        margin: 20px;
-    }
-    .guard-logo {
-        width: 110px;
-        height: 110px;
-        margin: 0 auto 20px;
-        background: radial-gradient(circle, rgba(168,85,247,0.3), rgba(59,130,246,0.1));
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
-        animation: pulse 2s infinite;
-    }
-    .guard-logo span {
-        font-size: 60px;
-        filter: drop-shadow(0 0 10px #a855f7);
-    }
-    .logo-title {
-        font-size: 32px;
-        font-weight: 800;
-        background: linear-gradient(135deg, #fff, #a855f7);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 1px;
-    }
-    .logo-subtitle {
-        font-size: 11px;
-        color: #a78bfa;
-        letter-spacing: 3px;
-        margin-bottom: 25px;
-    }
-    .binary-stream {
-        font-family: 'Space Mono', monospace;
-        font-size: 10px;
-        background: rgba(0,0,0,0.5);
-        padding: 6px;
-        border-radius: 20px;
-        display: inline-block;
-        color: #a855f7;
-        margin-bottom: 15px;
-    }
-    @media (max-width: 600px) {
-        .login-box {
-            padding: 30px 20px;
-            max-width: 90%;
-        }
-        .guard-logo {
-            width: 80px;
-            height: 80px;
-        }
-        .guard-logo span {
-            font-size: 45px;
-        }
-        .logo-title {
-            font-size: 24px;
-        }
-        .logo-subtitle {
-            font-size: 9px;
-        }
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# ====================== FUNÇÕES DE AVATAR ======================
-def compress_avatar_image(uploaded_file, max_size_kb=200):
-    img = Image.open(uploaded_file)
-    if img.mode in ('RGBA', 'LA', 'P'):
-        img = img.convert('RGB')
-    img.thumbnail((400, 400), Image.Resampling.LANCZOS)
-    buffer = io.BytesIO()
-    quality = 85
-    while True:
-        buffer.seek(0)
-        img.save(buffer, format='JPEG', quality=quality, optimize=True)
-        size_kb = buffer.tell() / 1024
-        if size_kb <= max_size_kb or quality <= 20:
-            break
-        quality -= 10
-    b64_str = base64.b64encode(buffer.getvalue()).decode()
-    return f"data:image/jpeg;base64,{b64_str}"
-
-def get_avatar_url():
-    padrao_url = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a2a'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='10'%3ESEGURANÇA%3C/text%3E%3C/svg%3E"
-    try:
-        result = supabase.table("app_config").select("value").eq("key", "avatar_url").execute()
-        if result.data and result.data[0]['value']:
-            return result.data[0]['value']
-    except:
-        pass
-    return padrao_url
-
-def save_avatar_url(url):
-    try:
-        supabase.table("app_config").upsert({
-            "key": "avatar_url",
-            "value": url,
-            "updated_at": datetime.now().isoformat()
-        }).execute()
-        st.session_state.avatar_url = url
-        return True
-    except Exception as e:
-        st.error(f"Erro ao salvar avatar: {e}")
-        return False
-
-# ====================== FUNÇÕES DE TEMA ======================
-def compress_image_to_base64(uploaded_file, max_size_kb=500):
-    img = Image.open(uploaded_file)
-    if img.mode in ('RGBA', 'LA', 'P'):
-        img = img.convert('RGB')
-    max_width = 1920
-    if img.width > max_width:
-        ratio = max_width / img.width
-        new_size = (max_width, int(img.height * ratio))
-        img = img.resize(new_size, Image.Resampling.LANCZOS)
-    buffer = io.BytesIO()
-    quality = 85
-    while True:
-        buffer.seek(0)
-        img.save(buffer, format='JPEG', quality=quality, optimize=True)
-        size_kb = buffer.tell() / 1024
-        if size_kb <= max_size_kb or quality <= 20:
-            break
-        quality -= 10
-    b64_str = base64.b64encode(buffer.getvalue()).decode()
-    return f"data:image/jpeg;base64,{b64_str}"
-
-def get_theme_config():
-    padrao = {
-        "type": "gradient",
-        "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
-        "apply_to_login": False,
-        "image_adjust": "cover",
-        "image_position": "center",
-        "video_loop": True
-    }
-    try:
-        result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
-        if result.data:
-            config = json.loads(result.data[0]['value'])
-            config.setdefault("image_adjust", "cover")
-            config.setdefault("image_position", "center")
-            config.setdefault("video_loop", True)
-            return config
-        else:
-            save_theme_config(padrao)
-            return padrao
-    except Exception as e:
-        st.error(f"Erro ao carregar tema: {e}")
-        return padrao
-
-def save_theme_config(config):
-    try:
-        supabase.table("app_config").upsert({
-            "key": "background_config",
-            "value": json.dumps(config),
-            "updated_at": datetime.now().isoformat()
-        }).execute()
-        st.session_state.theme_config = config
-        return True
-    except Exception as e:
-        st.error(f"Erro ao salvar tema global: {e}")
-        return False
-
-def futuristic_background_script():
-    st.markdown("""
-    <canvas id="futuristic-canvas"></canvas>
-    <script>
-        (function() {
-            const canvas = document.getElementById('futuristic-canvas');
-            const ctx = canvas.getContext('2d');
-            let width, height;
-            let particles = [];
-            let dataLines = [];
-            let holographicShield = { angle: 0, pulse: 0 };
-            
-            function resize() {
-                width = canvas.width = window.innerWidth;
-                height = canvas.height = window.innerHeight;
-            }
-            window.addEventListener('resize', resize);
-            
-            class Particle {
-                constructor() {
-                    this.x = Math.random() * width;
-                    this.y = Math.random() * height;
-                    this.radius = Math.random() * 2 + 1;
-                    this.speedX = (Math.random() - 0.5) * 0.5;
-                    this.speedY = (Math.random() - 0.5) * 0.5 + 0.2;
-                    this.opacity = Math.random() * 0.5 + 0.2;
-                    this.color = `rgba(0, ${150 + Math.random() * 105}, 255, ${this.opacity})`;
-                }
-                update() {
-                    this.x += this.speedX;
-                    this.y += this.speedY;
-                    if (this.y > height) this.y = 0;
-                    if (this.x > width) this.x = 0;
-                    if (this.x < 0) this.x = width;
-                }
-                draw() {
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = this.color;
-                    ctx.fill();
-                }
-            }
-            
-            class DataLine {
-                constructor() {
-                    this.x1 = Math.random() * width;
-                    this.y1 = Math.random() * height;
-                    this.x2 = this.x1 + (Math.random() - 0.5) * 300;
-                    this.y2 = this.y1 + (Math.random() - 0.5) * 300;
-                    this.progress = 0;
-                    this.speed = 0.005 + Math.random() * 0.01;
-                    this.color = `rgba(0, 200, 255, ${0.2 + Math.random() * 0.3})`;
-                }
-                update() {
-                    this.progress += this.speed;
-                    if (this.progress >= 1) {
-                        this.progress = 0;
-                        this.x1 = Math.random() * width;
-                        this.y1 = Math.random() * height;
-                        this.x2 = this.x1 + (Math.random() - 0.5) * 300;
-                        this.y2 = this.y1 + (Math.random() - 0.5) * 300;
-                    }
-                }
-                draw() {
-                    const x = this.x1 + (this.x2 - this.x1) * this.progress;
-                    const y = this.y1 + (this.y2 - this.y1) * this.progress;
-                    ctx.beginPath();
-                    ctx.moveTo(this.x1, this.y1);
-                    ctx.lineTo(x, y);
-                    ctx.strokeStyle = this.color;
-                    ctx.lineWidth = 1.5;
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(x, y, 2, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(0, 200, 255, 0.8)`;
-                    ctx.fill();
-                }
-            }
-            
-            function drawServers() {
-                const serverCols = Math.floor(width / 180);
-                for (let i = 0; i < serverCols; i++) {
-                    const x = 80 + i * 180;
-                    const y = height * 0.2;
-                    ctx.fillStyle = 'rgba(0, 20, 40, 0.7)';
-                    ctx.fillRect(x, y, 60, 300);
-                    ctx.strokeStyle = '#0ff';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(x, y, 60, 300);
-                    for (let j = 0; j < 5; j++) {
-                        ctx.fillStyle = `rgba(0, ${100 + j * 30}, 200, 0.5)`;
-                        ctx.fillRect(x + 5, y + 20 + j * 50, 50, 10);
-                    }
-                }
-            }
-            
-            function drawShield() {
-                const centerX = width / 2;
-                const centerY = height / 2;
-                const radius = 120 + Math.sin(Date.now() * 0.002) * 5;
-                holographicShield.pulse = 0.5 + Math.sin(Date.now() * 0.005) * 0.2;
-                ctx.save();
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = '#0ff';
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(0, 200, 255, ${0.6 + holographicShield.pulse * 0.3})`;
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius - 10, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(100, 0, 255, 0.5)`;
-                ctx.stroke();
-                ctx.font = "50px 'Segoe UI', 'Material Icons'";
-                ctx.fillStyle = `rgba(0, 255, 255, ${0.8 + Math.sin(Date.now() * 0.003) * 0.2})`;
-                ctx.shadowBlur = 15;
-                ctx.fillText("🔒", centerX - 28, centerY + 20);
-                ctx.restore();
-                for (let i = 0; i < 12; i++) {
-                    const angle = Date.now() * 0.002 + i * Math.PI * 2 / 12;
-                    const x1 = centerX + Math.cos(angle) * radius;
-                    const y1 = centerY + Math.sin(angle) * radius;
-                    const x2 = centerX + Math.cos(angle) * (radius + 40 + Math.sin(Date.now() * 0.01 + i) * 20);
-                    const y2 = centerY + Math.sin(angle) * (radius + 40 + Math.sin(Date.now() * 0.01 + i) * 20);
-                    ctx.beginPath();
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y2);
-                    ctx.strokeStyle = `rgba(0, 255, 255, 0.4)`;
-                    ctx.lineWidth = 2;
-                    ctx.stroke();
-                }
-            }
-            
-            function drawNeuralNetwork() {
-                const nodes = [];
-                for (let i = 0; i < 30; i++) {
-                    nodes.push({ x: Math.random() * width, y: Math.random() * height, active: false });
-                }
-                for (let i = 0; i < nodes.length; i++) {
-                    for (let j = i + 1; j < nodes.length; j++) {
-                        const dx = nodes[i].x - nodes[j].x;
-                        const dy = nodes[i].y - nodes[j].y;
-                        const dist = Math.hypot(dx, dy);
-                        if (dist < 150) {
-                            ctx.beginPath();
-                            ctx.moveTo(nodes[i].x, nodes[i].y);
-                            ctx.lineTo(nodes[j].x, nodes[j].y);
-                            ctx.strokeStyle = `rgba(0, 255, 255, ${0.2 * (1 - dist / 150)})`;
-                            ctx.stroke();
-                        }
-                    }
-                }
-                nodes.forEach(node => {
-                    ctx.beginPath();
-                    ctx.arc(node.x, node.y, 3, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(0, 200, 255, 0.7)`;
-                    ctx.fill();
-                });
-            }
-            
-            function init() {
-                resize();
-                for (let i = 0; i < 150; i++) particles.push(new Particle());
-                for (let i = 0; i < 40; i++) dataLines.push(new DataLine());
-            }
-            
-            function animate() {
-                if (!ctx) return;
-                ctx.clearRect(0, 0, width, height);
-                const grad = ctx.createLinearGradient(0, 0, width, height);
-                grad.addColorStop(0, '#030318');
-                grad.addColorStop(0.5, '#0a0a2a');
-                grad.addColorStop(1, '#050518');
-                ctx.fillStyle = grad;
-                ctx.fillRect(0, 0, width, height);
-                drawServers();
-                dataLines.forEach(line => { line.update(); line.draw(); });
-                particles.forEach(p => { p.update(); p.draw(); });
-                drawNeuralNetwork();
-                drawShield();
-                if (Math.random() < 0.05) {
-                    ctx.fillStyle = `rgba(0, 255, 255, 0.15)`;
-                    ctx.font = "12px monospace";
-                    ctx.fillText("010101", Math.random() * width, Math.random() * height);
-                }
-                requestAnimationFrame(animate);
-            }
-            
-            init();
-            animate();
-        })();
-    </script>
-    """, unsafe_allow_html=True)
-
-def apply_theme_css():
-    config = st.session_state.get("theme_config", get_theme_config())
-    bg_type = config.get("type", "gradient")
-    
-    if bg_type == "gradient":
-        bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-        css = f"""
-        <style>
-        html, body, .stApp, .stApp > header, .stApp > div, .main, .main > div {{
-            background: {bg_value} !important;
-            background-attachment: fixed !important;
-            background-size: cover !important;
-            background-repeat: no-repeat !important;
-            background-position: center !important;
-        }}
-        </style>
-        """
-        st.markdown(css, unsafe_allow_html=True)
-    elif bg_type == "solid":
-        bg_value = config.get("value", "#0a0a1a")
-        css = f"""
-        <style>
-        html, body, .stApp, .stApp > header, .stApp > div, .main, .main > div {{
-            background: {bg_value} !important;
-            background-attachment: fixed !important;
-        }}
-        </style>
-        """
-        st.markdown(css, unsafe_allow_html=True)
-    elif bg_type == "url":
-        bg_value = config.get("value", "")
-        if not bg_value or bg_value.startswith("radial"):
-            bg_value = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-        adjust = config.get("image_adjust", "cover")
-        position = config.get("image_position", "center")
-        css = f"""
-        <style>
-        html, body, .stApp, .stApp > header, .stApp > div, .main, .main > div {{
-            background: {bg_value} !important;
-            background-attachment: fixed !important;
-            background-size: {adjust} !important;
-            background-repeat: no-repeat !important;
-            background-position: {position} !important;
-        }}
-        </style>
-        """
-        st.markdown(css, unsafe_allow_html=True)
-    elif bg_type == "video":
-        media_url = config.get("value", "")
-        adjust = config.get("image_adjust", "cover")
-        mime_type = config.get("mime_type", "video/mp4")
-        video_loop = config.get("video_loop", True)
-        loop_attr = "loop" if video_loop else ""
-        if not media_url:
-            st.markdown("""
-            <style>
-            .stApp { background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%); }
-            </style>
-            """, unsafe_allow_html=True)
-            return
-        container_div = "<div style='position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -9999; pointer-events: none;'>"
-        if mime_type == "image/gif":
-            media_html = f'<img src="{media_url}" style="width: 100%; height: 100%; object-fit: {adjust};">'
-        else:
-            media_html = f'<video autoplay muted playsinline {loop_attr} style="width: 100%; height: 100%; object-fit: {adjust};"><source src="{media_url}" type="{mime_type}"></video>'
-        st.markdown(container_div + media_html + "</div>", unsafe_allow_html=True)
-        st.markdown("""
-        <style>
-        .stApp {
-            background: transparent !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-    elif bg_type == "futuristic":
-        futuristic_background_script()
-
-# ====================== FUNÇÕES DE SESSÃO ======================
+# ====================== FUNÇÕES DE GERENCIAMENTO DE SESSÃO ======================
 def registrar_sessao(perfil, usuario="admin"):
     session_id = str(uuid.uuid4())
     try:
@@ -876,7 +93,124 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE RELATÓRIOS PDF ======================
+# ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (CORRIGIDAS) ======================
+def compress_image_to_base64(uploaded_file, max_size_kb=500):
+    img = Image.open(uploaded_file)
+    if img.mode in ('RGBA', 'LA', 'P'):
+        img = img.convert('RGB')
+    max_width = 1920
+    if img.width > max_width:
+        ratio = max_width / img.width
+        new_size = (max_width, int(img.height * ratio))
+        img = img.resize(new_size, Image.Resampling.LANCZOS)
+    buffer = io.BytesIO()
+    quality = 85
+    while True:
+        buffer.seek(0)
+        img.save(buffer, format='JPEG', quality=quality, optimize=True)
+        size_kb = buffer.tell() / 1024
+        if size_kb <= max_size_kb or quality <= 20:
+            break
+        quality -= 10
+    b64_str = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/jpeg;base64,{b64_str}"
+
+def get_theme_config():
+    padrao = {
+        "type": "gradient",
+        "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
+        "apply_to_login": False,
+        "image_adjust": "cover",
+        "image_position": "center"
+    }
+    try:
+        result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
+        if result.data:
+            config = json.loads(result.data[0]['value'])
+            config.setdefault("image_adjust", "cover")
+            config.setdefault("image_position", "center")
+            return config
+        else:
+            save_theme_config(padrao)
+            return padrao
+    except Exception as e:
+        st.error(f"Erro ao carregar tema: {e}")
+        return padrao
+
+def save_theme_config(config):
+    try:
+        supabase.table("app_config").upsert({
+            "key": "background_config",
+            "value": json.dumps(config),
+            "updated_at": datetime.now().isoformat()
+        }).execute()
+        st.session_state.theme_config = config
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar tema global: {e}")
+        return False
+
+def apply_theme_css():
+    """Aplica o CSS de fundo com seletores amplos + JavaScript fallback."""
+    config = st.session_state.get("theme_config", get_theme_config())
+    bg_type = config.get("type", "gradient")
+    
+    if bg_type == "gradient":
+        bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
+        bg_css_value = bg_value
+        adjust = "cover"
+        position = "center"
+    elif bg_type == "solid":
+        bg_value = config.get("value", "#0a0a1a")
+        bg_css_value = bg_value
+        adjust = "cover"
+        position = "center"
+    else:  # imagem
+        bg_value = config.get("value", "")
+        if not bg_value or bg_value.startswith("radial"):
+            bg_css_value = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
+            adjust = "cover"
+            position = "center"
+        else:
+            bg_css_value = bg_value
+            adjust = config.get("image_adjust", "cover")
+            position = config.get("image_position", "center")
+    
+    # CSS com seletores específicos
+    css = f"""
+    <style>
+    html, body, .stApp, .stApp > header, .stApp > div, .main, .main > div {{
+        background: {bg_css_value} !important;
+        background-attachment: fixed !important;
+        background-size: {adjust} !important;
+        background-repeat: no-repeat !important;
+        background-position: {position} !important;
+    }}
+    </style>
+    <script>
+        (function() {{
+            var bgValue = "{bg_css_value.replace('"', '\\"')}";
+            var adjust = "{adjust}";
+            var position = "{position}";
+            document.body.style.background = bgValue;
+            document.body.style.backgroundAttachment = "fixed";
+            document.body.style.backgroundSize = adjust;
+            document.body.style.backgroundRepeat = "no-repeat";
+            document.body.style.backgroundPosition = position;
+            var app = document.querySelector('.stApp');
+            if(app) {{
+                app.style.background = bgValue;
+                app.style.backgroundAttachment = "fixed";
+                app.style.backgroundSize = adjust;
+                app.style.backgroundRepeat = "no-repeat";
+                app.style.backgroundPosition = position;
+            }}
+        }})();
+    </script>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+# ====================== FUNÇÕES DE RELATÓRIOS (PDF) ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
@@ -961,6 +295,68 @@ def sanitizar_texto(texto):
         return texto
     return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
 
+# ====================== CARREGAR IMAGENS ======================
+def carregar_imagem(nome):
+    try:
+        return Image.open(nome)
+    except:
+        return None
+
+IMAGEM_SIDEBAR = carregar_imagem("sidebar_logo.png")
+
+# ====================== CSS BASE ======================
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono&display=swap');
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(100,0,255,0.4); } 70% { box-shadow: 0 0 0 12px rgba(100,0,255,0); } 100% { box-shadow: 0 0 0 0 rgba(100,0,255,0); } }
+@keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0px); } }
+@keyframes buttonGlow { 0% { box-shadow: 0 0 5px #0ff; } 50% { box-shadow: 0 0 20px #0ff; } 100% { box-shadow: 0 0 5px #0ff; } }
+[data-testid="stSidebar"] { background: rgba(8,8,20,0.85); backdrop-filter: blur(12px); border-right: 1px solid rgba(100,0,255,0.3); }
+.sidebar-header { text-align: center; padding: 25px 10px; border-bottom: 1px solid rgba(100,0,255,0.5); }
+.sidebar-title { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, #a855f7, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.info-item { margin-bottom: 12px; color: #c4b5fd; font-size: 12px; display: flex; gap: 8px; font-family: 'Space Mono', monospace; }
+.admin-header { background: rgba(8,8,20,0.7); backdrop-filter: blur(8px); border-radius: 16px; padding: 12px 20px; margin-bottom: 20px; border: 1px solid rgba(168,85,247,0.4); }
+.badge-admin { background: linear-gradient(135deg, #a855f7, #3b82f6); padding: 4px 15px; border-radius: 30px; font-weight: 700; font-size: 11px; color: white; }
+.session-indicator { background: rgba(0,0,0,0.6); border-radius: 30px; padding: 4px 12px; font-size: 12px; font-family: 'Space Mono', monospace; color: #a78bfa; display: inline-flex; align-items: center; gap: 5px; }
+.admin-card { background: rgba(15,15,30,0.6); backdrop-filter: blur(4px); border-radius: 20px; padding: 18px; border: 1px solid rgba(168,85,247,0.2); transition: 0.2s; }
+.admin-card:hover { transform: translateY(-3px); border-color: #a855f7; box-shadow: 0 5px 20px rgba(168,85,247,0.15); }
+.card-title { font-size: 10px; letter-spacing: 2px; color: #a78bfa; }
+.card-value { font-size: 32px; font-weight: 800; background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.stButton>button, .stForm button { border-radius: 40px; font-weight: 600; background: linear-gradient(90deg, #a855f7, #3b82f6); color: white; border: none; transition: all 0.3s ease; position: relative; overflow: hidden; z-index: 1; }
+.stButton>button::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); transition: left 0.5s ease; z-index: -1; }
+.stButton>button:hover::before { left: 100%; }
+.stButton>button:hover { transform: scale(1.02); box-shadow: 0 0 20px #a855f7; animation: buttonGlow 0.8s infinite alternate; }
+.stTextInput>div>div>input, .stNumberInput>div>div>input { background: rgba(0,0,0,0.8); border: 1px solid #a855f7; border-radius: 12px; color: #0ff !important; font-family: 'Space Mono', monospace; }
+.stSelectbox>div>div { background: rgba(0,0,0,0.8) !important; border: 1px solid #a855f7 !important; border-radius: 12px !important; color: #0ff !important; }
+.stTabs [data-baseweb="tab-list"] { gap: 6px; background: rgba(0,0,0,0.3); padding: 5px; border-radius: 30px; }
+.stTabs [data-baseweb="tab"] { border-radius: 25px; padding: 5px 20px; color: #ccc; }
+.stTabs [aria-selected="true"] { background: linear-gradient(135deg, #a855f7, #3b82f6); color: white; }
+.footer { text-align: center; padding: 15px; color: #6b7280; font-size: 9px; border-top: 1px solid rgba(168,85,247,0.2); margin-top: 25px; }
+h1, h2, h3 { font-family: 'Inter', sans-serif; color: #e9d5ff; }
+</style>
+""", unsafe_allow_html=True)
+
+# ====================== SIDEBAR ======================
+if IMAGEM_SIDEBAR:
+    st.sidebar.image(IMAGEM_SIDEBAR, use_container_width=True)
+else:
+    st.sidebar.markdown('<div class="sidebar-header"><div class="sidebar-title">👮‍♂️ JOHN ACESSOS</div><p style="color:#a78bfa; font-size:9px;">ACESSO DE DADOS</p></div>', unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ⚡ ESTADO")
+st.sidebar.markdown('<div class="info-item">🟢 REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🤖 MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🔒 CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🗄️ DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📡 INFO")
+if st.session_state.get("perfil"):
+    st.sidebar.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
+else:
+    st.sidebar.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="info-item">📦 Versão: 13.1 (TECH)</div>', unsafe_allow_html=True)
+
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -983,8 +379,8 @@ if "pessoa_confirmada" not in st.session_state:
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 
+# Carregar tema global do Supabase (força recarga)
 st.session_state.theme_config = get_theme_config()
-st.session_state.avatar_url = get_avatar_url()
 
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
@@ -993,34 +389,31 @@ if not st.session_state.logado:
         apply_theme_css()
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
-    
+    if st.session_state.bloqueado_ate and datetime.now() < st.session_state.bloqueado_ate:
+        st.error(f"⛔ Bloqueado até {st.session_state.bloqueado_ate.strftime('%H:%M:%S')}")
+        st.stop()
     st.markdown("""
-    <div class="login-container">
-        <div class="login-box">
-            <div class="guard-logo"><span>🛡️</span></div>
-            <div class="logo-title">JOHN ACESSOS</div>
-            <div class="logo-subtitle">CYBER SECURITY 2026</div>
-            <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
+    <style>
+    .login-container{display:flex;justify-content:center;align-items:center;min-height:80vh;}
+    .login-box{background:rgba(8,8,20,0.7);backdrop-filter:blur(20px);border-radius:50px;padding:45px 35px;border:1px solid rgba(168,85,247,0.6);width:100%;max-width:480px;text-align:center;animation:float 3s ease-in-out infinite;}
+    .guard-logo{width:110px;height:110px;margin:0 auto 20px;background:radial-gradient(circle,rgba(168,85,247,0.3),rgba(59,130,246,0.1));border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;animation:pulse 2s infinite;}
+    .guard-logo span{font-size:60px;filter:drop-shadow(0 0 10px #a855f7);}
+    .logo-title{font-size:32px;font-weight:800;background:linear-gradient(135deg,#fff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+    .logo-subtitle{font-size:11px;color:#a78bfa;letter-spacing:3px;margin-bottom:25px;}
+    .binary-stream{font-family:'Space Mono',monospace;font-size:10px;background:rgba(0,0,0,0.5);padding:6px;border-radius:20px;display:inline-block;color:#a855f7;margin-bottom:15px;}
+    </style>
+    <div class="login-container"><div class="login-box">
+    <div class="guard-logo"><span>👮‍♂️🔒</span></div>
+    <div class="logo-title">JOHN ACESSOS</div>
+    <div class="logo-subtitle">ACESSO DE DADOS</div>
+    <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
+    <script>function generateBinary(){let b='';for(let i=0;i<60;i++)b+=Math.random()<0.5?'0':'1';return b;}
+    setInterval(()=>{let el=document.getElementById('binary-container');if(el)el.innerHTML=`<div class="binary-stream">${generateBinary()}</div>`;},400);</script>
     """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <script>
-        function generateBinary() {
-            let b = '';
-            for(let i = 0; i < 60; i++) b += Math.random() < 0.5 ? '0' : '1';
-            return b;
-        }
-        setInterval(() => {
-            let el = document.getElementById('binary-container');
-            if(el) el.innerHTML = `<div class="binary-stream">${generateBinary()}</div>`;
-        }, 400);
-    </script>
-    """, unsafe_allow_html=True)
-    
     with st.form("login_form"):
         st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
         senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
-        submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
+        submitted = st.form_submit_button("👮‍♂️ ACESSAR SISTEMA", use_container_width=True)
         if submitted:
             if senha == "fgxv4VP0/*":
                 st.session_state.logado = True
@@ -1042,11 +435,11 @@ if not st.session_state.logado:
                     st.error("⛔ Acesso bloqueado por 5 minutos.")
                 else:
                     st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
-    
     st.markdown("</div></div>", unsafe_allow_html=True)
     st.stop()
 
 # ====================== APÓS LOGIN ======================
+# Aplica o tema carregado do Supabase
 apply_theme_css()
 
 if st.session_state.session_id:
@@ -1056,21 +449,15 @@ if st.session_state.session_id:
 else:
     total_conectados = 0
 
-# ====================== HEADER FUTURISTA ======================
+indicador_html = f'<div class="session-indicator">{"⚠️" if total_conectados > 1 else ""} 👥 {total_conectados}</div>'
 st.markdown(f"""
-<div class="admin-header" style="background: rgba(8,8,20,0.6); backdrop-filter: blur(8px); border-radius: 20px; padding: 10px 20px; margin-bottom: 20px; border: 1px solid cyan;">
+<div class="admin-header">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex; gap:15px; align-items:center;">
-            <div style="width:45px;height:45px;">
-                <img src="{st.session_state.avatar_url}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:1px solid cyan; box-shadow:0 0 8px cyan;">
-            </div>
-            <div><h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1><p style="margin:0;color:#aaf;font-size:10px;">MONITORAMENTO INTELIGENTE • ACESSO DE DADOS</p></div>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <div style="width:36px;height:36px;background:linear-gradient(135deg,#a855f7,#3b82f6);border-radius:50%;display:flex;align-items:center;justify-content:center;"><span style="font-size:20px;">👮‍♂️</span></div>
+            <div><h1 style="margin:0;font-size:16px;">JOHN ACESSOS - ACESSO DE DADOS</h1><p style="margin:0;color:#a78bfa;font-size:8px;">SEGURANÇA E PROTEÇÃO</p></div>
         </div>
-        <div style="display:flex; gap:15px; align-items:center;">
-            <div class="live-indicator"><span class="pulse-dot"></span> LIVE</div>
-            <div class="session-indicator">👥 {total_conectados}</div>
-            <div class="badge-admin">👑 {st.session_state.perfil}</div>
-        </div>
+        <div style="display:flex; gap:15px; align-items:center;">{indicador_html}<div class="badge-admin">👑 {st.session_state.perfil}</div></div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -1085,33 +472,7 @@ with col4:
         st.session_state.logado = False
         st.rerun()
 
-# ====================== SIDEBAR ======================
-with st.sidebar:
-    st.markdown(f"""
-    <div class="avatar-container">
-        <div class="glow-ring"></div>
-        <img src="{st.session_state.avatar_url}" class="avatar-image">
-        <div class="sidebar-title" style="font-size: 20px; margin-top: 12px;">👮‍♂️ JOHN ACESSOS</div>
-        <p style="color:#0ff; font-size: 9px; letter-spacing: 2px;">CYBER SECURITY 2026</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    st.markdown("### ⚡ ESTADO")
-    st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item"><span style="color:#0ff;">●</span> MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item"><span style="color:#f0f;">●</span> CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item"><span style="color:#ff0;">●</span> DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
-    st.markdown("---")
-    st.markdown("### 📡 INFO")
-    if st.session_state.get("perfil"):
-        st.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
-    st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">📦 Versão: 13.1 (CYBER)</div>', unsafe_allow_html=True)
-
-# ====================== ADMIN: CONFIGURAÇÕES ======================
+# ====================== ADMIN: MANAGE APP E TEMA GLOBAL ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
@@ -1132,18 +493,15 @@ if st.session_state.perfil == "ADMIN":
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
-        st.markdown("### Personalizar Fundo - Aplica para todos")
+        st.markdown("### Personalizar Fundo - Aplica para todos os usuários")
         config_atual = st.session_state.theme_config
         tipo_atual = config_atual.get("type", "gradient")
-        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (URL)", "Futurista Dinâmico (Canvas)"]
-        idx_map = {"gradient":0, "solid":1, "url":2, "image_upload":3, "video":4, "futuristic":5}
-        idx = idx_map.get(tipo_atual, 0)
+        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)"]
+        idx = 0 if tipo_atual == "gradient" else 1 if tipo_atual == "solid" else 2 if tipo_atual == "url" else 3
         tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
         
         novo_valor = config_atual.get("value", "")
         novo_tipo = tipo_atual
-        novo_mime = config_atual.get("mime_type", "")
-        video_loop = config_atual.get("video_loop", True)
         
         if tipo == "Gradiente padrão":
             novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
@@ -1170,7 +528,7 @@ if st.session_state.perfil == "ADMIN":
             else:
                 novo_valor = config_atual.get("value", "")
                 novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-        elif tipo == "Imagem (upload)":
+        else:  # Imagem (upload)
             uploaded_file = st.file_uploader("Escolha uma imagem (PNG, JPG, JPEG, GIF)", type=["png","jpg","jpeg","gif"], key="upload_img")
             if uploaded_file:
                 with st.spinner("Processando imagem..."):
@@ -1191,98 +549,58 @@ if st.session_state.perfil == "ADMIN":
                 else:
                     novo_valor = config_atual.get("value", "")
                     novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-        elif tipo == "Animação (URL)":
-            url_padrao = ""
-            if tipo_atual == "video":
-                url_padrao = config_atual.get("value", "")
-            url_media = st.text_input("URL do vídeo/GIF (MP4/GIF)", value=url_padrao, key="url_video", placeholder="https://exemplo.com/video.mp4")
-            video_loop = st.checkbox("Reproduzir em loop infinito", value=config_atual.get("video_loop", True), key="video_loop")
-            if url_media and (url_media.startswith('http://') or url_media.startswith('https://')):
-                novo_valor = url_media
-                novo_tipo = "video"
-                if url_media.lower().endswith('.gif'):
-                    novo_mime = "image/gif"
-                else:
-                    novo_mime = "video/mp4"
-                st.success("✅ URL de mídia configurada!")
-            elif url_media:
-                st.error("URL inválida. Use http:// ou https://")
-                novo_valor = config_atual.get("value", "")
-                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-            else:
-                novo_valor = config_atual.get("value", "")
-                novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-        elif tipo == "Futurista Dinâmico (Canvas)":
-            novo_valor = "futuristic"
-            novo_tipo = "futuristic"
         
+        # Opções de ajuste apenas para imagem
         ajuste_opcoes = ["cover", "contain", "stretch"]
-        if novo_tipo in ["url", "video"]:
+        posicao_opcoes = ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"]
+        
+        if novo_tipo == "url" and novo_valor:
             st.markdown("---")
-            st.markdown("#### Ajustes da mídia")
+            st.markdown("#### Ajustes da imagem")
             ajuste_atual = config_atual.get("image_adjust", "cover")
             posicao_atual = config_atual.get("image_position", "center")
             novo_ajuste = st.selectbox("Modo de ajuste:", ajuste_opcoes, index=ajuste_opcoes.index(ajuste_atual) if ajuste_atual in ajuste_opcoes else 0, key="ajuste_imagem")
-            nova_posicao = st.selectbox("Posição (para imagens fixas):", ["center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"], index=3 if posicao_atual == "center" else 0, key="posicao_imagem")
+            nova_posicao = st.selectbox("Posição:", posicao_opcoes, index=posicao_opcoes.index(posicao_atual) if posicao_atual in posicao_opcoes else 3, key="posicao_imagem")
         else:
             novo_ajuste = "cover"
             nova_posicao = "center"
         
+        # Pré-visualização
         st.markdown("**Prévia:**")
         if novo_tipo == "gradient":
             preview_style = novo_valor
-            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid cyan;"></div>', unsafe_allow_html=True)
         elif novo_tipo == "solid":
             preview_style = novo_valor
-            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid cyan;"></div>', unsafe_allow_html=True)
-        elif novo_tipo == "url":
+        else:
             preview_style = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-            st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid cyan;"></div>', unsafe_allow_html=True)
-        elif novo_tipo == "video":
-            if novo_valor:
-                if novo_mime == "image/gif":
-                    st.markdown(f'<img src="{novo_valor}" style="width:100%; max-height:100px; object-fit:cover; border-radius:8px;">', unsafe_allow_html=True)
-                else:
-                    st.video(novo_valor, format="video/mp4")
-            else:
-                st.info("Informe uma URL para prévia")
-        elif novo_tipo == "futuristic":
-            st.info("Fundo futurista dinâmico (Canvas) será aplicado após salvar.")
+        st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid #fff;"></div>', unsafe_allow_html=True)
         
         aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         with col_btn1:
             if st.button("💾 Salvar e Aplicar Tema (Global)", key="salvar_tema_global"):
+                # Monta o valor final para o CSS
                 if novo_tipo == "gradient":
                     valor_final = novo_valor
                 elif novo_tipo == "solid":
                     valor_final = novo_valor
-                elif novo_tipo == "url":
+                else:  # imagem
                     if novo_valor:
                         valor_final = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed"
                     else:
                         valor_final = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
                         novo_tipo = "gradient"
-                elif novo_tipo == "video":
-                    valor_final = novo_valor if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
-                    if not novo_valor:
-                        novo_tipo = "gradient"
-                else:  # futuristic
-                    valor_final = "futuristic"
-                    novo_tipo = "futuristic"
                 
                 nova_config = {
                     "type": novo_tipo,
                     "value": valor_final,
                     "apply_to_login": aplicar_login,
                     "image_adjust": novo_ajuste,
-                    "image_position": nova_posicao,
-                    "mime_type": novo_mime if novo_tipo == "video" else "",
-                    "video_loop": video_loop if novo_tipo == "video" else True
+                    "image_position": nova_posicao
                 }
                 if save_theme_config(nova_config):
                     apply_theme_css()
-                    st.success("✅ Tema global salvo e aplicado!")
+                    st.success("✅ Tema global salvo e aplicado! Todos os usuários verão este tema.")
                 else:
                     st.error("Erro ao salvar tema global.")
         with col_btn2:
@@ -1292,9 +610,7 @@ if st.session_state.perfil == "ADMIN":
                     "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
                     "apply_to_login": False,
                     "image_adjust": "cover",
-                    "image_position": "center",
-                    "mime_type": "",
-                    "video_loop": True
+                    "image_position": "center"
                 }
                 if save_theme_config(padrao):
                     apply_theme_css()
@@ -1304,156 +620,26 @@ if st.session_state.perfil == "ADMIN":
                 st.session_state.theme_config = get_theme_config()
                 apply_theme_css()
                 st.success("Tema recarregado do Supabase!")
-    
-    st.sidebar.markdown("---")
-    with st.sidebar.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
-        st.markdown("### Exportar Cadastros")
-        try:
-            todas_pessoas = supabase.table("Pessoas").select("nome, cpf, empresa").execute().data
-            if not todas_pessoas:
-                st.info("Nenhuma pessoa cadastrada ainda.")
-            else:
-                df_todas = pd.DataFrame(todas_pessoas)
-                empresas = sorted([e for e in df_todas['empresa'].unique() if e and e.strip()])
-                opcoes_empresa = ["Todos"] + empresas
-                empresa_selecionada = st.selectbox("Filtrar por unidade (empresa):", opcoes_empresa, key="export_empresa")
-                if empresa_selecionada == "Todos":
-                    df_export = df_todas.copy()
-                    st.write(f"Total de registros: {len(df_export)}")
-                else:
-                    df_export = df_todas[df_todas['empresa'] == empresa_selecionada].copy()
-                    st.write(f"Total de registros para {empresa_selecionada}: {len(df_export)}")
-                if not df_export.empty:
-                    csv = df_export.to_csv(index=False, encoding='utf-8-sig')
-                    nome_arquivo = f"cadastros_{empresa_selecionada.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-                    st.download_button(
-                        label="📥 Baixar CSV",
-                        data=csv,
-                        file_name=nome_arquivo,
-                        mime="text/csv",
-                        key="download_csv_pessoas"
-                    )
-                else:
-                    st.warning("Nenhum registro para o filtro selecionado.")
-        except Exception as e:
-            st.error(f"Erro ao carregar dados: {e}")
-    
-    st.sidebar.markdown("---")
-    with st.sidebar.expander("🖼️ Configurar Avatar (Segurança)", expanded=False):
-        st.markdown("### Personalizar Imagem do Perfil")
-        st.markdown("Envie uma imagem realista de segurança (4K recomendado).")
-        uploaded_avatar = st.file_uploader("Escolha uma imagem (PNG/JPG)", type=["png","jpg","jpeg"], key="upload_avatar")
-        if uploaded_avatar:
-            with st.spinner("Processando imagem..."):
-                try:
-                    avatar_base64 = compress_avatar_image(uploaded_avatar)
-                    if save_avatar_url(avatar_base64):
-                        st.session_state.avatar_url = avatar_base64
-                        st.success("✅ Avatar atualizado com sucesso!")
-                        st.rerun()
-                    else:
-                        st.error("Erro ao salvar avatar.")
-                except Exception as e:
-                    st.error(f"Erro ao processar imagem: {e}")
-        st.markdown("---")
-        st.markdown("**Imagem atual:**")
-        st.image(st.session_state.avatar_url, width=120, caption="Avatar atual")
-        if st.button("↺ Restaurar Avatar Padrão", key="reset_avatar"):
-            padrao_url = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a2a'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='10'%3ESEGURANÇA%3C/text%3E%3C/svg%3E"
-            if save_avatar_url(padrao_url):
-                st.session_state.avatar_url = padrao_url
-                st.success("Avatar restaurado para o padrão!")
-                st.rerun()
 
-# ====================== DASHBOARD (CARDS ULTRA TECNOLÓGICOS) ======================
+# ====================== DASHBOARD ======================
 st.markdown("---")
 try:
-    # PRESENTES: pessoas com data_saida vazia
-    presentes_data = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
-    total_presentes = presentes_data.count if hasattr(presentes_data, 'count') else 0
-    
-    # CADASTRADOS: total de pessoas
-    cadastrados_data = supabase.table("Pessoas").select("id", count="exact").execute()
-    total_cadastrados = cadastrados_data.count if hasattr(cadastrados_data, 'count') else 0
-    
-    # SETORES ATIVOS: setores distintos na movimentacao
-    setores_data = supabase.table("movimentacao").select("setor_destino").execute()
-    if setores_data.data:
-        setores_unicos = len(set(p['setor_destino'] for p in setores_data.data))
-    else:
-        setores_unicos = 11
-except Exception as e:
-    st.error(f"Erro ao carregar estatísticas: {e}")
+    pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
+    total_presentes = len(pessoas_presentes)
+    total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
+except:
     total_presentes = 0
-    total_cadastrados = 0
-    setores_unicos = 11
+    total_colaboradores = 0
 
-# Layout dos cards
 col1, col2, col3, col4 = st.columns(4)
-
 with col1:
-    st.markdown(f"""
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon">👥</div>
-            <div class="status-indicator"><span class="status-led"></span> ATIVO</div>
-        </div>
-        <div class="card-title">PRESENTES</div>
-        <div class="card-value">{total_presentes}</div>
-        <div class="card-footer">
-            <span>🟢 ONLINE</span>
-            <span>⏱️ TEMPO REAL</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f'<div class="admin-card"><div style="display:flex;justify-content:space-between;"><div><div class="card-title">📍 PRESENTES</div><div class="card-value">{total_presentes}</div></div><div style="font-size:22px;">👥</div></div></div>', unsafe_allow_html=True)
 with col2:
-    st.markdown(f"""
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon">📊</div>
-            <div class="status-indicator"><span class="status-led"></span> BASE</div>
-        </div>
-        <div class="card-title">CADASTRADOS</div>
-        <div class="card-value">{total_cadastrados}</div>
-        <div class="card-footer">
-            <span>📋 CADASTROS</span>
-            <span>✅ VERIFICADOS</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown(f'<div class="admin-card"><div><div class="card-title">📋 CADASTRADOS</div><div class="card-value">{total_colaboradores}</div></div><div style="font-size:22px;">📊</div></div>', unsafe_allow_html=True)
 with col3:
-    st.markdown(f"""
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon">🏛️</div>
-            <div class="status-indicator"><span class="status-led"></span> MAPA</div>
-        </div>
-        <div class="card-title">SETORES ATIVOS</div>
-        <div class="card-value">{setores_unicos}</div>
-        <div class="card-footer">
-            <span>📍 ÁREAS</span>
-            <span>🔍 MONITORADAS</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown('<div class="admin-card"><div><div class="card-title">🏥 SETORES</div><div class="card-value">11</div></div><div style="font-size:22px;">🏛️</div></div>', unsafe_allow_html=True)
 with col4:
-    st.markdown(f"""
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="card-icon">🛡️</div>
-            <div class="status-indicator"><span class="status-led"></span> 24/7</div>
-        </div>
-        <div class="card-title">SEGURANÇA</div>
-        <div class="card-value">ATIVA</div>
-        <div class="card-footer">
-            <span>🔒 PROTEÇÃO</span>
-            <span>⚡ INTELIGENTE</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="admin-card"><div><div class="card-title">🎥 CFTV</div><div class="card-value">24/7</div></div><div style="font-size:22px;">📹</div></div>', unsafe_allow_html=True)
 
 # ====================== CADASTRO ======================
 st.markdown("---")
@@ -1833,11 +1019,12 @@ if st.session_state.perfil == "ADMIN":
                                     st.error(f"Erro: {e}")
                     st.divider()
 
+# Reaplicar o tema novamente ao final (para garantir)
 apply_theme_css()
 
 st.markdown("---")
 st.markdown("""
 <div class="footer">
-    🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
+    👮‍♂️ JOHN ACESSOS - ACESSO DE DADOS | Segurança e Proteção de Dados | Monitoramento de Sessões
 </div>
 """, unsafe_allow_html=True)
