@@ -980,7 +980,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN (CAMPOS À FRENTE DA LOGO) ======================
+# ====================== TELA DE LOGIN (CAMPOS ACIMA DA LOGO E ACESSÍVEIS) ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -988,12 +988,45 @@ if not st.session_state.logado:
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
     
+    # CSS para garantir que o formulário fique acessível e a logo não atrapalhe
+    st.markdown("""
+    <style>
+    /* Força o formulário a ficar na frente e com alta interatividade */
+    .login-box form {
+        position: relative;
+        z-index: 10;
+    }
+    /* Elementos da logo ficam atrás e sem capturar cliques */
+    .login-box .guard-logo,
+    .login-box .logo-title,
+    .login-box .logo-subtitle,
+    .login-box #binary-container {
+        position: relative;
+        z-index: 1;
+        pointer-events: none;
+    }
+    /* Remove qualquer overlay escuro extra */
+    .login-container {
+        background: transparent !important;
+    }
+    .login-box {
+        background: rgba(8, 8, 20, 0.9) !important;
+        backdrop-filter: blur(20px);
+    }
+    /* Garante que os inputs fiquem visíveis e clicáveis */
+    .stTextInput > div > div > input {
+        background: rgba(0, 10, 20, 0.9) !important;
+        color: #0ff !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     st.markdown("""
     <div class="login-container">
         <div class="login-box">
     """, unsafe_allow_html=True)
     
-    # PRIMEIRO: campos de login (ficam à frente da logo)
+    # FORMULÁRIO DE LOGIN (PRIMEIRO - FICA ACIMA)
     with st.form("login_form"):
         st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
         senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
@@ -1021,7 +1054,7 @@ if not st.session_state.logado:
                 else:
                     st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
     
-    # DEPOIS: logo e elementos visuais (ficam atrás dos campos)
+    # ELEMENTOS DA LOGO (DEPOIS, FICAM ATRÁS)
     st.markdown("""
             <div class="guard-logo"><span>🛡️</span></div>
             <div class="logo-title">JOHN ACESSOS</div>
@@ -1031,6 +1064,7 @@ if not st.session_state.logado:
     
     st.markdown("</div></div>", unsafe_allow_html=True)
     
+    # Script do binário (não interfere)
     st.markdown("""
     <script>
         function generateBinary() {
