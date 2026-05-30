@@ -7,7 +7,6 @@ import base64
 import re
 import uuid
 import json
-import io
 
 # --- CONFIGURAÇÃO DE SEGURANÇA ---
 MAX_TENTATIVAS_LOGIN = 5
@@ -120,83 +119,67 @@ def save_background_config(config):
         st.session_state.background_config = config
         return False
 
-def compress_image_to_base64(uploaded_file, max_size_kb=500):
-    img = Image.open(uploaded_file)
-    if img.mode in ('RGBA', 'LA', 'P'):
-        img = img.convert('RGB')
-    max_width = 1920
-    if img.width > max_width:
-        ratio = max_width / img.width
-        new_size = (max_width, int(img.height * ratio))
-        img = img.resize(new_size, Image.Resampling.LANCZOS)
-    buffer = io.BytesIO()
-    quality = 85
-    while True:
-        buffer.seek(0)
-        img.save(buffer, format='JPEG', quality=quality, optimize=True)
-        size_kb = buffer.tell() / 1024
-        if size_kb <= max_size_kb or quality <= 20:
-            break
-        quality -= 10
-    b64_str = base64.b64encode(buffer.getvalue()).decode()
-    return f"data:image/jpeg;base64,{b64_str}"
-
 def apply_background_css(config=None):
     if config is None:
         config = st.session_state.get("background_config", get_background_config())
     bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-    st.markdown(f"<style>.stApp{{background:{bg_value};background-attachment:fixed;background-size:cover;background-repeat:no-repeat;background-position:center;}}</style>", unsafe_allow_html=True)
+    st.markdown(f"""
+    <style>
+    .stApp {{
+        background: {bg_value};
+        background-attachment: fixed;
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
 
-# ====================== FUNÇÕES PARA GERAR HTML E PDF ======================
+# ====================== FUNÇÕES DE RELATÓRIOS (PDF) ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
-    colunas_desejadas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
-    colunas_existentes = [col for col in colunas_desejadas if col in df.columns]
-    df_relatorio = df[colunas_existentes].copy().fillna('')
-    tabela_html = df_relatorio.to_html(escape=True, index=False, classes='dataframe')
+    colunas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
+    colunas_existentes = [c for c in colunas if c in df.columns]
+    df_rel = df[colunas_existentes].copy().fillna('')
+    tabela = df_rel.to_html(escape=True, index=False)
     return f"""
     <!DOCTYPE html>
     <html><head><meta charset="UTF-8"><title>{titulo}</title>
     <style>
-        body{{font-family:'Segoe UI',Arial,sans-serif;margin:2cm;background:white;}}
-        h1{{text-align:center;color:#0a2b3e;font-size:24px;}}
-        .sub{{text-align:center;color:#555;font-size:12px;margin-bottom:30px;}}
+        body{{font-family:'Segoe UI',Arial,sans-serif;margin:2cm;}}
+        h1{{text-align:center;color:#0a2b3e;}}
+        .sub{{text-align:center;color:#555;margin-bottom:30px;}}
         table{{width:100%;border-collapse:collapse;font-size:10px;}}
-        th{{background:#0a2b3e;color:white;padding:8px;text-align:left;}}
+        th{{background:#0a2b3e;color:white;padding:8px;}}
         td{{border:1px solid #ccc;padding:6px;}}
-        tr:nth-child(even){{background-color:#f9f9f9;}}
+        tr:nth-child(even){{background:#f9f9f9;}}
         @media print{{body{{margin:1cm;}}.no-print{{display:none;}}}}
     </style></head>
     <body>
         <h1>JOHN ACESSOS - {titulo}</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
-        {tabela_html}
+        {tabela}
         <div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div>
     </body></html>
-    """
-
-def gerar_secao_html(df, titulo_secao):
-    if df.empty:
-        return f"<div class='section'><h2>{titulo_secao}</h2><p>Nenhum registro encontrado.</p></div>"
-    colunas = ['id','nome','cpf','empresa','setor_destino','data_entrada','data_saida']
-    colunas_existentes = [c for c in colunas if c in df.columns]
-    df_secao = df[colunas_existentes].fillna('')
-    return f"""
-    <div class='section'>
-        <h2>{titulo_secao} <span class='count-badge'>{len(df)} registros</span></h2>
-        {df_secao.to_html(escape=True, index=False)}
-    </div>
     """
 
 def gerar_html_consolidado(df):
     if df.empty:
         return None
+    def secao(df_filtro, titulo):
+        df_filtro = df_filtro.copy().fillna('')
+        if df_filtro.empty:
+            return f"<div class='section'><h2>{titulo}</h2><p>Nenhum registro.</p></div>"
+        colunas = ['id','nome','cpf','empresa','setor_destino','data_entrada','data_saida']
+        existentes = [c for c in colunas if c in df_filtro.columns]
+        tabela = df_filtro[existentes].to_html(escape=True, index=False)
+        return f"<div class='section'><h2>{titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>"
     html = f"""
     <!DOCTYPE html>
     <html><head><meta charset="UTF-8"><title>RELATÓRIO CONSOLIDADO</title>
     <style>
-        body{{font-family:'Segoe UI',Arial,sans-serif;margin:2cm;background:white;}}
+        body{{font-family:'Segoe UI',Arial,sans-serif;margin:2cm;}}
         h1{{text-align:center;color:#0a2b3e;}}
         .sub{{text-align:center;color:#555;margin-bottom:30px;}}
         .section{{margin-top:40px;page-break-inside:avoid;}}
@@ -211,18 +194,14 @@ def gerar_html_consolidado(df):
         <h1>JOHN ACESSOS - RELATÓRIO CONSOLIDADO</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
     """
-    df_grsa = df[df['setor_destino'].str.contains('GRSA', case=False, na=False)]
-    html += gerar_secao_html(df_grsa, "🔧 GRSA")
-    df_bras = df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
-    html += gerar_secao_html(df_bras, "🏭 Brasanitas")
-    df_cc = df[df['setor_destino'].str.contains('C.C', case=False, na=False)]
-    html += gerar_secao_html(df_cc, "🏥 C.C")
+    html += secao(df[df['setor_destino'].str.contains('GRSA', case=False, na=False)], "🔧 GRSA")
+    html += secao(df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)], "🏭 Brasanitas")
+    html += secao(df[df['setor_destino'].str.contains('C.C', case=False, na=False)], "🏥 C.C")
     empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
     todas_empresas = df['empresa'].dropna().unique()
-    empresas_prestadores = [emp for emp in todas_empresas if emp.upper() not in [e.upper() for e in empresas_excluir]]
-    if empresas_prestadores:
-        df_prestadores = df[df['empresa'].isin(empresas_prestadores)]
-        html += gerar_secao_html(df_prestadores, "🏢 Prestadores de Serviços")
+    prestadores = [e for e in todas_empresas if e.upper() not in [x.upper() for x in empresas_excluir]]
+    if prestadores:
+        html += secao(df[df['empresa'].isin(prestadores)], "🏢 Prestadores de Serviços")
     else:
         html += "<div class='section'><h2>🏢 Prestadores de Serviços</h2><p>Nenhum registro.</p></div>"
     html += '<div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div></body></html>'
@@ -242,9 +221,9 @@ def sanitizar_texto(texto):
     return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
 
 # ====================== CARREGAR IMAGENS ======================
-def carregar_imagem(nome_arquivo):
+def carregar_imagem(nome):
     try:
-        return Image.open(nome_arquivo)
+        return Image.open(nome)
     except:
         return None
 
@@ -257,7 +236,7 @@ st.markdown("""
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(100,0,255,0.4); } 70% { box-shadow: 0 0 0 12px rgba(100,0,255,0); } 100% { box-shadow: 0 0 0 0 rgba(100,0,255,0); } }
 @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0px); } }
 @keyframes buttonGlow { 0% { box-shadow: 0 0 5px #0ff; } 50% { box-shadow: 0 0 20px #0ff; } 100% { box-shadow: 0 0 5px #0ff; } }
-[data-testid="stSidebar"] { background: rgba(8, 8, 20, 0.85); backdrop-filter: blur(12px); border-right: 1px solid rgba(100,0,255,0.3); }
+[data-testid="stSidebar"] { background: rgba(8,8,20,0.85); backdrop-filter: blur(12px); border-right: 1px solid rgba(100,0,255,0.3); }
 .sidebar-header { text-align: center; padding: 25px 10px; border-bottom: 1px solid rgba(100,0,255,0.5); }
 .sidebar-title { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, #a855f7, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .info-item { margin-bottom: 12px; color: #c4b5fd; font-size: 12px; display: flex; gap: 8px; font-family: 'Space Mono', monospace; }
@@ -433,44 +412,35 @@ if st.session_state.perfil == "ADMIN":
             st.success("✅ Sessões expiradas removidas!")
             st.rerun()
         st.caption("Ações disponíveis apenas para o administrador.")
+    
     st.sidebar.markdown("---")
     if st.sidebar.button("🎨 Configurar Tema", use_container_width=True):
         with st.popover("🎨 Personalizar Fundo", use_container_width=True):
             config_atual = st.session_state.background_config.copy()
-            tipo = st.radio("Tipo de fundo:", ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)"],
-                            index=["gradient","solid","url","upload"].index(config_atual.get("type","gradient")) if config_atual.get("type") in ["gradient","solid","url","upload"] else 0, key="tipo_fundo")
+            tipo_atual = config_atual.get("type", "gradient")
+            opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)"]
+            idx = 0 if tipo_atual == "gradient" else 1 if tipo_atual == "solid" else 2
+            tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
             novo_valor = config_atual.get("value", "")
-            novo_tipo = config_atual.get("type", "gradient")
+            novo_tipo = tipo_atual
             if tipo == "Gradiente padrão":
                 novo_valor = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
                 novo_tipo = "gradient"
             elif tipo == "Cor sólida":
-                cor = st.color_picker("Escolha a cor", value=config_atual.get("value", "#0a0a1a") if config_atual.get("type")=="solid" else "#0a0a1a", key="cor_picker")
+                cor_padrao = config_atual.get("value", "#0a0a1a") if tipo_atual == "solid" else "#0a0a1a"
+                cor = st.color_picker("Escolha a cor", value=cor_padrao, key="cor_picker")
                 novo_valor = cor
                 novo_tipo = "solid"
-            elif tipo == "Imagem (URL)":
-                url_img = st.text_input("URL da imagem", value=config_atual.get("value", "") if config_atual.get("type")=="url" else "", key="url_img")
+            else:  # URL
+                url_padrao = config_atual.get("value", "") if tipo_atual == "url" else ""
+                url_img = st.text_input("URL da imagem", value=url_padrao, key="url_img", placeholder="https://exemplo.com/imagem.jpg")
                 if url_img:
                     novo_valor = f"url('{url_img}') center/cover no-repeat fixed"
                     novo_tipo = "url"
                 else:
                     novo_valor = config_atual.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-                    novo_tipo = config_atual.get("type", "gradient")
-            else:
-                uploaded_file = st.file_uploader("Selecione uma imagem (JPG/PNG)", type=["jpg","jpeg","png"], key="upload_img")
-                if uploaded_file:
-                    with st.spinner("Processando..."):
-                        try:
-                            data_url = compress_image_to_base64(uploaded_file)
-                            novo_valor = f"url('{data_url}') center/cover no-repeat fixed"
-                            novo_tipo = "url"
-                            st.success("Imagem carregada!")
-                        except Exception as e:
-                            st.error(f"Erro: {e}")
-                else:
-                    novo_valor = config_atual.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-                    novo_tipo = config_atual.get("type", "gradient")
-            aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login")
+                    novo_tipo = tipo_atual if tipo_atual in ["gradient","solid"] else "gradient"
+            aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
             if st.button("💾 Salvar e Aplicar Tema", key="salvar_tema"):
                 nova_config = {"type": novo_tipo, "value": novo_valor, "apply_to_login": aplicar_login}
                 save_background_config(nova_config)
@@ -486,7 +456,7 @@ total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.markdown(f'<div class="admin-card"><div style="display:flex; justify-content:space-between;"><div><div class="card-title">📍 PRESENTES</div><div class="card-value">{total_presentes}</div></div><div style="font-size:22px;">👥</div></div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="admin-card"><div style="display:flex;justify-content:space-between;"><div><div class="card-title">📍 PRESENTES</div><div class="card-value">{total_presentes}</div></div><div style="font-size:22px;">👥</div></div></div>', unsafe_allow_html=True)
 with col2:
     st.markdown(f'<div class="admin-card"><div><div class="card-title">📋 CADASTRADOS</div><div class="card-value">{total_colaboradores}</div></div><div style="font-size:22px;">📊</div></div>', unsafe_allow_html=True)
 with col3:
