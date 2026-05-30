@@ -30,22 +30,21 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== CSS FUTURISTA GLOBAL (COM LOGIN SEM SCROLL) ======================
+# ====================== CSS FUTURISTA GLOBAL ======================
 st.markdown("""
 <style>
-    /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
     html, body {
         margin: 0;
         padding: 0;
         height: 100%;
+        width: 100%;
         overflow: hidden;
     }
     .stApp {
         transition: background 0.3s ease;
         height: 100%;
-        overflow: auto; /* permite rolagem apenas dentro do app após login */
+        overflow: auto;
     }
-    /* TOP BAR TRANSPARENTE */
     header[data-testid="stHeader"] {
         background: transparent !important;
         box-shadow: none !important;
@@ -56,14 +55,12 @@ st.markdown("""
         color: #0ff !important;
         text-shadow: 0 0 3px #0ff;
     }
-    /* SIDEBAR GLASS */
     [data-testid="stSidebar"] {
         background: rgba(10, 10, 25, 0.65) !important;
         backdrop-filter: blur(16px);
         border-right: 1px solid rgba(0, 255, 255, 0.3);
         box-shadow: 4px 0 30px rgba(0, 255, 255, 0.1);
     }
-    /* AVATAR FUTURISTA */
     .avatar-container {
         text-align: center;
         margin-bottom: 25px;
@@ -100,7 +97,6 @@ st.markdown("""
         0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
         100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
     }
-    /* CARDS GLASSMORPHISM + NEON */
     .cyber-card {
         background: rgba(15, 15, 35, 0.55);
         backdrop-filter: blur(12px);
@@ -180,7 +176,6 @@ st.markdown("""
     .cyber-card:hover::after {
         left: 100%;
     }
-    /* BOTÕES NEON */
     .stButton>button, .stForm button {
         background: rgba(0,20,40,0.7) !important;
         backdrop-filter: blur(8px);
@@ -198,7 +193,6 @@ st.markdown("""
         box-shadow: 0 0 15px magenta;
         transform: scale(1.02);
     }
-    /* INPUTS FUTURISTAS */
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
         background: rgba(0, 10, 20, 0.7) !important;
         backdrop-filter: blur(8px);
@@ -212,7 +206,6 @@ st.markdown("""
         border-color: magenta !important;
         box-shadow: 0 0 12px magenta;
     }
-    /* FORM CONTAINERS */
     .stForm, .stExpander, .stTabs [data-baseweb="tab-list"] {
         background: rgba(0, 0, 0, 0.3);
         backdrop-filter: blur(8px);
@@ -231,13 +224,11 @@ st.markdown("""
         color: #0ff !important;
         text-shadow: 0 0 3px cyan;
     }
-    /* TABELAS E HISTÓRICO */
     .stDataFrame {
         background: rgba(0,0,0,0.4) !important;
         border: 1px solid cyan !important;
         border-radius: 16px;
     }
-    /* INDICADORES EM TEMPO REAL */
     .live-indicator {
         display: inline-flex;
         align-items: center;
@@ -262,7 +253,6 @@ st.markdown("""
         0% { opacity: 0.4; transform: scale(0.8);}
         100% { opacity: 1; transform: scale(1.2);}
     }
-    /* FOOTER */
     .footer {
         text-align: center;
         padding: 15px;
@@ -271,7 +261,6 @@ st.markdown("""
         border-top: 1px solid rgba(0,255,255,0.2);
         margin-top: 25px;
     }
-    /* TEXTOS GERAIS */
     h1, h2, h3, p, label, .info-item, .stMarkdown, .stRadio label, .stCheckbox label {
         color: #eef !important;
         text-shadow: 0 0 2px rgba(0,0,0,0.5);
@@ -302,7 +291,6 @@ st.markdown("""
         align-items: center;
         gap: 5px;
     }
-    /* CANVAS FUTURISTA */
     #futuristic-canvas {
         position: fixed;
         top: 0;
@@ -312,28 +300,32 @@ st.markdown("""
         z-index: -9999;
         pointer-events: none;
     }
-    /* --- LOGIN CENTRALIZADO E SEM ROLAGEM --- */
     .login-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
-        width: 100%;
         margin: 0;
         padding: 0;
         overflow: hidden;
+        z-index: 1000;
     }
     .login-box {
-        background: rgba(8,8,20,0.7);
+        background: rgba(8, 8, 20, 0.85);
         backdrop-filter: blur(20px);
         border-radius: 50px;
         padding: 45px 35px;
-        border: 1px solid rgba(168,85,247,0.6);
-        width: 100%;
+        border: 1px solid rgba(168, 85, 247, 0.6);
+        width: 90%;
         max-width: 480px;
         text-align: center;
         animation: float 3s ease-in-out infinite;
-        box-shadow: 0 0 30px rgba(168,85,247,0.2);
+        box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
+        margin: 20px;
     }
     .guard-logo {
         width: 110px;
@@ -374,6 +366,25 @@ st.markdown("""
         display: inline-block;
         color: #a855f7;
         margin-bottom: 15px;
+    }
+    @media (max-width: 600px) {
+        .login-box {
+            padding: 30px 20px;
+            max-width: 90%;
+        }
+        .guard-logo {
+            width: 80px;
+            height: 80px;
+        }
+        .guard-logo span {
+            font-size: 45px;
+        }
+        .logo-title {
+            font-size: 24px;
+        }
+        .logo-subtitle {
+            font-size: 9px;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -419,7 +430,7 @@ def save_avatar_url(url):
         st.error(f"Erro ao salvar avatar: {e}")
         return False
 
-# ====================== FUNÇÕES DE TEMA (INCLUINDO FUTURISTA) ======================
+# ====================== FUNÇÕES DE TEMA ======================
 def compress_image_to_base64(uploaded_file, max_size_kb=500):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -732,14 +743,12 @@ def apply_theme_css():
             </style>
             """, unsafe_allow_html=True)
             return
-        
         container_div = "<div style='position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -9999; pointer-events: none;'>"
         if mime_type == "image/gif":
             media_html = f'<img src="{media_url}" style="width: 100%; height: 100%; object-fit: {adjust};">'
         else:
             media_html = f'<video autoplay muted playsinline {loop_attr} style="width: 100%; height: 100%; object-fit: {adjust};"><source src="{media_url}" type="{mime_type}"></video>'
         st.markdown(container_div + media_html + "</div>", unsafe_allow_html=True)
-        
         st.markdown("""
         <style>
         .stApp {
@@ -923,7 +932,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN (CENTRALIZADA SEM SCROLL) ======================
+# ====================== TELA DE LOGIN (CENTRALIZADA) ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -931,7 +940,6 @@ if not st.session_state.logado:
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
     
-    # Força o container de login a ocupar a tela toda sem scroll
     st.markdown("""
     <div class="login-container">
         <div class="login-box">
@@ -941,7 +949,6 @@ if not st.session_state.logado:
             <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     """, unsafe_allow_html=True)
     
-    # Script para o binário flutuante
     st.markdown("""
     <script>
         function generateBinary() {
@@ -1050,7 +1057,7 @@ with st.sidebar:
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
     st.markdown('<div class="info-item">📦 Versão: 13.1 (CYBER)</div>', unsafe_allow_html=True)
 
-# ====================== ADMIN: CONFIGURAÇÕES (MANTIDO IDÊNTICO AO ANTERIOR) ======================
+# ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
@@ -1304,20 +1311,33 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS CYBER) ======================
+# ====================== DASHBOARD (CARDS CORRIGIDOS) ======================
 st.markdown("---")
 try:
-    pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
-    total_presentes = len(pessoas_presentes)
-    total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
-except:
+    # PRESENTES: pessoas com data_saida vazia
+    pessoas_presentes = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
+    total_presentes = pessoas_presentes.count if hasattr(pessoas_presentes, 'count') else 0
+    
+    # CADASTRADOS: total de pessoas
+    total_cadastrados = supabase.table("Pessoas").select("id", count="exact").execute()
+    total_colaboradores = total_cadastrados.count if hasattr(total_cadastrados, 'count') else 0
+    
+    # SETORES ATIVOS: quantidade de setores distintos com movimentação
+    setores = supabase.table("movimentacao").select("setor_destino").execute()
+    if setores.data:
+        setores_unicos = len(set(p['setor_destino'] for p in setores.data))
+    else:
+        setores_unicos = 11  # fallback para a lista original
+except Exception as e:
+    st.error(f"Erro ao carregar estatísticas: {e}")
     total_presentes = 0
     total_colaboradores = 0
+    setores_unicos = 11
 
 cards_data = [
     {"icon": "👥", "title": "PRESENTES", "value": total_presentes},
     {"icon": "📊", "title": "CADASTRADOS", "value": total_colaboradores},
-    {"icon": "🏛️", "title": "SETORES ATIVOS", "value": 11},
+    {"icon": "🏛️", "title": "SETORES ATIVOS", "value": setores_unicos},
     {"icon": "🛡️", "title": "SEGURANÇA", "value": "24/7"}
 ]
 
