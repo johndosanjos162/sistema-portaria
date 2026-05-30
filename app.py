@@ -95,14 +95,16 @@ def encerrar_outras_sessoes():
 
 # ====================== FUNÇÕES DE CONFIGURAÇÃO DE TEMA (CORRIGIDAS) ======================
 def get_background_config():
+    """Carrega configuração do tema (prioriza session_state, fallback para padrão)."""
     config_padrao = {
         "type": "gradient",
         "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
         "apply_to_login": False
     }
-    # Prioriza session_state
+    # Primeiro, verifica session_state
     if "tema_config" in st.session_state:
         return st.session_state.tema_config
+    # Se não, tenta carregar do Supabase
     try:
         result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
         if result.data:
@@ -115,6 +117,8 @@ def get_background_config():
     return config_padrao
 
 def save_background_config(config):
+    """Salva configuração no session_state e no Supabase (opcional)."""
+    st.session_state.tema_config = config
     try:
         supabase.table("app_config").upsert({
             "key": "background_config",
@@ -123,17 +127,17 @@ def save_background_config(config):
         }).execute()
     except Exception as e:
         st.error(f"Erro ao salvar tema no servidor: {e}")
-    st.session_state.tema_config = config
     return True
 
 def apply_background_css(config=None):
-    """Aplica o CSS de fundo de forma segura, sem gerar JavaScript inválido."""
+    """Aplica o CSS de fundo de forma segura."""
     if config is None:
         config = st.session_state.get("tema_config", get_background_config())
     bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-    # Escapa caracteres especiais para o CSS/JS (ex.: aspas)
-    bg_value_escaped = bg_value.replace("'", "\\'").replace('"', '\\"')
-    # Gera apenas CSS, sem JavaScript (mais seguro e evita erros)
+    # Garantir que bg_value é uma string simples (sem quebras de linha)
+    bg_value = bg_value.strip()
+    # Escapar caracteres para colocar no CSS (já que o CSS aceita aspas simples/duplas)
+    # Mas aqui vamos colocar no style, então não precisa escapar tanto
     css = f"""
     <style>
     .stApp, .stApp > header, .stApp > div {{
@@ -145,25 +149,7 @@ def apply_background_css(config=None):
     }}
     </style>
     """
-    # Opcional: JavaScript apenas para garantir (mas sem usar a variável em string enorme)
-    js = f"""
-    <script>
-    (function() {{
-        try {{
-            document.body.style.background = "{bg_value_escaped}";
-            document.body.style.backgroundAttachment = "fixed";
-            document.body.style.backgroundSize = "cover";
-            var app = document.querySelector('.stApp');
-            if(app) {{
-                app.style.background = "{bg_value_escaped}";
-                app.style.backgroundAttachment = "fixed";
-                app.style.backgroundSize = "cover";
-            }}
-        }} catch(e) {{ console.log(e); }}
-    }})();
-    </script>
-    """
-    st.markdown(css + js, unsafe_allow_html=True)
+    st.markdown(css, unsafe_allow_html=True)
 
 # ====================== FUNÇÕES DE RELATÓRIOS (PDF) ======================
 def gerar_html_impressao(df, titulo):
