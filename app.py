@@ -980,7 +980,7 @@ if "pessoa_saida" not in st.session_state:
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== TELA DE LOGIN (SEM LOGO) ======================
+# ====================== TELA DE LOGIN (CAMPOS À FRENTE DA LOGO) ======================
 if not st.session_state.logado:
     theme = st.session_state.theme_config
     if theme.get("apply_to_login", False):
@@ -993,7 +993,7 @@ if not st.session_state.logado:
         <div class="login-box">
     """, unsafe_allow_html=True)
     
-    # Somente os campos de login, sem a logo
+    # PRIMEIRO: campos de login (ficam à frente da logo)
     with st.form("login_form"):
         st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
         senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
@@ -1021,7 +1021,30 @@ if not st.session_state.logado:
                 else:
                     st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
     
+    # DEPOIS: logo e elementos visuais (ficam atrás dos campos)
+    st.markdown("""
+            <div class="guard-logo"><span>🛡️</span></div>
+            <div class="logo-title">JOHN ACESSOS</div>
+            <div class="logo-subtitle">CYBER SECURITY 2026</div>
+            <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
+    """, unsafe_allow_html=True)
+    
     st.markdown("</div></div>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    <script>
+        function generateBinary() {
+            let b = '';
+            for(let i = 0; i < 60; i++) b += Math.random() < 0.5 ? '0' : '1';
+            return b;
+        }
+        setInterval(() => {
+            let el = document.getElementById('binary-container');
+            if(el) el.innerHTML = `<div class="binary-stream">${generateBinary()}</div>`;
+        }, 400);
+    </script>
+    """, unsafe_allow_html=True)
+    
     st.stop()
 
 # ====================== APÓS LOGIN ======================
