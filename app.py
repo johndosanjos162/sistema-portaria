@@ -33,16 +33,19 @@ st.set_page_config(
 # ====================== CSS FUTURISTA GLOBAL ======================
 st.markdown("""
 <style>
-    /* RESET E BACKGROUND */
-    * {
+    /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
+    html, body {
         margin: 0;
         padding: 0;
-        box-sizing: border-box;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
     }
     .stApp {
         transition: background 0.3s ease;
+        height: 100%;
+        overflow: auto;
     }
-    /* TOP BAR TRANSPARENTE */
     header[data-testid="stHeader"] {
         background: transparent !important;
         box-shadow: none !important;
@@ -53,14 +56,12 @@ st.markdown("""
         color: #0ff !important;
         text-shadow: 0 0 3px #0ff;
     }
-    /* SIDEBAR GLASS */
     [data-testid="stSidebar"] {
         background: rgba(10, 10, 25, 0.65) !important;
         backdrop-filter: blur(16px);
         border-right: 1px solid rgba(0, 255, 255, 0.3);
         box-shadow: 4px 0 30px rgba(0, 255, 255, 0.1);
     }
-    /* AVATAR FUTURISTA */
     .avatar-container {
         text-align: center;
         margin-bottom: 25px;
@@ -97,64 +98,114 @@ st.markdown("""
         0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
         100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
     }
-    /* CARDS GLASSMORPHISM + NEON */
-    .cyber-card {
-        background: rgba(15, 15, 35, 0.55);
+
+    /* ===== NOVOS CARDS ULTRA TECNOLÓGICOS ===== */
+    .dashboard-card {
+        background: rgba(10, 15, 30, 0.45);
         backdrop-filter: blur(12px);
         border-radius: 28px;
         padding: 1.2rem 1rem;
         margin: 0.5rem;
-        border: 1px solid rgba(0, 255, 255, 0.4);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2), 0 0 12px rgba(0,255,255,0.3);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 15px rgba(0,255,255,0.2);
         transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
         position: relative;
         overflow: hidden;
         cursor: default;
+        z-index: 1;
     }
-    .cyber-card::before {
+    /* Efeito de reflexo dinâmico */
+    .dashboard-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.15), transparent);
+        transition: left 0.6s ease;
+        z-index: 0;
+        pointer-events: none;
+    }
+    .dashboard-card:hover::before {
+        left: 100%;
+    }
+    /* Borda neon animada no hover */
+    .dashboard-card::after {
         content: '';
         position: absolute;
         top: -2px;
         left: -2px;
         right: -2px;
         bottom: -2px;
-        background: linear-gradient(45deg, cyan, magenta, cyan);
+        background: linear-gradient(45deg, cyan, magenta, cyan, #0ff);
         border-radius: 30px;
         z-index: -1;
         opacity: 0;
         transition: opacity 0.4s;
     }
-    .cyber-card:hover {
-        transform: translateY(-6px);
-        border-color: cyan;
-        box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 25px cyan;
+    .dashboard-card:hover::after {
+        opacity: 0.6;
     }
-    .cyber-card:hover::before {
-        opacity: 0.4;
+    .dashboard-card:hover {
+        transform: translateY(-6px);
+        border-color: rgba(0, 255, 255, 0.8);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 25px cyan;
+    }
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        position: relative;
+        z-index: 2;
     }
     .card-icon {
-        font-size: 3rem;
-        text-align: center;
+        font-size: 2.5rem;
         filter: drop-shadow(0 0 6px cyan);
         transition: 0.2s;
     }
-    .cyber-card:hover .card-icon {
+    .dashboard-card:hover .card-icon {
         transform: scale(1.05);
         filter: drop-shadow(0 0 12px magenta);
+    }
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0,0,0,0.5);
+        padding: 4px 10px;
+        border-radius: 30px;
+        font-size: 0.7rem;
+        font-family: 'Space Mono', monospace;
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        backdrop-filter: blur(4px);
+    }
+    .status-led {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #0f0;
+        box-shadow: 0 0 6px #0f0;
+        animation: pulseLed 1.2s infinite;
+    }
+    @keyframes pulseLed {
+        0% { opacity: 0.4; transform: scale(0.8); }
+        100% { opacity: 1; transform: scale(1.2); }
     }
     .card-title {
         font-size: 0.85rem;
         letter-spacing: 3px;
         text-transform: uppercase;
         color: #aaf;
-        text-align: center;
         font-weight: 500;
-        margin: 10px 0 5px;
+        margin-bottom: 8px;
+        position: relative;
+        z-index: 2;
     }
     .card-value {
-        font-size: 2.6rem;
+        font-size: 2.8rem;
         font-weight: 800;
-        text-align: center;
         background: linear-gradient(135deg, #fff, cyan);
         -webkit-background-clip: text;
         background-clip: text;
@@ -162,21 +213,20 @@ st.markdown("""
         text-shadow: 0 0 20px rgba(0,255,255,0.5);
         line-height: 1.2;
         font-family: 'Space Mono', monospace;
+        margin-bottom: 4px;
+        position: relative;
+        z-index: 2;
     }
-    /* Efeito holográfico no hover */
-    .cyber-card::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(0,255,255,0.2), transparent);
-        transition: left 0.6s;
-        pointer-events: none;
-    }
-    .cyber-card:hover::after {
-        left: 100%;
+    .card-footer {
+        font-size: 0.7rem;
+        color: rgba(0, 255, 255, 0.7);
+        font-family: monospace;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+        position: relative;
+        z-index: 2;
     }
     /* BOTÕES NEON */
     .stButton>button, .stForm button {
@@ -210,7 +260,6 @@ st.markdown("""
         border-color: magenta !important;
         box-shadow: 0 0 12px magenta;
     }
-    /* FORM CONTAINERS */
     .stForm, .stExpander, .stTabs [data-baseweb="tab-list"] {
         background: rgba(0, 0, 0, 0.3);
         backdrop-filter: blur(8px);
@@ -229,13 +278,11 @@ st.markdown("""
         color: #0ff !important;
         text-shadow: 0 0 3px cyan;
     }
-    /* TABELAS E HISTÓRICO */
     .stDataFrame {
         background: rgba(0,0,0,0.4) !important;
         border: 1px solid cyan !important;
         border-radius: 16px;
     }
-    /* INDICADORES EM TEMPO REAL */
     .live-indicator {
         display: inline-flex;
         align-items: center;
@@ -260,7 +307,6 @@ st.markdown("""
         0% { opacity: 0.4; transform: scale(0.8);}
         100% { opacity: 1; transform: scale(1.2);}
     }
-    /* FOOTER */
     .footer {
         text-align: center;
         padding: 15px;
@@ -269,7 +315,6 @@ st.markdown("""
         border-top: 1px solid rgba(0,255,255,0.2);
         margin-top: 25px;
     }
-    /* TEXTOS GERAIS */
     h1, h2, h3, p, label, .info-item, .stMarkdown, .stRadio label, .stCheckbox label {
         color: #eef !important;
         text-shadow: 0 0 2px rgba(0,0,0,0.5);
@@ -300,10 +345,105 @@ st.markdown("""
         align-items: center;
         gap: 5px;
     }
+    #futuristic-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -9999;
+        pointer-events: none;
+    }
+    .login-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        z-index: 1000;
+    }
+    .login-box {
+        background: rgba(8, 8, 20, 0.85);
+        backdrop-filter: blur(20px);
+        border-radius: 50px;
+        padding: 45px 35px;
+        border: 1px solid rgba(168, 85, 247, 0.6);
+        width: 90%;
+        max-width: 480px;
+        text-align: center;
+        animation: float 3s ease-in-out infinite;
+        box-shadow: 0 0 30px rgba(168, 85, 247, 0.2);
+        margin: 20px;
+    }
+    .guard-logo {
+        width: 110px;
+        height: 110px;
+        margin: 0 auto 20px;
+        background: radial-gradient(circle, rgba(168,85,247,0.3), rgba(59,130,246,0.1));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        animation: pulse 2s infinite;
+    }
+    .guard-logo span {
+        font-size: 60px;
+        filter: drop-shadow(0 0 10px #a855f7);
+    }
+    .logo-title {
+        font-size: 32px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff, #a855f7);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 1px;
+    }
+    .logo-subtitle {
+        font-size: 11px;
+        color: #a78bfa;
+        letter-spacing: 3px;
+        margin-bottom: 25px;
+    }
+    .binary-stream {
+        font-family: 'Space Mono', monospace;
+        font-size: 10px;
+        background: rgba(0,0,0,0.5);
+        padding: 6px;
+        border-radius: 20px;
+        display: inline-block;
+        color: #a855f7;
+        margin-bottom: 15px;
+    }
+    @media (max-width: 600px) {
+        .login-box {
+            padding: 30px 20px;
+            max-width: 90%;
+        }
+        .guard-logo {
+            width: 80px;
+            height: 80px;
+        }
+        .guard-logo span {
+            font-size: 45px;
+        }
+        .logo-title {
+            font-size: 24px;
+        }
+        .logo-subtitle {
+            font-size: 9px;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== FUNÇÕES DE AVATAR (BASE64) ======================
+# ====================== FUNÇÕES DE AVATAR ======================
 def compress_avatar_image(uploaded_file, max_size_kb=200):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -403,6 +543,200 @@ def save_theme_config(config):
         st.error(f"Erro ao salvar tema global: {e}")
         return False
 
+def futuristic_background_script():
+    st.markdown("""
+    <canvas id="futuristic-canvas"></canvas>
+    <script>
+        (function() {
+            const canvas = document.getElementById('futuristic-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+            let dataLines = [];
+            let holographicShield = { angle: 0, pulse: 0 };
+            
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.radius = Math.random() * 2 + 1;
+                    this.speedX = (Math.random() - 0.5) * 0.5;
+                    this.speedY = (Math.random() - 0.5) * 0.5 + 0.2;
+                    this.opacity = Math.random() * 0.5 + 0.2;
+                    this.color = `rgba(0, ${150 + Math.random() * 105}, 255, ${this.opacity})`;
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    if (this.y > height) this.y = 0;
+                    if (this.x > width) this.x = 0;
+                    if (this.x < 0) this.x = width;
+                }
+                draw() {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = this.color;
+                    ctx.fill();
+                }
+            }
+            
+            class DataLine {
+                constructor() {
+                    this.x1 = Math.random() * width;
+                    this.y1 = Math.random() * height;
+                    this.x2 = this.x1 + (Math.random() - 0.5) * 300;
+                    this.y2 = this.y1 + (Math.random() - 0.5) * 300;
+                    this.progress = 0;
+                    this.speed = 0.005 + Math.random() * 0.01;
+                    this.color = `rgba(0, 200, 255, ${0.2 + Math.random() * 0.3})`;
+                }
+                update() {
+                    this.progress += this.speed;
+                    if (this.progress >= 1) {
+                        this.progress = 0;
+                        this.x1 = Math.random() * width;
+                        this.y1 = Math.random() * height;
+                        this.x2 = this.x1 + (Math.random() - 0.5) * 300;
+                        this.y2 = this.y1 + (Math.random() - 0.5) * 300;
+                    }
+                }
+                draw() {
+                    const x = this.x1 + (this.x2 - this.x1) * this.progress;
+                    const y = this.y1 + (this.y2 - this.y1) * this.progress;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x1, this.y1);
+                    ctx.lineTo(x, y);
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(0, 200, 255, 0.8)`;
+                    ctx.fill();
+                }
+            }
+            
+            function drawServers() {
+                const serverCols = Math.floor(width / 180);
+                for (let i = 0; i < serverCols; i++) {
+                    const x = 80 + i * 180;
+                    const y = height * 0.2;
+                    ctx.fillStyle = 'rgba(0, 20, 40, 0.7)';
+                    ctx.fillRect(x, y, 60, 300);
+                    ctx.strokeStyle = '#0ff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, 60, 300);
+                    for (let j = 0; j < 5; j++) {
+                        ctx.fillStyle = `rgba(0, ${100 + j * 30}, 200, 0.5)`;
+                        ctx.fillRect(x + 5, y + 20 + j * 50, 50, 10);
+                    }
+                }
+            }
+            
+            function drawShield() {
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const radius = 120 + Math.sin(Date.now() * 0.002) * 5;
+                holographicShield.pulse = 0.5 + Math.sin(Date.now() * 0.005) * 0.2;
+                ctx.save();
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#0ff';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(0, 200, 255, ${0.6 + holographicShield.pulse * 0.3})`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius - 10, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(100, 0, 255, 0.5)`;
+                ctx.stroke();
+                ctx.font = "50px 'Segoe UI', 'Material Icons'";
+                ctx.fillStyle = `rgba(0, 255, 255, ${0.8 + Math.sin(Date.now() * 0.003) * 0.2})`;
+                ctx.shadowBlur = 15;
+                ctx.fillText("🔒", centerX - 28, centerY + 20);
+                ctx.restore();
+                for (let i = 0; i < 12; i++) {
+                    const angle = Date.now() * 0.002 + i * Math.PI * 2 / 12;
+                    const x1 = centerX + Math.cos(angle) * radius;
+                    const y1 = centerY + Math.sin(angle) * radius;
+                    const x2 = centerX + Math.cos(angle) * (radius + 40 + Math.sin(Date.now() * 0.01 + i) * 20);
+                    const y2 = centerY + Math.sin(angle) * (radius + 40 + Math.sin(Date.now() * 0.01 + i) * 20);
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.strokeStyle = `rgba(0, 255, 255, 0.4)`;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+            
+            function drawNeuralNetwork() {
+                const nodes = [];
+                for (let i = 0; i < 30; i++) {
+                    nodes.push({ x: Math.random() * width, y: Math.random() * height, active: false });
+                }
+                for (let i = 0; i < nodes.length; i++) {
+                    for (let j = i + 1; j < nodes.length; j++) {
+                        const dx = nodes[i].x - nodes[j].x;
+                        const dy = nodes[i].y - nodes[j].y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist < 150) {
+                            ctx.beginPath();
+                            ctx.moveTo(nodes[i].x, nodes[i].y);
+                            ctx.lineTo(nodes[j].x, nodes[j].y);
+                            ctx.strokeStyle = `rgba(0, 255, 255, ${0.2 * (1 - dist / 150)})`;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                nodes.forEach(node => {
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(0, 200, 255, 0.7)`;
+                    ctx.fill();
+                });
+            }
+            
+            function init() {
+                resize();
+                for (let i = 0; i < 150; i++) particles.push(new Particle());
+                for (let i = 0; i < 40; i++) dataLines.push(new DataLine());
+            }
+            
+            function animate() {
+                if (!ctx) return;
+                ctx.clearRect(0, 0, width, height);
+                const grad = ctx.createLinearGradient(0, 0, width, height);
+                grad.addColorStop(0, '#030318');
+                grad.addColorStop(0.5, '#0a0a2a');
+                grad.addColorStop(1, '#050518');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, width, height);
+                drawServers();
+                dataLines.forEach(line => { line.update(); line.draw(); });
+                particles.forEach(p => { p.update(); p.draw(); });
+                drawNeuralNetwork();
+                drawShield();
+                if (Math.random() < 0.05) {
+                    ctx.fillStyle = `rgba(0, 255, 255, 0.15)`;
+                    ctx.font = "12px monospace";
+                    ctx.fillText("010101", Math.random() * width, Math.random() * height);
+                }
+                requestAnimationFrame(animate);
+            }
+            
+            init();
+            animate();
+        })();
+    </script>
+    """, unsafe_allow_html=True)
+
 def apply_theme_css():
     config = st.session_state.get("theme_config", get_theme_config())
     bg_type = config.get("type", "gradient")
@@ -463,26 +797,21 @@ def apply_theme_css():
             </style>
             """, unsafe_allow_html=True)
             return
-        
         container_div = "<div style='position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -9999; pointer-events: none;'>"
         if mime_type == "image/gif":
             media_html = f'<img src="{media_url}" style="width: 100%; height: 100%; object-fit: {adjust};">'
         else:
             media_html = f'<video autoplay muted playsinline {loop_attr} style="width: 100%; height: 100%; object-fit: {adjust};"><source src="{media_url}" type="{mime_type}"></video>'
         st.markdown(container_div + media_html + "</div>", unsafe_allow_html=True)
-        
         st.markdown("""
         <style>
         .stApp {
             background: transparent !important;
         }
-        .stButton>button, .stTextInput>div>div>input, .stSelectbox>div>div, .stTabs [data-baseweb="tab-list"], .stTabs [data-baseweb="tab"] {
-            background: rgba(20, 20, 40, 0.7) !important;
-            backdrop-filter: blur(6px);
-            border: 1px solid rgba(0,255,255,0.3);
-        }
         </style>
         """, unsafe_allow_html=True)
+    elif bg_type == "futuristic":
+        futuristic_background_script()
 
 # ====================== FUNÇÕES DE SESSÃO ======================
 def registrar_sessao(perfil, usuario="admin"):
@@ -547,20 +876,7 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== VALIDAÇÃO ======================
-def validar_cpf(cpf):
-    cpf_limpo = re.sub(r'\D', '', cpf)
-    return cpf_limpo.isdigit() and len(cpf_limpo) == 11
-
-def sanitizar_cpf(cpf):
-    return re.sub(r'\D', '', cpf)
-
-def sanitizar_texto(texto):
-    if not texto:
-        return texto
-    return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
-
-# ====================== RELATÓRIOS PDF ======================
+# ====================== FUNÇÕES DE RELATÓRIOS PDF ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
@@ -632,6 +948,19 @@ def gerar_html_consolidado(df):
     html += '<div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div></body></html>'
     return html
 
+# ====================== FUNÇÕES DE VALIDAÇÃO ======================
+def validar_cpf(cpf):
+    cpf_limpo = re.sub(r'\D', '', cpf)
+    return cpf_limpo.isdigit() and len(cpf_limpo) == 11
+
+def sanitizar_cpf(cpf):
+    return re.sub(r'\D', '', cpf)
+
+def sanitizar_texto(texto):
+    if not texto:
+        return texto
+    return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
+
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -664,27 +993,30 @@ if not st.session_state.logado:
         apply_theme_css()
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
-    if st.session_state.bloqueado_ate and datetime.now() < st.session_state.bloqueado_ate:
-        st.error(f"⛔ Bloqueado até {st.session_state.bloqueado_ate.strftime('%H:%M:%S')}")
-        st.stop()
+    
     st.markdown("""
-    <style>
-    .login-container{display:flex;justify-content:center;align-items:center;min-height:80vh;}
-    .login-box{background:rgba(8,8,20,0.7);backdrop-filter:blur(20px);border-radius:50px;padding:45px 35px;border:1px solid rgba(168,85,247,0.6);width:100%;max-width:480px;text-align:center;animation:float 3s ease-in-out infinite;}
-    .guard-logo{width:110px;height:110px;margin:0 auto 20px;background:radial-gradient(circle,rgba(168,85,247,0.3),rgba(59,130,246,0.1));border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;animation:pulse 2s infinite;}
-    .guard-logo span{font-size:60px;filter:drop-shadow(0 0 10px #a855f7);}
-    .logo-title{font-size:32px;font-weight:800;background:linear-gradient(135deg,#fff,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-    .logo-subtitle{font-size:11px;color:#a78bfa;letter-spacing:3px;margin-bottom:25px;}
-    .binary-stream{font-family:'Space Mono',monospace;font-size:10px;background:rgba(0,0,0,0.5);padding:6px;border-radius:20px;display:inline-block;color:#a855f7;margin-bottom:15px;}
-    </style>
-    <div class="login-container"><div class="login-box">
-    <div class="guard-logo"><span>🛡️</span></div>
-    <div class="logo-title">JOHN ACESSOS</div>
-    <div class="logo-subtitle">CYBER SECURITY 2026</div>
-    <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
-    <script>function generateBinary(){let b='';for(let i=0;i<60;i++)b+=Math.random()<0.5?'0':'1';return b;}
-    setInterval(()=>{let el=document.getElementById('binary-container');if(el)el.innerHTML=`<div class="binary-stream">${generateBinary()}</div>`;},400);</script>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="guard-logo"><span>🛡️</span></div>
+            <div class="logo-title">JOHN ACESSOS</div>
+            <div class="logo-subtitle">CYBER SECURITY 2026</div>
+            <div id="binary-container" style="text-align:center; margin-bottom:15px;"></div>
     """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <script>
+        function generateBinary() {
+            let b = '';
+            for(let i = 0; i < 60; i++) b += Math.random() < 0.5 ? '0' : '1';
+            return b;
+        }
+        setInterval(() => {
+            let el = document.getElementById('binary-container');
+            if(el) el.innerHTML = `<div class="binary-stream">${generateBinary()}</div>`;
+        }, 400);
+    </script>
+    """, unsafe_allow_html=True)
+    
     with st.form("login_form"):
         st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
         senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
@@ -710,6 +1042,7 @@ if not st.session_state.logado:
                     st.error("⛔ Acesso bloqueado por 5 minutos.")
                 else:
                     st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
+    
     st.markdown("</div></div>", unsafe_allow_html=True)
     st.stop()
 
@@ -802,8 +1135,8 @@ if st.session_state.perfil == "ADMIN":
         st.markdown("### Personalizar Fundo - Aplica para todos")
         config_atual = st.session_state.theme_config
         tipo_atual = config_atual.get("type", "gradient")
-        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (URL)"]
-        idx_map = {"gradient":0, "solid":1, "url":2, "image_upload":3, "video":4}
+        opcoes = ["Gradiente padrão", "Cor sólida", "Imagem (URL)", "Imagem (upload)", "Animação (URL)", "Futurista Dinâmico (Canvas)"]
+        idx_map = {"gradient":0, "solid":1, "url":2, "image_upload":3, "video":4, "futuristic":5}
         idx = idx_map.get(tipo_atual, 0)
         tipo = st.radio("Tipo de fundo:", opcoes, index=idx, key="tipo_fundo_radio")
         
@@ -858,7 +1191,7 @@ if st.session_state.perfil == "ADMIN":
                 else:
                     novo_valor = config_atual.get("value", "")
                     novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
-        else:  # Animação (URL)
+        elif tipo == "Animação (URL)":
             url_padrao = ""
             if tipo_atual == "video":
                 url_padrao = config_atual.get("value", "")
@@ -879,6 +1212,9 @@ if st.session_state.perfil == "ADMIN":
             else:
                 novo_valor = config_atual.get("value", "")
                 novo_tipo = tipo_atual if tipo_atual in ["gradient","solid","url"] else "gradient"
+        elif tipo == "Futurista Dinâmico (Canvas)":
+            novo_valor = "futuristic"
+            novo_tipo = "futuristic"
         
         ajuste_opcoes = ["cover", "contain", "stretch"]
         if novo_tipo in ["url", "video"]:
@@ -902,7 +1238,7 @@ if st.session_state.perfil == "ADMIN":
         elif novo_tipo == "url":
             preview_style = f"url('{novo_valor}') {nova_posicao}/{novo_ajuste} no-repeat fixed" if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
             st.markdown(f'<div style="width:100%; height:50px; background:{preview_style}; border-radius:8px; border:1px solid cyan;"></div>', unsafe_allow_html=True)
-        else:  # video
+        elif novo_tipo == "video":
             if novo_valor:
                 if novo_mime == "image/gif":
                     st.markdown(f'<img src="{novo_valor}" style="width:100%; max-height:100px; object-fit:cover; border-radius:8px;">', unsafe_allow_html=True)
@@ -910,6 +1246,8 @@ if st.session_state.perfil == "ADMIN":
                     st.video(novo_valor, format="video/mp4")
             else:
                 st.info("Informe uma URL para prévia")
+        elif novo_tipo == "futuristic":
+            st.info("Fundo futurista dinâmico (Canvas) será aplicado após salvar.")
         
         aplicar_login = st.checkbox("Aplicar também na tela de login", value=config_atual.get("apply_to_login", False), key="aplicar_login_check")
         col_btn1, col_btn2, col_btn3 = st.columns(3)
@@ -925,10 +1263,13 @@ if st.session_state.perfil == "ADMIN":
                     else:
                         valor_final = "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
                         novo_tipo = "gradient"
-                else:  # video
+                elif novo_tipo == "video":
                     valor_final = novo_valor if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
                     if not novo_valor:
                         novo_tipo = "gradient"
+                else:  # futuristic
+                    valor_final = "futuristic"
+                    novo_tipo = "futuristic"
                 
                 nova_config = {
                     "type": novo_tipo,
@@ -1024,74 +1365,95 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== DASHBOARD (CARDS CYBER) ======================
+# ====================== DASHBOARD (CARDS ULTRA TECNOLÓGICOS) ======================
 st.markdown("---")
 try:
-    pessoas_presentes = supabase.table("movimentacao").select("*").eq("data_saida", "").execute().data
-    total_presentes = len(pessoas_presentes)
-    total_colaboradores = len(supabase.table("Pessoas").select("*").execute().data)
-except:
+    # PRESENTES: pessoas com data_saida vazia
+    presentes_data = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
+    total_presentes = presentes_data.count if hasattr(presentes_data, 'count') else 0
+    
+    # CADASTRADOS: total de pessoas
+    cadastrados_data = supabase.table("Pessoas").select("id", count="exact").execute()
+    total_cadastrados = cadastrados_data.count if hasattr(cadastrados_data, 'count') else 0
+    
+    # SETORES ATIVOS: setores distintos na movimentacao
+    setores_data = supabase.table("movimentacao").select("setor_destino").execute()
+    if setores_data.data:
+        setores_unicos = len(set(p['setor_destino'] for p in setores_data.data))
+    else:
+        setores_unicos = 11
+except Exception as e:
+    st.error(f"Erro ao carregar estatísticas: {e}")
     total_presentes = 0
-    total_colaboradores = 0
+    total_cadastrados = 0
+    setores_unicos = 11
 
-cards_data = [
-    {"icon": "👥", "title": "PRESENTES", "value": total_presentes},
-    {"icon": "📊", "title": "CADASTRADOS", "value": total_colaboradores},
-    {"icon": "🏛️", "title": "SETORES ATIVOS", "value": 11},
-    {"icon": "🛡️", "title": "SEGURANÇA", "value": "24/7"}
-]
-
+# Layout dos cards
 col1, col2, col3, col4 = st.columns(4)
-cols = [col1, col2, col3, col4]
 
-for idx, card in enumerate(cards_data):
-    with cols[idx]:
-        if isinstance(card["value"], int):
-            value_display = f'<div class="card-value" data-target="{card["value"]}">0</div>'
-            # Injetar script para animação
-            st.markdown(f"""
-            <div class="cyber-card">
-                <div class="card-icon">{card["icon"]}</div>
-                <div class="card-title">{card["title"]}</div>
-                {value_display}
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="cyber-card">
-                <div class="card-icon">{card["icon"]}</div>
-                <div class="card-title">{card["title"]}</div>
-                <div class="card-value">{card["value"]}</div>
-            </div>
-            """, unsafe_allow_html=True)
+with col1:
+    st.markdown(f"""
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div class="card-icon">👥</div>
+            <div class="status-indicator"><span class="status-led"></span> ATIVO</div>
+        </div>
+        <div class="card-title">PRESENTES</div>
+        <div class="card-value">{total_presentes}</div>
+        <div class="card-footer">
+            <span>🟢 ONLINE</span>
+            <span>⏱️ TEMPO REAL</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# Script para animar contadores
-st.markdown("""
-<script>
-    function animateCounters() {
-        const counters = document.querySelectorAll('.card-value');
-        counters.forEach(counter => {
-            const target = parseInt(counter.getAttribute('data-target'));
-            if (target && !counter.dataset.animated) {
-                counter.dataset.animated = 'true';
-                let current = 0;
-                const increment = Math.ceil(target / 30);
-                const update = () => {
-                    current += increment;
-                    if (current >= target) {
-                        counter.innerText = target;
-                    } else {
-                        counter.innerText = current;
-                        requestAnimationFrame(update);
-                    }
-                };
-                requestAnimationFrame(update);
-            }
-        });
-    }
-    document.addEventListener('DOMContentLoaded', animateCounters);
-</script>
-""", unsafe_allow_html=True)
+with col2:
+    st.markdown(f"""
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div class="card-icon">📊</div>
+            <div class="status-indicator"><span class="status-led"></span> BASE</div>
+        </div>
+        <div class="card-title">CADASTRADOS</div>
+        <div class="card-value">{total_cadastrados}</div>
+        <div class="card-footer">
+            <span>📋 CADASTROS</span>
+            <span>✅ VERIFICADOS</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div class="card-icon">🏛️</div>
+            <div class="status-indicator"><span class="status-led"></span> MAPA</div>
+        </div>
+        <div class="card-title">SETORES ATIVOS</div>
+        <div class="card-value">{setores_unicos}</div>
+        <div class="card-footer">
+            <span>📍 ÁREAS</span>
+            <span>🔍 MONITORADAS</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+    <div class="dashboard-card">
+        <div class="card-header">
+            <div class="card-icon">🛡️</div>
+            <div class="status-indicator"><span class="status-led"></span> 24/7</div>
+        </div>
+        <div class="card-title">SEGURANÇA</div>
+        <div class="card-value">ATIVA</div>
+        <div class="card-footer">
+            <span>🔒 PROTEÇÃO</span>
+            <span>⚡ INTELIGENTE</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ====================== CADASTRO ======================
 st.markdown("---")
