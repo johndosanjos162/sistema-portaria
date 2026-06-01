@@ -8,6 +8,7 @@ import re
 import uuid
 import json
 import io
+import time
 
 # ====================== CAMADA 1: CREDENCIAIS (via secrets) ======================
 # As senhas e chaves estão no .streamlit/secrets.toml (fora do código fonte)
@@ -356,6 +357,21 @@ st.markdown("""
         height: 100%;
         z-index: -9999;
         pointer-events: none;
+    }
+    .sync-card {
+        background: linear-gradient(135deg, rgba(0,255,255,0.05), rgba(0,100,100,0.1));
+        border-radius: 15px;
+        padding: 15px;
+        margin: 10px 0;
+        border: 1px solid rgba(0,255,255,0.3);
+    }
+    .success-animation {
+        animation: glowPulse 0.5s ease-in-out;
+    }
+    @keyframes glowPulse {
+        0% { box-shadow: 0 0 0 0 rgba(0,255,0,0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(0,255,0,0); }
+        100% { box-shadow: 0 0 0 0 rgba(0,255,0,0); }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -897,21 +913,18 @@ def sanitizar_texto(texto):
         return texto
     return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
 
-# ====================== FUNÇÃO PARA MESCLAR NOMES REPETIDOS ======================
-def mesclar_nomes_repetidos():
+# ====================== FUNÇÃO PARA APAGAR REGISTROS DUPLICADOS ======================
+def apagar_registros_duplicados():
     """
-    Função que identifica CPFs duplicados na tabela Pessoas e mescla os registros,
-    mantendo o nome mais completo ou o primeiro cadastro, e atualizando as movimentações
-    para referenciar o registro mantido.
+    Função que identifica CPFs duplicados na tabela Pessoas 
+    e APAGA todos os registros duplicados, mantendo APENAS UM registro para cada pessoa.
     """
     try:
-        # Buscar todos os registros da tabela Pessoas
         todas_pessoas = supabase_admin.table("Pessoas").select("*").execute().data
         
         if not todas_pessoas:
             return {"sucesso": False, "mensagem": "Nenhum registro encontrado na tabela Pessoas"}
         
-        # Agrupar por CPF
         grupos_por_cpf = {}
         for pessoa in todas_pessoas:
             cpf = pessoa['cpf']
@@ -919,7 +932,6 @@ def mesclar_nomes_repetidos():
                 grupos_por_cpf[cpf] = []
             grupos_por_cpf[cpf].append(pessoa)
         
-        # Identificar CPFs com duplicatas
         cpfs_com_duplicatas = {cpf: registros for cpf, registros in grupos_por_cpf.items() if len(registros) > 1}
         
         if not cpfs_com_duplicatas:
@@ -929,40 +941,124 @@ def mesclar_nomes_repetidos():
         resultados = []
         
         for cpf, registros in cpfs_com_duplicatas.items():
-            # Ordenar registros para escolher o principal (priorizar nome mais longo, ou mais recente)
-            # Vamos priorizar o registro com nome mais completo (mais caracteres)
-            registros_ordenados = sorted(registros, key=lambda x: len(x.get('nome', '') or ''), reverse=True)
-            
-            # O primeiro será mantido
+            registros_ordenados = sorted(registros, key=lambda x: x['id'])
             registro_principal = registros_ordenados[0]
             ids_para_remover = [r['id'] for r in registros_ordenados[1:]]
             
-            # Atualizar movimentações que referenciam os IDs que serão removidos
+            nomes_removidos = [r['nome'] for r in registros_ordenados[1:]]
+            
             for id_remover in ids_para_remover:
-                # Buscar movimentações com este ID
-                movimentacoes = supabase_admin.table("movimentacao").select("*").eq("cpf", cpf).execute().data
-                
-                for mov in movimentacoes:
-                    # Atualizar o nome na movimentação para o nome principal, se necessário
-                    if mov.get('nome') != registro_principal['nome']:
-                        supabase_admin.table("movimentacao").update({
-                            "nome": registro_principal['nome']
-                        }).eq("id", mov['id']).execute()
-                
-                # Remover o registro duplicado
                 supabase_admin.table("Pessoas").delete().eq("id", id_remover).execute()
                 total_removidos += 1
-                resultados.append(f"CPF {cpf}: removido registro duplicado ID {id_remover}, mantido {registro_principal['nome']}")
+            
+            resultados.append(
+                f"CPF {cpf}: mantido ID {registro_principal['id']} - {registro_principal['nome']} | "
+                f"Removidos: {len(ids_para_remover)} registro(s) - Nomes: {', '.join(nomes_removidos[:3])}{'...' if len(nomes_removidos) > 3 else ''}"
+            )
         
         return {
             "sucesso": True, 
-            "mensagem": f"Mesclagem concluída! {total_removidos} registro(s) duplicado(s) removido(s).",
+            "mensagem": f"Limpeza concluída! {total_removidos} registro(s) duplicado(s) removido(s).",
             "duplicados_removidos": total_removidos,
             "detalhes": resultados
         }
         
     except Exception as e:
-        return {"sucesso": False, "mensagem": f"Erro durante a mesclagem: {str(e)}"}
+        return {"sucesso": False, "mensagem": f"Erro durante a limpeza: {str(e)}"}
+
+# ====================== FUNÇÃO PARA SINCRONIZAR NOVOS CADASTROS ======================
+def sincronizar_novos_cadastros(arquivo_csv):
+    """
+    Função para sincronizar novos cadastros a partir de um arquivo CSV
+    """
+    try:
+        # Ler o arquivo CSV
+        df = pd.read_csv(arquivo_csv)
+        
+        # Verificar colunas necessárias
+        colunas_necessarias = ['cpf', 'nome']
+        colunas_opcionais = ['empresa']
+        
+        for col in colunas_necessarias:
+            if col not in df.columns:
+                return {"sucesso": False, "mensagem": f"Coluna '{col}' não encontrada no arquivo CSV"}
+        
+        # Limpar e validar os dados
+        registros_inseridos = 0
+        registros_atualizados = 0
+        registros_ignorados = 0
+        erros = []
+        
+        for idx, row in df.iterrows():
+            try:
+                cpf = sanitizar_cpf(str(row['cpf']))
+                nome = sanitizar_texto(str(row['nome'])).strip().upper()
+                empresa = sanitizar_texto(str(row.get('empresa', ''))).strip().upper() if pd.notna(row.get('empresa')) else ""
+                
+                # Validar CPF
+                if not validar_cpf(cpf):
+                    erros.append(f"Linha {idx+2}: CPF '{row['cpf']}' inválido")
+                    registros_ignorados += 1
+                    continue
+                
+                if not nome:
+                    erros.append(f"Linha {idx+2}: Nome não pode estar vazio")
+                    registros_ignorados += 1
+                    continue
+                
+                # Verificar se já existe
+                existe = supabase_admin.table("Pessoas").select("id, nome, empresa").eq("cpf", cpf).execute().data
+                
+                if existe:
+                    # Verificar se precisa atualizar
+                    precisa_atualizar = False
+                    if existe[0]['nome'] != nome:
+                        precisa_atualizar = True
+                    if empresa and existe[0].get('empresa', '') != empresa:
+                        precisa_atualizar = True
+                    
+                    if precisa_atualizar:
+                        supabase_admin.table("Pessoas").update({
+                            "nome": nome,
+                            "empresa": empresa
+                        }).eq("cpf", cpf).execute()
+                        registros_atualizados += 1
+                    else:
+                        registros_ignorados += 1
+                else:
+                    # Inserir novo registro
+                    supabase_admin.table("Pessoas").insert({
+                        "cpf": cpf,
+                        "nome": nome,
+                        "empresa": empresa
+                    }).execute()
+                    registros_inseridos += 1
+                    
+            except Exception as e:
+                erros.append(f"Linha {idx+2}: {str(e)}")
+                registros_ignorados += 1
+        
+        mensagem = f"""
+        ✅ Sincronização concluída!
+        - 📝 Registros inseridos: {registros_inseridos}
+        - 🔄 Registros atualizados: {registros_atualizados}
+        - ⏭️ Registros ignorados (já existentes): {registros_ignorados}
+        """
+        
+        if erros:
+            mensagem += f"\n\n⚠️ Erros encontrados: {len(erros)}"
+        
+        return {
+            "sucesso": True,
+            "mensagem": mensagem,
+            "inseridos": registros_inseridos,
+            "atualizados": registros_atualizados,
+            "ignorados": registros_ignorados,
+            "erros": erros
+        }
+        
+    except Exception as e:
+        return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
 
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
@@ -1690,58 +1786,135 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
-        # ====================== NOVA SEÇÃO: MESCLAR NOMES REPETIDOS ======================
-        st.markdown("### 🔄 Ferramenta de Mesclagem de Nomes Repetidos")
-        st.markdown("""
-        Esta ferramenta identifica CPFs duplicados na base de dados e mescla os registros automaticamente.
-        - Mantém o nome mais completo para cada CPF
-        - Atualiza todas as movimentações para usar o nome mantido
-        - Remove registros duplicados
-        """)
+        # ====================== DUAS COLUNAS PARA AS FERRAMENTAS ======================
+        col_ferramenta1, col_ferramenta2 = st.columns(2)
         
-        col_mesclar1, col_mesclar2 = st.columns([1, 3])
-        with col_mesclar1:
-            if st.button("🔄 MESCLAR NOMES REPETIDOS", key="btn_mesclar_nomes", type="primary"):
-                with st.spinner("Processando mesclagem de nomes duplicados..."):
-                    resultado = mesclar_nomes_repetidos()
-                    if resultado["sucesso"]:
-                        if resultado.get("duplicados_removidos", 0) > 0:
-                            st.success(f"✅ {resultado['mensagem']}")
-                            with st.expander("📋 Detalhes da mesclagem"):
-                                for detalhe in resultado.get("detalhes", []):
-                                    st.write(f"• {detalhe}")
-                            st.balloons()
-                            st.rerun()
-                        else:
-                            st.info(resultado["mensagem"])
-                    else:
-                        st.error(f"❌ {resultado['mensagem']}")
-        
-        with col_mesclar2:
-            # Mostrar estatísticas de duplicatas antes de mesclar
+        with col_ferramenta1:
+            st.markdown("### 🗑️ Limpeza de Registros Duplicados")
+            st.markdown("""
+            ⚠️ **ATENÇÃO:** Esta ferramenta **APAGA registros duplicados** da base de dados mantendo APENAS UM registro por CPF.
+            - Identifica CPFs repetidos
+            - Remove TODOS os registros duplicados, mantendo apenas o mais antigo (menor ID)
+            - **NÃO altera as movimentações** (apenas os cadastros)
+            """)
+            
+            # Mostrar estatísticas de duplicatas antes de limpar
             try:
-                todas_pessoas = supabase.table("Pessoas").select("cpf, nome").execute().data
+                todas_pessoas = supabase.table("Pessoas").select("cpf, nome, empresa, id").execute().data
                 if todas_pessoas:
                     df_check = pd.DataFrame(todas_pessoas)
                     duplicados = df_check[df_check.duplicated(subset=['cpf'], keep=False)]
                     qtd_cpfs_duplicados = len(duplicados['cpf'].unique()) if not duplicados.empty else 0
                     qtd_registros_duplicados = len(duplicados)
                     
+                    col_stats1, col_stats2, col_stats3 = st.columns(3)
+                    with col_stats1:
+                        st.metric("Total de Cadastros", len(todas_pessoas))
+                    with col_stats2:
+                        st.metric("CPFs Duplicados", qtd_cpfs_duplicados, 
+                                 delta="⚠️" if qtd_cpfs_duplicados > 0 else "✓")
+                    with col_stats3:
+                        st.metric("Registros Duplicados", qtd_registros_duplicados,
+                                 delta=f"-{qtd_registros_duplicados - qtd_cpfs_duplicados} a remover" if qtd_registros_duplicados > 0 else "✓")
+                    
                     if qtd_registros_duplicados > 0:
-                        st.warning(f"⚠️ Detectados {qtd_registros_duplicados} registro(s) duplicado(s) em {qtd_cpfs_duplicados} CPF(s) diferentes.")
-                        with st.expander("Ver CPFs duplicados"):
-                            cpfs_dup = duplicados.groupby('cpf')['nome'].apply(list).reset_index()
+                        st.warning(f"⚠️ Detectados {qtd_registros_duplicados} registro(s) duplicado(s) em {qtd_cpfs_duplicados} CPF(s) diferente(s).")
+                        
+                        with st.expander("📋 Ver detalhes dos CPFs duplicados"):
+                            cpfs_dup = duplicados.groupby('cpf').agg({
+                                'nome': list,
+                                'empresa': list,
+                                'id': list
+                            }).reset_index()
                             for _, row in cpfs_dup.iterrows():
-                                st.write(f"**CPF:** {row['cpf']}")
-                                for nome in row['nome']:
-                                    st.write(f"  - {nome}")
+                                st.write(f"**CPF:** {row['cpf']} - **Total de registros:** {len(row['nome'])}")
+                                for i, (nome, empresa, id_reg) in enumerate(zip(row['nome'], row['empresa'], row['id'])):
+                                    if i == 0:
+                                        st.write(f"  🟢 **MANTIDO:** ID {id_reg} - {nome} | Empresa: {empresa or 'N/A'}")
+                                    else:
+                                        st.write(f"  🔴 **SERÁ REMOVIDO:** ID {id_reg} - {nome} | Empresa: {empresa or 'N/A'}")
                                 st.divider()
+                        
+                        if st.button("🗑️ APAGAR REGISTROS DUPLICADOS", key="btn_apagar_duplicados", type="primary"):
+                            with st.spinner("Processando limpeza de registros duplicados..."):
+                                resultado = apagar_registros_duplicados()
+                                if resultado["sucesso"]:
+                                    if resultado.get("duplicados_removidos", 0) > 0:
+                                        st.success(f"✅ {resultado['mensagem']}")
+                                        with st.expander("📋 Detalhes da limpeza"):
+                                            for detalhe in resultado.get("detalhes", []):
+                                                st.write(f"• {detalhe}")
+                                        st.balloons()
+                                        time.sleep(2)
+                                        st.rerun()
+                                    else:
+                                        st.info(resultado["mensagem"])
+                                else:
+                                    st.error(f"❌ {resultado['mensagem']}")
                     else:
-                        st.success("✅ Nenhum CPF duplicado encontrado na base de dados.")
+                        st.success("✅ Nenhum CPF duplicado encontrado na base de dados. Todos os registros são únicos!")
                 else:
                     st.info("Nenhum cadastro encontrado.")
             except Exception as e:
                 st.error(f"Erro ao verificar duplicatas: {e}")
+        
+        with col_ferramenta2:
+            st.markdown("### 📤 Sincronizar Novos Cadastros")
+            st.markdown("""
+            🔄 **Sincronize novos cadastros** a partir de um arquivo CSV/Excel.
+            - Formato esperado: colunas **cpf**, **nome**, **empresa** (opcional)
+            - Novos registros são inseridos
+            - Registros existentes são atualizados se houver diferenças
+            - Suporta arquivos .csv e .xlsx
+            """)
+            
+            arquivo_sync = st.file_uploader(
+                "Selecione o arquivo com os cadastros", 
+                type=["csv", "xlsx", "xls"],
+                key="sync_arquivo",
+                help="Arquivo deve conter as colunas: cpf, nome (empresa é opcional)"
+            )
+            
+            if arquivo_sync:
+                if st.button("🔄 SINCRONIZAR CADASTROS", key="btn_sincronizar", type="primary"):
+                    with st.spinner("Processando sincronização..."):
+                        resultado = sincronizar_novos_cadastros(arquivo_sync)
+                        if resultado["sucesso"]:
+                            st.success("✅ Sincronização concluída!")
+                            
+                            # Mostrar resumo em cards
+                            col_res1, col_res2, col_res3 = st.columns(3)
+                            with col_res1:
+                                st.metric("📝 Inseridos", resultado.get("inseridos", 0), delta="+")
+                            with col_res2:
+                                st.metric("🔄 Atualizados", resultado.get("atualizados", 0), delta="~")
+                            with col_res3:
+                                st.metric("⏭️ Ignorados", resultado.get("ignorados", 0), delta="=")
+                            
+                            st.info(resultado["mensagem"])
+                            
+                            if resultado.get("erros"):
+                                with st.expander(f"⚠️ {len(resultado['erros'])} erro(s) encontrados"):
+                                    for erro in resultado["erros"][:20]:  # Mostrar até 20 erros
+                                        st.error(erro)
+                                    if len(resultado["erros"]) > 20:
+                                        st.warning(f"... e mais {len(resultado['erros']) - 20} erros não exibidos")
+                            
+                            st.balloons()
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {resultado['mensagem']}")
+            
+            st.markdown("---")
+            st.markdown("**📋 Exemplo de formato do arquivo (CSV):**")
+            st.code("""
+cpf,nome,empresa
+12345678901,JOSE DA SILVA,BRASANITAS
+98765432100,MARIA SANTOS,GRSA
+11122233344,PEDRO ALVES,
+            """, language="csv")
+            st.caption("💡 O CPF deve conter 11 dígitos. A coluna 'empresa' é opcional.")
         
         st.markdown("---")
         
