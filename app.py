@@ -897,6 +897,73 @@ def sanitizar_texto(texto):
         return texto
     return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
 
+# ====================== FUNÇÃO PARA MESCLAR NOMES REPETIDOS ======================
+def mesclar_nomes_repetidos():
+    """
+    Função que identifica CPFs duplicados na tabela Pessoas e mescla os registros,
+    mantendo o nome mais completo ou o primeiro cadastro, e atualizando as movimentações
+    para referenciar o registro mantido.
+    """
+    try:
+        # Buscar todos os registros da tabela Pessoas
+        todas_pessoas = supabase_admin.table("Pessoas").select("*").execute().data
+        
+        if not todas_pessoas:
+            return {"sucesso": False, "mensagem": "Nenhum registro encontrado na tabela Pessoas"}
+        
+        # Agrupar por CPF
+        grupos_por_cpf = {}
+        for pessoa in todas_pessoas:
+            cpf = pessoa['cpf']
+            if cpf not in grupos_por_cpf:
+                grupos_por_cpf[cpf] = []
+            grupos_por_cpf[cpf].append(pessoa)
+        
+        # Identificar CPFs com duplicatas
+        cpfs_com_duplicatas = {cpf: registros for cpf, registros in grupos_por_cpf.items() if len(registros) > 1}
+        
+        if not cpfs_com_duplicatas:
+            return {"sucesso": True, "mensagem": "Nenhum CPF duplicado encontrado.", "duplicados_removidos": 0}
+        
+        total_removidos = 0
+        resultados = []
+        
+        for cpf, registros in cpfs_com_duplicatas.items():
+            # Ordenar registros para escolher o principal (priorizar nome mais longo, ou mais recente)
+            # Vamos priorizar o registro com nome mais completo (mais caracteres)
+            registros_ordenados = sorted(registros, key=lambda x: len(x.get('nome', '') or ''), reverse=True)
+            
+            # O primeiro será mantido
+            registro_principal = registros_ordenados[0]
+            ids_para_remover = [r['id'] for r in registros_ordenados[1:]]
+            
+            # Atualizar movimentações que referenciam os IDs que serão removidos
+            for id_remover in ids_para_remover:
+                # Buscar movimentações com este ID
+                movimentacoes = supabase_admin.table("movimentacao").select("*").eq("cpf", cpf).execute().data
+                
+                for mov in movimentacoes:
+                    # Atualizar o nome na movimentação para o nome principal, se necessário
+                    if mov.get('nome') != registro_principal['nome']:
+                        supabase_admin.table("movimentacao").update({
+                            "nome": registro_principal['nome']
+                        }).eq("id", mov['id']).execute()
+                
+                # Remover o registro duplicado
+                supabase_admin.table("Pessoas").delete().eq("id", id_remover).execute()
+                total_removidos += 1
+                resultados.append(f"CPF {cpf}: removido registro duplicado ID {id_remover}, mantido {registro_principal['nome']}")
+        
+        return {
+            "sucesso": True, 
+            "mensagem": f"Mesclagem concluída! {total_removidos} registro(s) duplicado(s) removido(s).",
+            "duplicados_removidos": total_removidos,
+            "detalhes": resultados
+        }
+        
+    except Exception as e:
+        return {"sucesso": False, "mensagem": f"Erro durante a mesclagem: {str(e)}"}
+
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
     st.session_state.logado = False
@@ -1385,10 +1452,6 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
     novo_nome = col_b.text_input("👤 Nome Completo *", key="novo_nome")
     novo_empresa = col_c.text_input("🏢 Empresa", key="novo_empresa")
     if st.button("💾 Salvar Cadastro", key="salvar_cadastro", type="primary"):
-        # Cadastro de pessoas: pode ser feito por ADMIN? Vamos manter a regra original (qualquer um pode cadastrar)
-        # mas usando supabase (não supabase_admin) porque a política RLS permite INSERT? 
-        # Se quiser proteger, descomente a linha abaixo e troque para supabase_admin:
-        # require_admin()
         if novo_cpf and novo_nome:
             if not validar_cpf(novo_cpf):
                 st.error("❌ CPF inválido.")
@@ -1627,6 +1690,61 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
+        # ====================== NOVA SEÇÃO: MESCLAR NOMES REPETIDOS ======================
+        st.markdown("### 🔄 Ferramenta de Mesclagem de Nomes Repetidos")
+        st.markdown("""
+        Esta ferramenta identifica CPFs duplicados na base de dados e mescla os registros automaticamente.
+        - Mantém o nome mais completo para cada CPF
+        - Atualiza todas as movimentações para usar o nome mantido
+        - Remove registros duplicados
+        """)
+        
+        col_mesclar1, col_mesclar2 = st.columns([1, 3])
+        with col_mesclar1:
+            if st.button("🔄 MESCLAR NOMES REPETIDOS", key="btn_mesclar_nomes", type="primary"):
+                with st.spinner("Processando mesclagem de nomes duplicados..."):
+                    resultado = mesclar_nomes_repetidos()
+                    if resultado["sucesso"]:
+                        if resultado.get("duplicados_removidos", 0) > 0:
+                            st.success(f"✅ {resultado['mensagem']}")
+                            with st.expander("📋 Detalhes da mesclagem"):
+                                for detalhe in resultado.get("detalhes", []):
+                                    st.write(f"• {detalhe}")
+                            st.balloons()
+                            st.rerun()
+                        else:
+                            st.info(resultado["mensagem"])
+                    else:
+                        st.error(f"❌ {resultado['mensagem']}")
+        
+        with col_mesclar2:
+            # Mostrar estatísticas de duplicatas antes de mesclar
+            try:
+                todas_pessoas = supabase.table("Pessoas").select("cpf, nome").execute().data
+                if todas_pessoas:
+                    df_check = pd.DataFrame(todas_pessoas)
+                    duplicados = df_check[df_check.duplicated(subset=['cpf'], keep=False)]
+                    qtd_cpfs_duplicados = len(duplicados['cpf'].unique()) if not duplicados.empty else 0
+                    qtd_registros_duplicados = len(duplicados)
+                    
+                    if qtd_registros_duplicados > 0:
+                        st.warning(f"⚠️ Detectados {qtd_registros_duplicados} registro(s) duplicado(s) em {qtd_cpfs_duplicados} CPF(s) diferentes.")
+                        with st.expander("Ver CPFs duplicados"):
+                            cpfs_dup = duplicados.groupby('cpf')['nome'].apply(list).reset_index()
+                            for _, row in cpfs_dup.iterrows():
+                                st.write(f"**CPF:** {row['cpf']}")
+                                for nome in row['nome']:
+                                    st.write(f"  - {nome}")
+                                st.divider()
+                    else:
+                        st.success("✅ Nenhum CPF duplicado encontrado na base de dados.")
+                else:
+                    st.info("Nenhum cadastro encontrado.")
+            except Exception as e:
+                st.error(f"Erro ao verificar duplicatas: {e}")
+        
+        st.markdown("---")
+        
         try:
             todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
         except:
