@@ -16,24 +16,16 @@ from zoneinfo import ZoneInfo
 BR_TZ = ZoneInfo("America/Sao_Paulo")
 
 def now_brasilia():
-    """Retorna datetime atual com fuso de Brasília (UTC-3)."""
     return datetime.now(BR_TZ)
 
 def now_brasilia_naive():
-    """Retorna datetime atual em Brasília, sem informação de fuso."""
     return now_brasilia().replace(tzinfo=None)
 
 def converter_utc_para_brasilia_exibicao(data_str):
-    """
-    Converte uma string no formato '%d/%m/%Y %H:%M:%S' de UTC para Brasília (UTC-3)
-    SUBTRAINDO 6 horas (ajuste adicional de -3h sobre a conversão anterior).
-    Usada APENAS para exibição, não altera o banco.
-    """
     if not data_str or data_str == "":
         return data_str
     try:
         dt = datetime.strptime(data_str, "%d/%m/%Y %H:%M:%S")
-        # Subtrai 6 horas (UTC -> Brasília com +3h de desconto extra)
         dt_br = dt - timedelta(hours=6)
         return dt_br.strftime("%d/%m/%Y %H:%M:%S")
     except:
@@ -916,7 +908,7 @@ def require_any_login():
         st.error("❌ Você precisa estar logado.")
         st.stop()
 
-# ====================== RELATÓRIOS PDF (com correção de horário -6h) ======================
+# ====================== RELATÓRIOS PDF ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
@@ -1016,6 +1008,140 @@ def gerar_html_consolidado(df):
     </body></html>
     """
     return html
+
+# ====================== FUNÇÕES PARA AJUSTE DE HORÁRIO ======================
+DEFAULT_ENTRADA = "08:00"
+DEFAULT_SAIDA = "17:00"
+
+def verificar_tabelas_horarios():
+    """Verifica se as tabelas necessárias existem. Retorna True se ok, senão exibe SQL."""
+    try:
+        supabase_admin.table("horarios_colaboradores").select("id").limit(1).execute()
+        supabase_admin.table("historico_ajustes_horario").select("id").limit(1).execute()
+        return True
+    except Exception as e:
+        st.error("❌ Tabelas de ajuste de horário não encontradas. Execute o SQL abaixo no Supabase:")
+        st.code("""
+CREATE TABLE IF NOT EXISTS horarios_colaboradores (
+    id SERIAL PRIMARY KEY,
+    colaborador_id INTEGER REFERENCES Pessoas(id) ON DELETE CASCADE,
+    matricula VARCHAR(50),
+    cargo VARCHAR(100),
+    horario_entrada TIME NOT NULL,
+    horario_saida TIME NOT NULL,
+    escala_trabalho VARCHAR(20) CHECK (escala_trabalho IN ('12x36', '5x2', '6x1', 'personalizada')),
+    data_inicio_vigencia DATE NOT NULL,
+    observacoes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS historico_ajustes_horario (
+    id SERIAL PRIMARY KEY,
+    ajuste_id INTEGER REFERENCES horarios_colaboradores(id) ON DELETE CASCADE,
+    alterado_em TIMESTAMP DEFAULT NOW(),
+    alterado_por VARCHAR(50),
+    dados_anteriores JSONB
+);
+        """, language="sql")
+        return False
+
+def get_horario_colaborador(colaborador_id):
+    """Retorna o ajuste ativo para o colaborador (considera data_inicio_vigencia <= hoje)."""
+    try:
+        hoje = now_brasilia().date()
+        resultado = supabase_admin.table("horarios_colaboradores")\
+            .select("*")\
+            .eq("colaborador_id", colaborador_id)\
+            .lte("data_inicio_vigencia", hoje.isoformat())\
+            .order("data_inicio_vigencia", desc=True)\
+            .limit(1)\
+            .execute()
+        return resultado.data[0] if resultado.data else None
+    except:
+        return None
+
+def salvar_ajuste_horario(colaborador_id, matricula, cargo, entrada, saida, escala, data_vigencia, observacoes):
+    """Cria um novo ajuste de horário."""
+    try:
+        dados = {
+            "colaborador_id": colaborador_id,
+            "matricula": matricula,
+            "cargo": cargo,
+            "horario_entrada": entrada,
+            "horario_saida": saida,
+            "escala_trabalho": escala,
+            "data_inicio_vigencia": data_vigencia.isoformat() if hasattr(data_vigencia, 'isoformat') else data_vigencia,
+            "observacoes": observacoes,
+            "created_at": now_brasilia_naive().isoformat(),
+            "updated_at": now_brasilia_naive().isoformat()
+        }
+        resultado = supabase_admin.table("horarios_colaboradores").insert(dados).execute()
+        return {"sucesso": True, "id": resultado.data[0]['id']}
+    except Exception as e:
+        return {"sucesso": False, "mensagem": str(e)}
+
+def atualizar_ajuste_horario(ajuste_id, **kwargs):
+    """Atualiza um ajuste existente, registrando no histórico."""
+    try:
+        # Busca dados anteriores
+        antigo = supabase_admin.table("horarios_colaboradores").select("*").eq("id", ajuste_id).execute()
+        if not antigo.data:
+            return {"sucesso": False, "mensagem": "Ajuste não encontrado"}
+        antigo_data = antigo.data[0]
+
+        # Atualiza
+        kwargs["updated_at"] = now_brasilia_naive().isoformat()
+        resultado = supabase_admin.table("horarios_colaboradores").update(kwargs).eq("id", ajuste_id).execute()
+
+        # Registra no histórico
+        historico = {
+            "ajuste_id": ajuste_id,
+            "alterado_em": now_brasilia_naive().isoformat(),
+            "alterado_por": st.session_state.get("perfil", "ADMIN"),
+            "dados_anteriores": antigo_data
+        }
+        supabase_admin.table("historico_ajustes_horario").insert(historico).execute()
+
+        return {"sucesso": True}
+    except Exception as e:
+        return {"sucesso": False, "mensagem": str(e)}
+
+def deletar_ajuste_horario(ajuste_id):
+    """Remove um ajuste (restaura o padrão)."""
+    try:
+        supabase_admin.table("horarios_colaboradores").delete().eq("id", ajuste_id).execute()
+        return {"sucesso": True}
+    except Exception as e:
+        return {"sucesso": False, "mensagem": str(e)}
+
+def copiar_ajuste_horario(origem_id, destino_colaborador_id):
+    """Copia um ajuste de um colaborador para outro."""
+    try:
+        origem = supabase_admin.table("horarios_colaboradores").select("*").eq("id", origem_id).execute()
+        if not origem.data:
+            return {"sucesso": False, "mensagem": "Ajuste de origem não encontrado"}
+        dados = origem.data[0].copy()
+        del dados["id"]
+        dados["colaborador_id"] = destino_colaborador_id
+        dados["created_at"] = now_brasilia_naive().isoformat()
+        dados["updated_at"] = now_brasilia_naive().isoformat()
+        supabase_admin.table("horarios_colaboradores").insert(dados).execute()
+        return {"sucesso": True}
+    except Exception as e:
+        return {"sucesso": False, "mensagem": str(e)}
+
+def get_historico_ajustes(ajuste_id):
+    """Retorna o histórico de alterações de um ajuste."""
+    try:
+        resultado = supabase_admin.table("historico_ajustes_horario")\
+            .select("*")\
+            .eq("ajuste_id", ajuste_id)\
+            .order("alterado_em", desc=True)\
+            .execute()
+        return resultado.data
+    except:
+        return []
 
 # ====================== CPF ======================
 def validar_cpf(cpf):
@@ -1159,6 +1285,10 @@ if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 if "pagina_historico" not in st.session_state:
     st.session_state.pagina_historico = 1
+if "copiar_origem_id" not in st.session_state:
+    st.session_state.copiar_origem_id = None
+if "historico_ajuste_id" not in st.session_state:
+    st.session_state.historico_ajuste_id = None
 
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
@@ -1298,17 +1428,14 @@ if st.session_state.perfil == "ADMIN":
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
-        # (código do tema mantido original - omitido por brevidade, mas funcional)
         st.info("Configuração de tema disponível na interface completa.")
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
-        # (código de exportação mantido)
         st.info("Exportação de dados disponível na interface completa.")
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🖼️ Configurar Avatar (Segurança)", expanded=False):
-        # (código de avatar mantido)
         st.info("Upload de avatar disponível na interface completa.")
 
 # ====================== MÉTRICAS DE PERFORMANCE ======================
@@ -1666,7 +1793,6 @@ if st.session_state.perfil == "ADMIN":
         col_ferramenta1, col_ferramenta2 = st.columns(2)
         with col_ferramenta1:
             st.markdown("### 🗑️ Limpeza de Registros Duplicados")
-            # (código de limpeza mantido)
             try:
                 todas_pessoas = supabase.table("Pessoas").select("cpf, nome, empresa, id").execute().data
                 if todas_pessoas:
@@ -1717,7 +1843,6 @@ if st.session_state.perfil == "ADMIN":
                 st.error(f"Erro: {e}")
         with col_ferramenta2:
             st.markdown("### 📤 Sincronizar Novos Cadastros")
-            # (código de sincronização mantido)
             st.markdown("""
             🔄 **Sincronize novos cadastros** a partir de um arquivo CSV/Excel.
             - Formato esperado: colunas **cpf**, **nome**, **empresa** (opcional)
@@ -1756,6 +1881,123 @@ cpf,nome,empresa
 98765432100,MARIA SANTOS,GRSA
 11122233344,PEDRO ALVES,
             """, language="csv")
+        
+        # ========== AJUSTE INDIVIDUAL DE HORÁRIO ==========
+        st.markdown("---")
+        st.markdown("### 🕒 Ajuste Individual de Horário")
+        if not verificar_tabelas_horarios():
+            st.stop()
+        
+        try:
+            pessoas = supabase_admin.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
+        except:
+            pessoas = []
+        
+        if not pessoas:
+            st.info("Nenhum colaborador cadastrado.")
+        else:
+            colaborador_selecionado = st.selectbox(
+                "👤 Selecione o Colaborador",
+                options=[(p["id"], f"{p['nome']} - {p.get('empresa','')}") for p in pessoas],
+                format_func=lambda x: x[1],
+                key="colaborador_horario"
+            )
+            colaborador_id = colaborador_selecionado[0] if colaborador_selecionado else None
+            
+            if colaborador_id:
+                ajuste_existente = get_horario_colaborador(colaborador_id)
+                
+                with st.form(key="form_ajuste_horario"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        matricula = st.text_input("📇 Matrícula", value=ajuste_existente.get("matricula", "") if ajuste_existente else "")
+                        cargo = st.text_input("💼 Cargo", value=ajuste_existente.get("cargo", "") if ajuste_existente else "")
+                        entrada = st.time_input("⏰ Horário de Entrada", value=datetime.strptime(ajuste_existente.get("horario_entrada", DEFAULT_ENTRADA), "%H:%M").time() if ajuste_existente else datetime.strptime(DEFAULT_ENTRADA, "%H:%M").time())
+                        saida = st.time_input("⏰ Horário de Saída", value=datetime.strptime(ajuste_existente.get("horario_saida", DEFAULT_SAIDA), "%H:%M").time() if ajuste_existente else datetime.strptime(DEFAULT_SAIDA, "%H:%M").time())
+                    with col2:
+                        escala = st.selectbox("📅 Escala de Trabalho", ["12x36", "5x2", "6x1", "personalizada"], index=["12x36", "5x2", "6x1", "personalizada"].index(ajuste_existente.get("escala_trabalho", "5x2")) if ajuste_existente else 1)
+                        data_vigencia = st.date_input("📅 Data de Início da Vigência", value=datetime.strptime(ajuste_existente.get("data_inicio_vigencia", now_brasilia().date().isoformat()), "%Y-%m-%d").date() if ajuste_existente else now_brasilia().date())
+                        observacoes = st.text_area("📝 Observações", value=ajuste_existente.get("observacoes", "") if ajuste_existente else "")
+                    
+                    col_btn1, col_btn2, col_btn3, col_btn4, col_btn5 = st.columns(5)
+                    with col_btn1:
+                        submitted = st.form_submit_button("💾 Salvar Horário", use_container_width=True)
+                        if submitted:
+                            if not entrada or not saida:
+                                st.error("Horários de entrada e saída são obrigatórios.")
+                            else:
+                                if ajuste_existente:
+                                    result = atualizar_ajuste_horario(
+                                        ajuste_existente["id"],
+                                        matricula=matricula,
+                                        cargo=cargo,
+                                        horario_entrada=entrada.strftime("%H:%M"),
+                                        horario_saida=saida.strftime("%H:%M"),
+                                        escala_trabalho=escala,
+                                        data_inicio_vigencia=data_vigencia.isoformat(),
+                                        observacoes=observacoes
+                                    )
+                                else:
+                                    result = salvar_ajuste_horario(
+                                        colaborador_id, matricula, cargo,
+                                        entrada.strftime("%H:%M"), saida.strftime("%H:%M"),
+                                        escala, data_vigencia, observacoes
+                                    )
+                                if result["sucesso"]:
+                                    st.success("Horário do colaborador atualizado com sucesso.")
+                                    st.balloons()
+                                    st.rerun()
+                                else:
+                                    st.error(f"Erro: {result.get('mensagem', '')}")
+                    
+                    with col_btn2:
+                        if st.form_submit_button("🔄 Atualizar Horário", use_container_width=True):
+                            st.info("Use o botão 'Salvar Horário' para efetivar as alterações.")
+                    
+                    with col_btn3:
+                        if ajuste_existente and st.form_submit_button("📋 Copiar para outro", use_container_width=True):
+                            st.session_state.copiar_origem_id = ajuste_existente["id"]
+                            st.rerun()
+                    
+                    with col_btn4:
+                        if ajuste_existente and st.form_submit_button("♻️ Restaurar Padrão", use_container_width=True):
+                            if deletar_ajuste_horario(ajuste_existente["id"])["sucesso"]:
+                                st.success("Horário padrão restaurado.")
+                                st.rerun()
+                            else:
+                                st.error("Erro ao restaurar padrão.")
+                    
+                    with col_btn5:
+                        if ajuste_existente and st.form_submit_button("📜 Histórico", use_container_width=True):
+                            st.session_state.historico_ajuste_id = ajuste_existente["id"]
+                            st.rerun()
+                
+                if st.session_state.get("historico_ajuste_id"):
+                    hist_id = st.session_state.pop("historico_ajuste_id")
+                    historico_ajustes = get_historico_ajustes(hist_id)
+                    if historico_ajustes:
+                        df_hist = pd.DataFrame(historico_ajustes)
+                        df_hist["alterado_em"] = df_hist["alterado_em"].apply(lambda x: converter_utc_para_brasilia_exibicao(x) if x else "")
+                        st.dataframe(df_hist[["alterado_em", "alterado_por"]], use_container_width=True)
+                        with st.expander("Ver detalhes completos"):
+                            for h in historico_ajustes:
+                                st.json(h["dados_anteriores"])
+                    else:
+                        st.info("Nenhuma alteração registrada.")
+                
+                if st.session_state.get("copiar_origem_id"):
+                    with st.popover("📋 Copiar horário para outro colaborador"):
+                        destino = st.selectbox("Colaborador destino", pessoas, format_func=lambda x: f"{x['nome']} - {x.get('empresa','')}", key="destino_copia")
+                        if st.button("Confirmar cópia"):
+                            if destino:
+                                result = copiar_ajuste_horario(st.session_state.copiar_origem_id, destino["id"])
+                                if result["sucesso"]:
+                                    st.success("Horário copiado com sucesso!")
+                                    st.session_state.copiar_origem_id = None
+                                    st.rerun()
+                                else:
+                                    st.error(f"Erro: {result.get('mensagem')}")
+        
         st.markdown("---")
         # Listagem e edição de cadastros (resumida, mas funcional)
         try:
