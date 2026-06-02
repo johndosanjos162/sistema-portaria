@@ -115,7 +115,7 @@ st.markdown("""<style>
     .dashboard-card:hover {transform:translateY(-6px);border-color:rgba(0,255,255,0.8);}
 </style>""", unsafe_allow_html=True)
 
-# ====================== FUNÇÕES ORIGINAIS (mantidas) ======================
+# ====================== FUNÇÕES ORIGINAIS ======================
 def compress_avatar_image(uploaded_file, max_size_kb=200):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -156,7 +156,7 @@ def save_avatar_url(url):
         st.error(f"Erro ao salvar avatar: {e}")
         return False
 
-# (Adicione aqui todas as outras funções originais: get_theme_config, save_theme_config, futuristic_background_script, apply_theme_css, registrar_sessao, etc.)
+# (Todas as outras funções originais como get_theme_config, apply_theme_css, etc. devem ser mantidas aqui)
 
 # ====================== INICIALIZAÇÃO ======================
 if "logado" not in st.session_state:
@@ -191,7 +191,7 @@ st.session_state.avatar_url = get_avatar_url()
 
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
-    # Cole aqui todo o código de login original
+    # Seu código de login original aqui
     st.stop()
 
 # ====================== APÓS LOGIN ======================
@@ -204,8 +204,8 @@ if st.session_state.session_id:
 else:
     total_conectados = 0
 
-# ====================== TODO O SEU CÓDIGO ORIGINAL (HEADER, DASHBOARD, CADASTRO, etc) ======================
-# Cole aqui todo o restante do código que você já tinha (header, sidebar, dashboard, cadastro, entrada, pessoas presentes, histórico, gestão de cadastros)
+# ====================== SEU CÓDIGO ORIGINAL CONTINUA AQUI ======================
+# (Header, Sidebar, Dashboard, Cadastro, Registro de Entrada, Pessoas Presentes, Histórico, Gestão de Cadastros, etc.)
 
 # ====================== IA AUTÔNOMA DE PERFORMANCE ======================
 st.markdown("---")
