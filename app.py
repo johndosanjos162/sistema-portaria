@@ -1020,17 +1020,55 @@ def gerar_html_impressao(df, titulo):
     </body></html>
     """
 
+# ====================== FUNÇÃO MODIFICADA: RELATÓRIO CONSOLIDADO (SEM MISTURAR C.C COM PRESTADORES) ======================
 def gerar_html_consolidado(df):
     if df.empty:
         return None
-    def secao(df_filtro, titulo):
+
+    # Função auxiliar para gerar uma seção, excluindo IDs já usados
+    def secao(df_filtro, titulo, ids_usados=None):
+        if ids_usados is None:
+            ids_usados = set()
+        # Remove registros que já foram incluídos em seções anteriores
+        df_filtro = df_filtro[~df_filtro['id'].isin(ids_usados)]
         df_filtro = df_filtro.copy().fillna('')
         if df_filtro.empty:
-            return f"<div class='section'><h2>{titulo}</h2><p>Nenhum registro.</p></div>"
+            return f"<div class='section'><h2>{titulo}</h2><p>Nenhum registro.</p></div>", set()
         colunas = ['id','nome','cpf','empresa','setor_destino','data_entrada','data_saida']
         existentes = [c for c in colunas if c in df_filtro.columns]
         tabela = df_filtro[existentes].to_html(escape=True, index=False)
-        return f"<div class='section'><h2>{titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>"
+        # Retorna também os IDs usados nesta seção
+        return f"<div class='section'><h2>{titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>", set(df_filtro['id'])
+
+    ids_utilizados = set()
+
+    # 1. Seção GRSA
+    df_gr = df[df['setor_destino'].str.contains('GRSA', case=False, na=False)]
+    html_gr, ids_gr = secao(df_gr, "🔧 GRSA", ids_utilizados)
+    ids_utilizados.update(ids_gr)
+
+    # 2. Seção Brasanitas
+    df_br = df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
+    html_br, ids_br = secao(df_br, "🏭 Brasanitas", ids_utilizados)
+    ids_utilizados.update(ids_br)
+
+    # 3. Seção C.C (apenas quem está no setor C.C e não foi incluído antes)
+    df_cc = df[df['setor_destino'].str.contains('C.C', case=False, na=False)]
+    html_cc, ids_cc = secao(df_cc, "🏥 C.C", ids_utilizados)
+    ids_utilizados.update(ids_cc)
+
+    # 4. Seção Prestadores de Serviços (exclui as empresas internas e também qualquer registro já usado)
+    empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
+    todas_empresas = df['empresa'].dropna().unique()
+    prestadores = [e for e in todas_empresas if e.upper() not in [x.upper() for x in empresas_excluir]]
+    if prestadores:
+        df_prest = df[df['empresa'].isin(prestadores)]
+        html_prest, ids_prest = secao(df_prest, "🏢 Prestadores de Serviços", ids_utilizados)
+    else:
+        html_prest = "<div class='section'><h2>🏢 Prestadores de Serviços</h2><p>Nenhum registro.</p></div>"
+        ids_prest = set()
+
+    # Montagem final do HTML
     html = f"""
     <!DOCTYPE html>
     <html><head><meta charset="UTF-8"><title>RELATÓRIO CONSOLIDADO</title>
@@ -1049,18 +1087,13 @@ def gerar_html_consolidado(df):
     <body>
         <h1>JOHN ACESSOS - RELATÓRIO CONSOLIDADO</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
+        {html_gr}
+        {html_br}
+        {html_cc}
+        {html_prest}
+        <div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div>
+    </body></html>
     """
-    html += secao(df[df['setor_destino'].str.contains('GRSA', case=False, na=False)], "🔧 GRSA")
-    html += secao(df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)], "🏭 Brasanitas")
-    html += secao(df[df['setor_destino'].str.contains('C.C', case=False, na=False)], "🏥 C.C")
-    empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
-    todas_empresas = df['empresa'].dropna().unique()
-    prestadores = [e for e in todas_empresas if e.upper() not in [x.upper() for x in empresas_excluir]]
-    if prestadores:
-        html += secao(df[df['empresa'].isin(prestadores)], "🏢 Prestadores de Serviços")
-    else:
-        html += "<div class='section'><h2>🏢 Prestadores de Serviços</h2><p>Nenhum registro.</p></div>"
-    html += '<div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div></body></html>'
     return html
 
 # ====================== FUNÇÕES DE VALIDAÇÃO CPF ======================
@@ -2289,6 +2322,6 @@ apply_theme_css()
 st.markdown("---")
 st.markdown("""
 <div class="footer">
-    🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
+JOHN ACESSOS - CYBER SECURITY 2026 - Todos os acessos monitorados
 </div>
 """, unsafe_allow_html=True)
