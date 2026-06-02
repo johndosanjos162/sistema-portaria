@@ -113,14 +113,13 @@ st.markdown("""<style>
     [data-testid="stSidebar"] {background:rgba(10,10,25,0.65)!important;backdrop-filter:blur(16px);}
     .dashboard-card {background:rgba(10,15,30,0.45);backdrop-filter:blur(12px);border-radius:28px;padding:1.2rem 1rem;margin:0.5rem;border:1px solid rgba(0,255,255,0.3);transition:all 0.3s;}
     .dashboard-card:hover {transform:translateY(-6px);border-color:rgba(0,255,255,0.8);}
-    .live-indicator {animation:pulse 1s infinite;}
-    @keyframes pulse {0%{opacity:0.4;transform:scale(0.8);}100%{opacity:1;transform:scale(1.2);}}
 </style>""", unsafe_allow_html=True)
 
-# ====================== SUAS FUNÇÕES (mantidas) ======================
+# ====================== FUNÇÕES ORIGINAIS (mantidas) ======================
 def compress_avatar_image(uploaded_file, max_size_kb=200):
     img = Image.open(uploaded_file)
-    if img.mode in ('RGBA', 'LA', 'P'): img = img.convert('RGB')
+    if img.mode in ('RGBA', 'LA', 'P'):
+        img = img.convert('RGB')
     img.thumbnail((400, 400), Image.Resampling.LANCZOS)
     buffer = io.BytesIO()
     quality = 85
@@ -128,33 +127,71 @@ def compress_avatar_image(uploaded_file, max_size_kb=200):
         buffer.seek(0)
         img.save(buffer, format='JPEG', quality=quality, optimize=True)
         size_kb = buffer.tell() / 1024
-        if size_kb <= max_size_kb or quality <= 20: break
+        if size_kb <= max_size_kb or quality <= 20:
+            break
         quality -= 10
-    return f"data:image/jpeg;base64,{base64.b64encode(buffer.getvalue()).decode()}"
+    b64_str = base64.b64encode(buffer.getvalue()).decode()
+    return f"data:image/jpeg;base64,{b64_str}"
 
-# ... (Todas as outras funções que você já tinha permanecem iguais: get_avatar_url, save_avatar_url, get_theme_config, apply_theme_css, etc.)
+def get_avatar_url():
+    padrao_url = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a2a'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='10'%3ESEGURANÇA%3C/text%3E%3C/svg%3E"
+    try:
+        result = supabase.table("app_config").select("value").eq("key", "avatar_url").execute()
+        if result.data and result.data[0]['value']:
+            return result.data[0]['value']
+    except:
+        pass
+    return padrao_url
+
+def save_avatar_url(url):
+    try:
+        supabase_admin.table("app_config").upsert({
+            "key": "avatar_url",
+            "value": url,
+            "updated_at": datetime.now().isoformat()
+        }).execute()
+        st.session_state.avatar_url = url
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar avatar: {e}")
+        return False
+
+# (Adicione aqui todas as outras funções originais: get_theme_config, save_theme_config, futuristic_background_script, apply_theme_css, registrar_sessao, etc.)
 
 # ====================== INICIALIZAÇÃO ======================
-if "logado" not in st.session_state: st.session_state.logado = False
-if "perfil" not in st.session_state: st.session_state.perfil = ""
-if "selected_ids" not in st.session_state: st.session_state.selected_ids = []
-if "pending_delete_ids" not in st.session_state: st.session_state.pending_delete_ids = []
-if "pending_clear_all" not in st.session_state: st.session_state.pending_clear_all = False
-if "tentativas_login" not in st.session_state: st.session_state.tentativas_login = 0
-if "bloqueado_ate" not in st.session_state: st.session_state.bloqueado_ate = None
-if "session_id" not in st.session_state: st.session_state.session_id = None
-if "pessoa_confirmada" not in st.session_state: st.session_state.pessoa_confirmada = None
-if "pessoa_saida" not in st.session_state: st.session_state.pessoa_saida = None
-if "pagina_historico" not in st.session_state: st.session_state.pagina_historico = 1
-if "ultima_limpeza" not in st.session_state: st.session_state.ultima_limpeza = "Nunca"
-if "ultima_limpeza_dt" not in st.session_state: st.session_state.ultima_limpeza_dt = datetime.now() - timedelta(minutes=40)
+if "logado" not in st.session_state:
+    st.session_state.logado = False
+if "perfil" not in st.session_state:
+    st.session_state.perfil = ""
+if "selected_ids" not in st.session_state:
+    st.session_state.selected_ids = []
+if "pending_delete_ids" not in st.session_state:
+    st.session_state.pending_delete_ids = []
+if "pending_clear_all" not in st.session_state:
+    st.session_state.pending_clear_all = False
+if "tentativas_login" not in st.session_state:
+    st.session_state.tentativas_login = 0
+if "bloqueado_ate" not in st.session_state:
+    st.session_state.bloqueado_ate = None
+if "session_id" not in st.session_state:
+    st.session_state.session_id = None
+if "pessoa_confirmada" not in st.session_state:
+    st.session_state.pessoa_confirmada = None
+if "pessoa_saida" not in st.session_state:
+    st.session_state.pessoa_saida = None
+if "pagina_historico" not in st.session_state:
+    st.session_state.pagina_historico = 1
+if "ultima_limpeza" not in st.session_state:
+    st.session_state.ultima_limpeza = "Nunca"
+if "ultima_limpeza_dt" not in st.session_state:
+    st.session_state.ultima_limpeza_dt = datetime.now() - timedelta(minutes=40)
 
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
-    # Cole aqui todo o seu código de login original
+    # Cole aqui todo o código de login original
     st.stop()
 
 # ====================== APÓS LOGIN ======================
@@ -167,8 +204,8 @@ if st.session_state.session_id:
 else:
     total_conectados = 0
 
-# ====================== TODO O RESTO DO SEU APP (HEADER, SIDEBAR, DASHBOARD, CADASTRO, etc.) ======================
-# Cole aqui todo o restante do seu código original (header, sidebar, dashboard, cadastro, registro de entrada, pessoas presentes, histórico, gestão de cadastros, etc.)
+# ====================== TODO O SEU CÓDIGO ORIGINAL (HEADER, DASHBOARD, CADASTRO, etc) ======================
+# Cole aqui todo o restante do código que você já tinha (header, sidebar, dashboard, cadastro, entrada, pessoas presentes, histórico, gestão de cadastros)
 
 # ====================== IA AUTÔNOMA DE PERFORMANCE ======================
 st.markdown("---")
@@ -179,7 +216,7 @@ with st.expander("⚡ IA Autônoma de Performance & Limpeza", expanded=True):
     with col1:
         st.metric("🧠 Status", "Otimizado", "✅")
     with col2:
-        st.metric("🔄 Cache", "Ativo", "📊")
+        st.metric("🔄 Cache Streamlit", "Ativo", "📊")
     with col3:
         st.metric("⏱️ Última Limpeza", st.session_state.get("ultima_limpeza", "Nunca"), "🕒")
     with col4:
@@ -199,7 +236,10 @@ with st.expander("⚡ IA Autônoma de Performance & Limpeza", expanded=True):
                             "ultima_limpeza", "ultima_limpeza_dt"]
         for chave in list(st.session_state.keys()):
             if chave not in chaves_para_manter and not chave.startswith("_"):
-                del st.session_state[chave]
+                try:
+                    del st.session_state[chave]
+                except:
+                    pass
         
         gc.collect()
         try:
@@ -216,7 +256,7 @@ with st.expander("⚡ IA Autônoma de Performance & Limpeza", expanded=True):
                 time.sleep(1)
                 st.rerun()
 
-    st.markdown("### ⚙️ Configurações de Autonomia")
+    st.markdown("### ⚙️ Configurações de Autonomia da IA")
     col_a, col_b = st.columns(2)
     with col_a:
         auto_cache = st.toggle("🧹 Limpeza Automática de Cache", value=True, key="auto_cache")
@@ -228,18 +268,18 @@ with st.expander("⚡ IA Autônoma de Performance & Limpeza", expanded=True):
             st.session_state.ultima_limpeza_dt = datetime.now() - timedelta(minutes=40)
         tempo_passado = (datetime.now() - st.session_state.ultima_limpeza_dt).total_seconds() / 60
         if tempo_passado > 25:
-            with st.spinner("🧠 IA realizando manutenção automática..."):
+            with st.spinner("🧠 IA Autônoma realizando manutenção..."):
                 limpeza_inteligente()
                 st.session_state.ultima_limpeza_dt = datetime.now()
                 st.toast("✅ Manutenção automática concluída", icon="⚡")
 
-    if st.button("🔍 Diagnóstico Completo"):
-        with st.spinner("Analisando..."):
+    if st.button("🔍 Diagnóstico Completo de Performance"):
+        with st.spinner("Analisando sistema..."):
             st.info(f"**Chaves em Session State:** {len(st.session_state.keys())}")
             st.info(f"**Cache Hit Ratio:** {cache_estatisticas.get_hit_ratio():.1f}%")
-            st.success("Sistema rodando de forma otimizada!")
+            st.success("✅ Sistema rodando de forma otimizada!")
 
-    st.caption("💡 IA Autônoma mantendo o app sempre rápido e estável.")
+    st.caption("💡 A IA está monitorando e limpando automaticamente o cache para manter o app sempre liso.")
 
 apply_theme_css()
 
