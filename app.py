@@ -1,6 +1,6 @@
 import streamlit as st
 from supabase import create_client
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 from PIL import Image
 import base64
@@ -10,7 +10,7 @@ import json
 import io
 import time
 from functools import wraps
-from zoneinfo import ZoneInfo  # Fuso horário
+from zoneinfo import ZoneInfo
 
 # ====================== HORÁRIO DE BRASÍLIA ======================
 BR_TZ = ZoneInfo("America/Sao_Paulo")
@@ -20,8 +20,23 @@ def now_brasilia():
     return datetime.now(BR_TZ)
 
 def now_brasilia_naive():
-    """Retorna datetime atual em Brasília, sem informação de fuso (para salvar no banco)."""
+    """Retorna datetime atual em Brasília, sem informação de fuso."""
     return now_brasilia().replace(tzinfo=None)
+
+def converter_utc_para_brasilia_exibicao(data_str):
+    """
+    Converte uma string no formato '%d/%m/%Y %H:%M:%S' de UTC para Brasília (UTC-3)
+    SUBTRAINDO 3 horas. Usada APENAS para exibição, não altera o banco.
+    """
+    if not data_str or data_str == "":
+        return data_str
+    try:
+        dt = datetime.strptime(data_str, "%d/%m/%Y %H:%M:%S")
+        # Subtrai 3 horas (UTC -> Brasília)
+        dt_br = dt - timedelta(hours=3)
+        return dt_br.strftime("%d/%m/%Y %H:%M:%S")
+    except:
+        return data_str
 
 # ====================== CONFIGURAÇÕES ======================
 CACHE_TTL_PADRAO = 30
@@ -36,7 +51,6 @@ class TimedCache:
         self.cache_times = {}
         self.hits = 0
         self.misses = 0
-    
     def get(self, key):
         now = time.time()
         if key in self.cache_data and (now - self.cache_times.get(key, 0)) < self.ttl_seconds:
@@ -44,15 +58,12 @@ class TimedCache:
             return self.cache_data[key]
         self.misses += 1
         return None
-    
     def set(self, key, value):
         self.cache_data[key] = value
         self.cache_times[key] = time.time()
-    
     def clear(self):
         self.cache_data.clear()
         self.cache_times.clear()
-    
     def get_hit_ratio(self):
         total = self.hits + self.misses
         return (self.hits / total * 100) if total > 0 else 0
@@ -904,13 +915,19 @@ def require_any_login():
         st.error("❌ Você precisa estar logado.")
         st.stop()
 
-# ====================== RELATÓRIOS PDF ======================
+# ====================== RELATÓRIOS PDF (com correção de horário) ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
+    # Cria uma cópia com horários convertidos para Brasília
+    df_corrigido = df.copy()
+    if 'data_entrada' in df_corrigido.columns:
+        df_corrigido['data_entrada'] = df_corrigido['data_entrada'].apply(converter_utc_para_brasilia_exibicao)
+    if 'data_saida' in df_corrigido.columns:
+        df_corrigido['data_saida'] = df_corrigido['data_saida'].apply(converter_utc_para_brasilia_exibicao)
     colunas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
-    colunas_existentes = [c for c in colunas if c in df.columns]
-    df_rel = df[colunas_existentes].copy().fillna('')
+    colunas_existentes = [c for c in colunas if c in df_corrigido.columns]
+    df_rel = df_corrigido[colunas_existentes].copy().fillna('')
     tabela = df_rel.to_html(escape=True, index=False)
     return f"""
     <!DOCTYPE html>
@@ -936,6 +953,13 @@ def gerar_html_impressao(df, titulo):
 def gerar_html_consolidado(df):
     if df.empty:
         return None
+    # Cria cópia com horários corrigidos
+    df_corrigido = df.copy()
+    if 'data_entrada' in df_corrigido.columns:
+        df_corrigido['data_entrada'] = df_corrigido['data_entrada'].apply(converter_utc_para_brasilia_exibicao)
+    if 'data_saida' in df_corrigido.columns:
+        df_corrigido['data_saida'] = df_corrigido['data_saida'].apply(converter_utc_para_brasilia_exibicao)
+    
     def secao(df_filtro, titulo, ids_usados=None):
         if ids_usados is None:
             ids_usados = set()
@@ -947,21 +971,22 @@ def gerar_html_consolidado(df):
         existentes = [c for c in colunas if c in df_filtro.columns]
         tabela = df_filtro[existentes].to_html(escape=True, index=False)
         return f"<div class='section'><h2>{titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>", set(df_filtro['id'])
+    
     ids_utilizados = set()
-    df_gr = df[df['setor_destino'].str.contains('GRSA', case=False, na=False)]
+    df_gr = df_corrigido[df_corrigido['setor_destino'].str.contains('GRSA', case=False, na=False)]
     html_gr, ids_gr = secao(df_gr, "🔧 GRSA", ids_utilizados)
     ids_utilizados.update(ids_gr)
-    df_br = df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
+    df_br = df_corrigido[df_corrigido['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
     html_br, ids_br = secao(df_br, "🏭 Brasanitas", ids_utilizados)
     ids_utilizados.update(ids_br)
-    df_cc = df[df['setor_destino'].str.contains('C.C', case=False, na=False)]
+    df_cc = df_corrigido[df_corrigido['setor_destino'].str.contains('C.C', case=False, na=False)]
     html_cc, ids_cc = secao(df_cc, "🏥 C.C", ids_utilizados)
     ids_utilizados.update(ids_cc)
     empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
-    todas_empresas = df['empresa'].dropna().unique()
+    todas_empresas = df_corrigido['empresa'].dropna().unique()
     prestadores = [e for e in todas_empresas if e.upper() not in [x.upper() for x in empresas_excluir]]
     if prestadores:
-        df_prest = df[df['empresa'].isin(prestadores)]
+        df_prest = df_corrigido[df_corrigido['empresa'].isin(prestadores)]
         html_prest, ids_prest = secao(df_prest, "🏢 Prestadores de Serviços", ids_utilizados)
     else:
         html_prest = "<div class='section'><h2>🏢 Prestadores de Serviços</h2><p>Nenhum registro.</p></div>"
@@ -1253,7 +1278,7 @@ with st.sidebar:
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
     st.markdown('<div class="info-item">📦 Versão: 13.1 (CYBER)</div>', unsafe_allow_html=True)
 
-# ====================== ADMIN: CONFIGURAÇÕES ======================
+# ====================== ADMIN: CONFIGURAÇÕES (resumido por brevidade, mantido igual) ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
@@ -1274,7 +1299,7 @@ if st.session_state.perfil == "ADMIN":
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
-        # ... (código de tema, mantido igual ao original) ...
+        # ... (código do tema, mantido igual ao original para não alongar) ...
         pass
 
     st.sidebar.markdown("---")
@@ -1424,7 +1449,7 @@ if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
     else:
         st.warning("Confirme o CPF primeiro.")
 
-# ====================== PESSOAS PRESENTES ======================
+# ====================== PESSOAS PRESENTES (com correção de horário na exibição) ======================
 st.markdown("---")
 st.markdown("### 📍 Pessoas Presentes")
 dados = get_presentes_cached()
@@ -1445,7 +1470,9 @@ if dados:
                     st.session_state.pessoa_saida = None
     if st.session_state.get("pessoa_saida"):
         p = st.session_state.pessoa_saida
-        st.markdown(f"**{p['nome']}** - CPF: {p['cpf']} - Setor: {p['setor_destino']}")
+        # Exibe horário corrigido
+        entrada_corrigida = converter_utc_para_brasilia_exibicao(p['data_entrada'])
+        st.markdown(f"**{p['nome']}** - CPF: {p['cpf']} - Setor: {p['setor_destino']} - Entrada: {entrada_corrigida}")
         if st.button("🚪 Registrar Saída", key="sair_pesquisado"):
             try:
                 supabase.table("movimentacao").update({"data_saida": now_brasilia().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
@@ -1460,10 +1487,12 @@ if dados:
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     with tabs[0]:
         for p in dados:
+            entrada_corrigida = converter_utc_para_brasilia_exibicao(p['data_entrada'])
             col1, col2, col3, col4 = st.columns([4,3,2,2])
             col1.write(f"**{p['nome']}**")
             col2.write(f"📍 {p['setor_destino']}")
             col3.write(f"🏢 {p.get('empresa','N/A')}")
+            col4.write(f"🕒 {entrada_corrigida}")
             if col4.button("🚪 Saída", key=f"saida_{p['id']}"):
                 try:
                     supabase.table("movimentacao").update({"data_saida": now_brasilia().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
@@ -1477,10 +1506,11 @@ if dados:
             setor_clean = setor.split()[-1]
             pessoas_setor = [p for p in dados if setor_clean in p['setor_destino']]
             for p in pessoas_setor:
+                entrada_corrigida = converter_utc_para_brasilia_exibicao(p['data_entrada'])
                 col1, col2, col3, col4 = st.columns([4,3,2,2])
                 col1.write(f"**{p['nome']}**")
                 col2.write(f"🏢 {p.get('empresa','N/A')}")
-                col3.write(f"🕒 {p['data_entrada']}")
+                col3.write(f"🕒 {entrada_corrigida}")
                 if col4.button("🚪 Saída", key=f"saida2_{p['id']}"):
                     try:
                         supabase.table("movimentacao").update({"data_saida": now_brasilia().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
@@ -1492,7 +1522,7 @@ if dados:
 else:
     st.info("Nenhuma pessoa presente no momento")
 
-# ====================== HISTÓRICO COM PAGINAÇÃO ======================
+# ====================== HISTÓRICO (com correção de horário na exibição) ======================
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     col_prev, col_page, col_next = st.columns([1, 2, 1])
@@ -1551,7 +1581,9 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     elif not checked and row['id'] in st.session_state.selected_ids:
                         st.session_state.selected_ids.remove(row['id'])
             with col_data:
-                st.markdown(f"ID {row['id']} - {row['nome']} | CPF: {row['cpf']} | Empresa: {row.get('empresa','N/A')} | Entrada: {row['data_entrada']} | Saída: {row['data_saida'] or 'Presente'}")
+                entrada_corrigida = converter_utc_para_brasilia_exibicao(row['data_entrada'])
+                saida_corrigida = converter_utc_para_brasilia_exibicao(row['data_saida']) if row['data_saida'] else 'Presente'
+                st.markdown(f"ID {row['id']} - {row['nome']} | CPF: {row['cpf']} | Empresa: {row.get('empresa','N/A')} | Entrada: {entrada_corrigida} | Saída: {saida_corrigida}")
         if st.session_state.perfil == "ADMIN" and st.session_state.selected_ids:
             st.warning(f"⚠️ {len(st.session_state.selected_ids)} registro(s) selecionado(s)")
             col_excluir, col_cancelar = st.columns(2)
