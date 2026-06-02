@@ -1,6 +1,6 @@
 import streamlit as st
 from supabase import create_client
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 from PIL import Image
 import base64
@@ -10,22 +10,92 @@ import json
 import io
 import time
 from functools import wraps
+from zoneinfo import ZoneInfo
 
-# ====================== NOVAS CONFIGURAÇÕES DE PERFORMANCE ======================
-CACHE_TTL_PADRAO = 30  # segundos
-ITENS_POR_PAGINA = 50  # Paginação no histórico
-DEBOUNCE_WAIT_MS = 500  # Milissegundos para debounce
+# ====================== CONFIGURAÇÕES DE PERFORMANCE ======================
+CACHE_TTL_PADRAO = 30
+ITENS_POR_PAGINA = 50
+DEBOUNCE_WAIT_MS = 500
 
-# ====================== NOVAS CLASSES DE PERFORMANCE ======================
+# ====================== FUNÇÕES DE FUSO HORÁRIO ======================
+BR_TZ = ZoneInfo("America/Sao_Paulo")
+
+def now_brasilia():
+    """Data/hora atual em Brasília (com fuso)"""
+    return datetime.now(BR_TZ)
+
+def now_brasilia_naive():
+    """Data/hora atual em Brasília, sem informação de fuso (para salvar no banco)"""
+    return now_brasilia().replace(tzinfo=None)
+
+def converter_utc_para_brasilia(data_str):
+    """
+    Converte uma string no formato '%d/%m/%Y %H:%M:%S' de UTC para Brasília (UTC-3)
+    Adiciona 3 horas à hora original.
+    Retorna a string no mesmo formato.
+    """
+    if not data_str or data_str == "":
+        return data_str
+    try:
+        dt = datetime.strptime(data_str, "%d/%m/%Y %H:%M:%S")
+        dt_br = dt + timedelta(hours=3)
+        return dt_br.strftime("%d/%m/%Y %H:%M:%S")
+    except:
+        return data_str
+
+# ====================== MIGRAÇÃO ÚNICA DE HORÁRIOS (UTC -> BRASÍLIA) ======================
+def migrar_horarios_para_brasilia():
+    """
+    Converte todos os registros da tabela 'movimentacao' que estão em UTC para Brasília.
+    Executa apenas uma vez, controlado por uma flag na tabela 'app_config'.
+    """
+    try:
+        # Verifica se a migração já foi feita
+        resultado_flag = supabase.table("app_config").select("value").eq("key", "horarios_migrados").execute()
+        if resultado_flag.data and resultado_flag.data[0]['value'] == "true":
+            return  # já migrado
+
+        st.info("🕒 Ajustando horários antigos para o fuso de Brasília (operação única)...")
+
+        # Busca todos os registros
+        registros = supabase_admin.table("movimentacao").select("id, data_entrada, data_saida").execute()
+        atualizados = 0
+
+        for reg in registros.data:
+            nova_entrada = converter_utc_para_brasilia(reg['data_entrada'])
+            nova_saida = converter_utc_para_brasilia(reg['data_saida']) if reg['data_saida'] else ""
+
+            if nova_entrada != reg['data_entrada'] or nova_saida != reg['data_saida']:
+                supabase_admin.table("movimentacao").update({
+                    "data_entrada": nova_entrada,
+                    "data_saida": nova_saida
+                }).eq("id", reg['id']).execute()
+                atualizados += 1
+
+        # Marca a migração como concluída
+        supabase_admin.table("app_config").upsert({
+            "key": "horarios_migrados",
+            "value": "true",
+            "updated_at": now_brasilia_naive().isoformat()
+        }).execute()
+
+        if atualizados > 0:
+            st.success(f"✅ {atualizados} registro(s) de movimentação tiveram o horário ajustado para Brasília.")
+            time.sleep(2)
+            st.rerun()
+        else:
+            st.info("Nenhum horário precisou ser ajustado.")
+    except Exception as e:
+        st.error(f"Erro durante a migração de horários: {e}")
+
+# ====================== CLASSES DE CACHE ======================
 class TimedCache:
-    """Cache com tempo de vida para consultas frequentes"""
     def __init__(self, ttl_seconds=CACHE_TTL_PADRAO):
         self.ttl_seconds = ttl_seconds
         self.cache_data = {}
         self.cache_times = {}
         self.hits = 0
         self.misses = 0
-    
     def get(self, key):
         now = time.time()
         if key in self.cache_data and (now - self.cache_times.get(key, 0)) < self.ttl_seconds:
@@ -33,29 +103,23 @@ class TimedCache:
             return self.cache_data[key]
         self.misses += 1
         return None
-    
     def set(self, key, value):
         self.cache_data[key] = value
         self.cache_times[key] = time.time()
-    
     def clear(self):
         self.cache_data.clear()
         self.cache_times.clear()
-    
     def get_hit_ratio(self):
         total = self.hits + self.misses
         return (self.hits / total * 100) if total > 0 else 0
 
 def debounce(wait_time=DEBOUNCE_WAIT_MS):
-    """Decorator para debounce de funções de busca"""
     def decorator(func):
         last_call = 0
         last_result = None
-        
         def wrapper(*args, **kwargs):
             nonlocal last_call, last_result
             current_time = time.time() * 1000
-            
             if current_time - last_call >= wait_time:
                 last_call = current_time
                 last_result = func(*args, **kwargs)
@@ -64,20 +128,16 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
         return wrapper
     return decorator
 
-# Instâncias de cache
 cache_estatisticas = TimedCache(ttl_seconds=30)
 cache_pessoas = TimedCache(ttl_seconds=60)
 cache_presentes = TimedCache(ttl_seconds=10)
 
-# ====================== NOVAS FUNÇÕES DE PERFORMANCE ======================
 def invalidar_cache():
-    """Invalida todos os caches após modificações"""
     cache_estatisticas.clear()
     cache_pessoas.clear()
     cache_presentes.clear()
 
 def registrar_tempo_query(tempo_ms):
-    """Registra tempo de query para métricas"""
     if "tempos_query" not in st.session_state:
         st.session_state.tempos_query = []
     st.session_state.tempos_query.append(tempo_ms)
@@ -85,15 +145,12 @@ def registrar_tempo_query(tempo_ms):
         st.session_state.tempos_query = st.session_state.tempos_query[-100:]
 
 def get_tempo_medio_query():
-    """Retorna tempo médio das queries"""
     tempos = st.session_state.get("tempos_query", [])
     return sum(tempos) / len(tempos) if tempos else 0
 
 def excluir_multiplos_registros(ids, tabela="movimentacao"):
-    """Exclui múltiplos registros em lote - NOVA FUNÇÃO"""
     if not ids:
         return {"sucesso": False, "mensagem": "Nenhum ID para excluir"}
-    
     try:
         supabase_admin.table(tabela).delete().in_("id", ids).execute()
         invalidar_cache()
@@ -102,20 +159,16 @@ def excluir_multiplos_registros(ids, tabela="movimentacao"):
         return {"sucesso": False, "mensagem": f"Erro: {e}"}
 
 def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
-    """Retorna histórico com paginação - NOVA FUNÇÃO"""
     inicio = time.time()
     offset = (pagina - 1) * itens_por_pagina
-    
     try:
         total = supabase.table("movimentacao").select("id", count="exact").execute()
         total_registros = total.count if hasattr(total, 'count') else 0
-        
         dados = supabase.table("movimentacao")\
             .select("*")\
             .order("id", desc=True)\
             .range(offset, offset + itens_por_pagina - 1)\
             .execute()
-        
         registrar_tempo_query((time.time() - inicio) * 1000)
         return {
             "dados": dados.data,
@@ -128,7 +181,6 @@ def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
 
 @debounce(wait_time=DEBOUNCE_WAIT_MS)
 def buscar_pessoa_por_cpf_debounced(cpf):
-    """Busca pessoa com debounce - NOVA FUNÇÃO"""
     try:
         pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf).execute()
         return pessoa.data[0] if pessoa.data else None
@@ -136,26 +188,21 @@ def buscar_pessoa_por_cpf_debounced(cpf):
         return None
 
 def get_estatisticas_cached():
-    """Retorna estatísticas com cache - NOVA FUNÇÃO"""
     cache_key = "estatisticas"
     cached = cache_estatisticas.get(cache_key)
     if cached:
         return cached
-    
     inicio = time.time()
     try:
         presentes_data = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
         cadastrados_data = supabase.table("Pessoas").select("id", count="exact").execute()
         setores_data = supabase.table("movimentacao").select("setor_destino").execute()
-        
         setores_unicos = len(set(p['setor_destino'] for p in setores_data.data)) if setores_data.data else 11
-        
         resultado = {
             "total_presentes": presentes_data.count if hasattr(presentes_data, 'count') else 0,
             "total_cadastrados": cadastrados_data.count if hasattr(cadastrados_data, 'count') else 0,
             "setores_unicos": setores_unicos
         }
-        
         registrar_tempo_query((time.time() - inicio) * 1000)
         cache_estatisticas.set(cache_key, resultado)
         return resultado
@@ -163,12 +210,10 @@ def get_estatisticas_cached():
         return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
 
 def get_presentes_cached():
-    """Retorna lista de presentes com cache - NOVA FUNÇÃO"""
     cache_key = "presentes"
     cached = cache_presentes.get(cache_key)
     if cached:
         return cached
-    
     inicio = time.time()
     try:
         dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
@@ -178,15 +223,13 @@ def get_presentes_cached():
     except:
         return []
 
-# ====================== CAMADA 1: CREDENCIAIS (via secrets) ======================
+# ====================== SUPABASE CREDENCIAIS ======================
 try:
     url = st.secrets["SUPABASE_URL"]
     anon_key = st.secrets["SUPABASE_KEY"]
     service_key = st.secrets["SUPABASE_SERVICE_KEY"]
-    
     supabase = create_client(url, anon_key)
     supabase_admin = create_client(url, service_key)
-    
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
@@ -203,7 +246,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ====================== CSS FUTURISTA (MANTIDO ORIGINAL) ======================
+# ====================== CSS (MANTIDO ORIGINAL) ======================
 st.markdown("""
 <style>
     /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
@@ -539,7 +582,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ====================== FUNÇÕES DE AVATAR ======================
+# ====================== FUNÇÕES DE AVATAR E TEMA (MANTIDAS) ======================
 def compress_avatar_image(uploaded_file, max_size_kb=200):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -572,7 +615,7 @@ def save_avatar_url(url):
         supabase_admin.table("app_config").upsert({
             "key": "avatar_url",
             "value": url,
-            "updated_at": datetime.now().isoformat()
+            "updated_at": now_brasilia_naive().isoformat()
         }).execute()
         st.session_state.avatar_url = url
         return True
@@ -580,7 +623,6 @@ def save_avatar_url(url):
         st.error(f"Erro ao salvar avatar: {e}")
         return False
 
-# ====================== FUNÇÕES DE TEMA ======================
 def compress_image_to_base64(uploaded_file, max_size_kb=500):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -631,7 +673,7 @@ def save_theme_config(config):
         supabase_admin.table("app_config").upsert({
             "key": "background_config",
             "value": json.dumps(config),
-            "updated_at": datetime.now().isoformat()
+            "updated_at": now_brasilia_naive().isoformat()
         }).execute()
         st.session_state.theme_config = config
         return True
@@ -919,7 +961,7 @@ def registrar_sessao(perfil, usuario="admin"):
             "id": session_id,
             "usuario": usuario,
             "perfil": perfil,
-            "ultima_atividade": datetime.now().isoformat(),
+            "ultima_atividade": now_brasilia_naive().isoformat(),
             "ip": "desconhecido",
             "user_agent": "streamlit"
         }
@@ -934,7 +976,7 @@ def atualizar_atividade_sessao():
     if "session_id" in st.session_state and st.session_state.session_id:
         try:
             supabase_admin.table("sessoes_ativas").update({
-                "ultima_atividade": datetime.now().isoformat()
+                "ultima_atividade": now_brasilia_naive().isoformat()
             }).eq("id", st.session_state.session_id).execute()
         except:
             pass
@@ -948,7 +990,7 @@ def remover_sessao():
         st.session_state.session_id = None
 
 def contar_sessoes_ativas():
-    limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
+    limite = (now_brasilia_naive() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
     try:
         result = supabase.table("sessoes_ativas").select("id", count="exact").gte("ultima_atividade", limite).execute()
         return result.count
@@ -956,7 +998,7 @@ def contar_sessoes_ativas():
         return 0
 
 def limpar_sessoes_expiradas():
-    limite = (datetime.now() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
+    limite = (now_brasilia_naive() - pd.Timedelta(minutes=SESSION_TIMEOUT_MINUTOS)).isoformat()
     try:
         if "session_id" in st.session_state and st.session_state.session_id:
             supabase_admin.table("sessoes_ativas").delete().lt("ultima_atividade", limite).neq("id", st.session_state.session_id).execute()
@@ -974,9 +1016,8 @@ def encerrar_outras_sessoes():
             return False
     return False
 
-# ====================== FUNÇÕES DE VALIDAÇÃO DE PERMISSÃO (CAMADA 3) ======================
+# ====================== FUNÇÕES DE VALIDAÇÃO DE PERMISSÃO ======================
 def require_admin():
-    """Interrompe a execução se o usuário não for ADMIN."""
     if st.session_state.get("perfil") != "ADMIN":
         st.error("❌ Ação restrita a administradores.")
         st.stop()
@@ -1014,22 +1055,19 @@ def gerar_html_impressao(df, titulo):
     </style></head>
     <body>
         <h1>JOHN ACESSOS - {titulo}</h1>
-        <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
+        <div class="sub">Gerado em: {now_brasilia().strftime('%d/%m/%Y %H:%M:%S')}</div>
         {tabela}
         <div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div>
     </body></html>
     """
 
-# ====================== FUNÇÃO MODIFICADA: RELATÓRIO CONSOLIDADO (SEM MISTURAR C.C COM PRESTADORES) ======================
 def gerar_html_consolidado(df):
     if df.empty:
         return None
 
-    # Função auxiliar para gerar uma seção, excluindo IDs já usados
     def secao(df_filtro, titulo, ids_usados=None):
         if ids_usados is None:
             ids_usados = set()
-        # Remove registros que já foram incluídos em seções anteriores
         df_filtro = df_filtro[~df_filtro['id'].isin(ids_usados)]
         df_filtro = df_filtro.copy().fillna('')
         if df_filtro.empty:
@@ -1037,27 +1075,22 @@ def gerar_html_consolidado(df):
         colunas = ['id','nome','cpf','empresa','setor_destino','data_entrada','data_saida']
         existentes = [c for c in colunas if c in df_filtro.columns]
         tabela = df_filtro[existentes].to_html(escape=True, index=False)
-        # Retorna também os IDs usados nesta seção
         return f"<div class='section'><h2>{titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>", set(df_filtro['id'])
 
     ids_utilizados = set()
 
-    # 1. Seção GRSA
     df_gr = df[df['setor_destino'].str.contains('GRSA', case=False, na=False)]
     html_gr, ids_gr = secao(df_gr, "🔧 GRSA", ids_utilizados)
     ids_utilizados.update(ids_gr)
 
-    # 2. Seção Brasanitas
     df_br = df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
     html_br, ids_br = secao(df_br, "🏭 Brasanitas", ids_utilizados)
     ids_utilizados.update(ids_br)
 
-    # 3. Seção C.C (apenas quem está no setor C.C e não foi incluído antes)
     df_cc = df[df['setor_destino'].str.contains('C.C', case=False, na=False)]
     html_cc, ids_cc = secao(df_cc, "🏥 C.C", ids_utilizados)
     ids_utilizados.update(ids_cc)
 
-    # 4. Seção Prestadores de Serviços (exclui as empresas internas e também qualquer registro já usado)
     empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
     todas_empresas = df['empresa'].dropna().unique()
     prestadores = [e for e in todas_empresas if e.upper() not in [x.upper() for x in empresas_excluir]]
@@ -1068,7 +1101,6 @@ def gerar_html_consolidado(df):
         html_prest = "<div class='section'><h2>🏢 Prestadores de Serviços</h2><p>Nenhum registro.</p></div>"
         ids_prest = set()
 
-    # Montagem final do HTML
     html = f"""
     <!DOCTYPE html>
     <html><head><meta charset="UTF-8"><title>RELATÓRIO CONSOLIDADO</title>
@@ -1086,7 +1118,7 @@ def gerar_html_consolidado(df):
     </style></head>
     <body>
         <h1>JOHN ACESSOS - RELATÓRIO CONSOLIDADO</h1>
-        <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
+        <div class="sub">Gerado em: {now_brasilia().strftime('%d/%m/%Y %H:%M:%S')}</div>
         {html_gr}
         {html_br}
         {html_cc}
@@ -1109,103 +1141,75 @@ def sanitizar_texto(texto):
         return texto
     return texto.replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#39;')
 
-# ====================== FUNÇÃO PARA APAGAR REGISTROS DUPLICADOS ======================
+# ====================== FUNÇÕES DE LIMPEZA E SINCRONIZAÇÃO ======================
 def apagar_registros_duplicados():
-    """
-    Função que identifica CPFs duplicados na tabela Pessoas 
-    e APAGA todos os registros duplicados, mantendo APENAS UM registro para cada pessoa.
-    """
     try:
         todas_pessoas = supabase_admin.table("Pessoas").select("*").execute().data
-        
         if not todas_pessoas:
             return {"sucesso": False, "mensagem": "Nenhum registro encontrado na tabela Pessoas"}
-        
         grupos_por_cpf = {}
         for pessoa in todas_pessoas:
             cpf = pessoa['cpf']
             if cpf not in grupos_por_cpf:
                 grupos_por_cpf[cpf] = []
             grupos_por_cpf[cpf].append(pessoa)
-        
         cpfs_com_duplicatas = {cpf: registros for cpf, registros in grupos_por_cpf.items() if len(registros) > 1}
-        
         if not cpfs_com_duplicatas:
             return {"sucesso": True, "mensagem": "Nenhum CPF duplicado encontrado.", "duplicados_removidos": 0}
-        
         total_removidos = 0
         resultados = []
-        
         for cpf, registros in cpfs_com_duplicatas.items():
             registros_ordenados = sorted(registros, key=lambda x: x['id'])
             registro_principal = registros_ordenados[0]
             ids_para_remover = [r['id'] for r in registros_ordenados[1:]]
-            
             nomes_removidos = [r['nome'] for r in registros_ordenados[1:]]
-            
             for id_remover in ids_para_remover:
                 supabase_admin.table("Pessoas").delete().eq("id", id_remover).execute()
                 total_removidos += 1
-            
             resultados.append(
                 f"CPF {cpf}: mantido ID {registro_principal['id']} - {registro_principal['nome']} | "
                 f"Removidos: {len(ids_para_remover)} registro(s) - Nomes: {', '.join(nomes_removidos[:3])}{'...' if len(nomes_removidos) > 3 else ''}"
             )
-        
         return {
             "sucesso": True, 
             "mensagem": f"Limpeza concluída! {total_removidos} registro(s) duplicado(s) removido(s).",
             "duplicados_removidos": total_removidos,
             "detalhes": resultados
         }
-        
     except Exception as e:
         return {"sucesso": False, "mensagem": f"Erro durante a limpeza: {str(e)}"}
 
-# ====================== FUNÇÃO PARA SINCRONIZAR NOVOS CADASTROS ======================
 def sincronizar_novos_cadastros(arquivo_csv):
-    """
-    Função para sincronizar novos cadastros a partir de um arquivo CSV
-    """
     try:
         df = pd.read_csv(arquivo_csv)
-        
         colunas_necessarias = ['cpf', 'nome']
-        
         for col in colunas_necessarias:
             if col not in df.columns:
                 return {"sucesso": False, "mensagem": f"Coluna '{col}' não encontrada no arquivo CSV"}
-        
         registros_inseridos = 0
         registros_atualizados = 0
         registros_ignorados = 0
         erros = []
-        
         for idx, row in df.iterrows():
             try:
                 cpf = sanitizar_cpf(str(row['cpf']))
                 nome = sanitizar_texto(str(row['nome'])).strip().upper()
                 empresa = sanitizar_texto(str(row.get('empresa', ''))).strip().upper() if pd.notna(row.get('empresa')) else ""
-                
                 if not validar_cpf(cpf):
                     erros.append(f"Linha {idx+2}: CPF '{row['cpf']}' inválido")
                     registros_ignorados += 1
                     continue
-                
                 if not nome:
                     erros.append(f"Linha {idx+2}: Nome não pode estar vazio")
                     registros_ignorados += 1
                     continue
-                
                 existe = supabase_admin.table("Pessoas").select("id, nome, empresa").eq("cpf", cpf).execute().data
-                
                 if existe:
                     precisa_atualizar = False
                     if existe[0]['nome'] != nome:
                         precisa_atualizar = True
                     if empresa and existe[0].get('empresa', '') != empresa:
                         precisa_atualizar = True
-                    
                     if precisa_atualizar:
                         supabase_admin.table("Pessoas").update({
                             "nome": nome,
@@ -1221,21 +1225,17 @@ def sincronizar_novos_cadastros(arquivo_csv):
                         "empresa": empresa
                     }).execute()
                     registros_inseridos += 1
-                    
             except Exception as e:
                 erros.append(f"Linha {idx+2}: {str(e)}")
                 registros_ignorados += 1
-        
         mensagem = f"""
         ✅ Sincronização concluída!
         - 📝 Registros inseridos: {registros_inseridos}
         - 🔄 Registros atualizados: {registros_atualizados}
         - ⏭️ Registros ignorados: {registros_ignorados}
         """
-        
         if erros:
             mensagem += f"\n\n⚠️ Erros encontrados: {len(erros)}"
-        
         return {
             "sucesso": True,
             "mensagem": mensagem,
@@ -1244,7 +1244,6 @@ def sincronizar_novos_cadastros(arquivo_csv):
             "ignorados": registros_ignorados,
             "erros": erros
         }
-        
     except Exception as e:
         return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
 
@@ -1269,11 +1268,14 @@ if "pessoa_confirmada" not in st.session_state:
     st.session_state.pessoa_confirmada = None
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
-if "pagina_historico" not in st.session_state:  # NOVO
+if "pagina_historico" not in st.session_state:
     st.session_state.pagina_historico = 1
 
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
+
+# ====================== MIGRAÇÃO ÚNICA DE HORÁRIOS ======================
+migrar_horarios_para_brasilia()
 
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
@@ -1299,7 +1301,7 @@ if not st.session_state.logado:
             senha = st.text_input("", type="password", placeholder="Chave de acesso criptografada", label_visibility="collapsed")
             submitted = st.form_submit_button("🛡️ ACESSAR SISTEMA", use_container_width=True)
             if submitted:
-                if st.session_state.get("bloqueado_ate") and datetime.now() < st.session_state.bloqueado_ate:
+                if st.session_state.get("bloqueado_ate") and now_brasilia_naive() < st.session_state.bloqueado_ate:
                     st.error(f"⛔ Acesso bloqueado até {st.session_state.bloqueado_ate.strftime('%H:%M:%S')}")
                 else:
                     if senha == ADMIN_PASSWORD:
@@ -1318,7 +1320,7 @@ if not st.session_state.logado:
                         st.session_state.tentativas_login += 1
                         restantes = MAX_TENTATIVAS_LOGIN - st.session_state.tentativas_login
                         if st.session_state.tentativas_login >= MAX_TENTATIVAS_LOGIN:
-                            st.session_state.bloqueado_ate = datetime.now() + pd.Timedelta(minutes=5)
+                            st.session_state.bloqueado_ate = now_brasilia_naive() + pd.Timedelta(minutes=5)
                             st.error("⛔ Acesso bloqueado por 5 minutos.")
                         else:
                             st.error(f"❌ ACESSO NEGADO - Tentativas restantes: {restantes}")
@@ -1356,7 +1358,7 @@ st.markdown(f"""
 col1, col2, col3, col4 = st.columns([6,1,1,1])
 with col3:
     if st.button("🔄 ATUALIZAR", key="btn_atualizar", use_container_width=True):
-        invalidar_cache()  # NOVO: Limpar cache ao atualizar
+        invalidar_cache()
         st.rerun()
 with col4:
     if st.button("🚪 SAIR", key="sair_final", use_container_width=True):
@@ -1374,7 +1376,6 @@ with st.sidebar:
         <p style="color:#0ff; font-size: 9px; letter-spacing: 2px;">CYBER SECURITY 2026</p>
     </div>
     """, unsafe_allow_html=True)
-    
     st.markdown("---")
     st.markdown("### ⚡ ESTADO")
     st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
@@ -1390,7 +1391,7 @@ with st.sidebar:
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
     st.markdown('<div class="info-item">📦 Versão: 13.1 (CYBER)</div>', unsafe_allow_html=True)
 
-# ====================== ADMIN: CONFIGURAÇÕES (SÓ APARECE PARA ADMIN) ======================
+# ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
     with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
@@ -1546,7 +1547,7 @@ if st.session_state.perfil == "ADMIN":
                     valor_final = novo_valor if novo_valor else "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)"
                     if not novo_valor:
                         novo_tipo = "gradient"
-                else:  # futuristic
+                else:
                     valor_final = "futuristic"
                     novo_tipo = "futuristic"
                 
@@ -1604,7 +1605,7 @@ if st.session_state.perfil == "ADMIN":
                     st.write(f"Total de registros para {empresa_selecionada}: {len(df_export)}")
                 if not df_export.empty:
                     csv = df_export.to_csv(index=False, encoding='utf-8-sig')
-                    nome_arquivo = f"cadastros_{empresa_selecionada.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                    nome_arquivo = f"cadastros_{empresa_selecionada.replace(' ', '_')}_{now_brasilia().strftime('%Y%m%d_%H%M%S')}.csv"
                     st.download_button(
                         label="📥 Baixar CSV",
                         data=csv,
@@ -1644,7 +1645,7 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado para o padrão!")
                 st.rerun()
 
-# ====================== NOVA SEÇÃO: MÉTRICAS DE PERFORMANCE ======================
+# ====================== MÉTRICAS DE PERFORMANCE ======================
 with st.expander("📊 Métricas de Performance", expanded=False):
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
@@ -1658,7 +1659,7 @@ with st.expander("📊 Métricas de Performance", expanded=False):
         st.metric("💾 Registros em cache", total_cached)
     st.caption(f"⚙️ Configurações: Cache TTL: {CACHE_TTL_PADRAO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
 
-# ====================== DASHBOARD (COM CACHE) ======================
+# ====================== DASHBOARD ======================
 st.markdown("---")
 stats = get_estatisticas_cached()
 
@@ -1752,7 +1753,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
                             "nome": sanitizar_texto(novo_nome).strip().upper(),
                             "empresa": sanitizar_texto(novo_empresa).strip().upper() if novo_empresa else ""
                         }).execute()
-                        invalidar_cache()  # NOVO: Limpar cache após modificação
+                        invalidar_cache()
                         st.success("✅ Cadastro salvo!")
                         st.balloons()
                         st.rerun()
@@ -1761,7 +1762,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
         else:
             st.error("CPF e Nome obrigatórios.")
 
-# ====================== REGISTRO DE ENTRADA (COM DEBOUNCE) ======================
+# ====================== REGISTRO DE ENTRADA ======================
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados / Instrumentadores"], horizontal=True, key="tipo_pessoa")
@@ -1780,7 +1781,6 @@ with col_btn:
             if not validar_cpf(cpf_limpo):
                 st.error("CPF inválido")
             else:
-                # NOVO: Usando busca com debounce
                 pessoa = buscar_pessoa_por_cpf_debounced(cpf_limpo)
                 if pessoa:
                     st.session_state.pessoa_confirmada = {"cpf": cpf_limpo, "nome": pessoa['nome'], "empresa": pessoa.get('empresa', '')}
@@ -1799,10 +1799,10 @@ if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
             supabase.table("movimentacao").insert({
                 "cpf": p['cpf'], "nome": p['nome'], "empresa": p['empresa'],
                 "setor_destino": setor_escolhido,
-                "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                "data_entrada": now_brasilia().strftime("%d/%m/%Y %H:%M:%S"),
                 "data_saida": ""
             }).execute()
-            invalidar_cache()  # NOVO: Limpar cache após modificação
+            invalidar_cache()
             st.success(f"Entrada registrada para {setor_escolhido}!")
             st.session_state.pessoa_confirmada = None
             st.rerun()
@@ -1811,10 +1811,9 @@ if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
     else:
         st.warning("Confirme o CPF primeiro.")
 
-# ====================== PESSOAS PRESENTES (COM CACHE) ======================
+# ====================== PESSOAS PRESENTES ======================
 st.markdown("---")
 st.markdown("### 📍 Pessoas Presentes")
-# NOVO: Usando cache para presentes
 dados = get_presentes_cached()
 
 if dados:
@@ -1837,8 +1836,8 @@ if dados:
         st.markdown(f"**{p['nome']}** - CPF: {p['cpf']} - Setor: {p['setor_destino']}")
         if st.button("🚪 Registrar Saída", key="sair_pesquisado"):
             try:
-                supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                invalidar_cache()  # NOVO: Limpar cache após modificação
+                supabase.table("movimentacao").update({"data_saida": now_brasilia().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
+                invalidar_cache()
                 st.success("Saída registrada")
                 st.session_state.pessoa_saida = None
                 st.rerun()
@@ -1855,8 +1854,8 @@ if dados:
             col3.write(f"🏢 {p.get('empresa','N/A')}")
             if col4.button("🚪 Saída", key=f"saida_{p['id']}"):
                 try:
-                    supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                    invalidar_cache()  # NOVO: Limpar cache após modificação
+                    supabase.table("movimentacao").update({"data_saida": now_brasilia().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
+                    invalidar_cache()
                     st.rerun()
                 except:
                     pass
@@ -1872,8 +1871,8 @@ if dados:
                 col3.write(f"🕒 {p['data_entrada']}")
                 if col4.button("🚪 Saída", key=f"saida2_{p['id']}"):
                     try:
-                        supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                        invalidar_cache()  # NOVO: Limpar cache após modificação
+                        supabase.table("movimentacao").update({"data_saida": now_brasilia().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
+                        invalidar_cache()
                         st.rerun()
                     except:
                         pass
@@ -1881,21 +1880,17 @@ if dados:
 else:
     st.info("Nenhuma pessoa presente no momento")
 
-# ====================== HISTÓRICO COM PAGINAÇÃO (NOVO) ======================
+# ====================== HISTÓRICO COM PAGINAÇÃO ======================
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
-    # NOVO: Controles de paginação
     col_prev, col_page, col_next = st.columns([1, 2, 1])
-    
     with col_prev:
         if st.button("◀ ANTERIOR", key="pag_anterior"):
             if st.session_state.pagina_historico > 1:
                 st.session_state.pagina_historico -= 1
                 st.rerun()
-    
     with col_page:
         st.markdown(f"<div style='text-align:center'>Página {st.session_state.pagina_historico}</div>", unsafe_allow_html=True)
-    
     with col_next:
         if st.button("PRÓXIMO ▶", key="pag_proximo"):
             historico_data = get_historico_paginado(st.session_state.pagina_historico + 1)
@@ -1903,7 +1898,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 st.session_state.pagina_historico += 1
                 st.rerun()
     
-    # Carregar dados da página atual
     historico = get_historico_paginado(st.session_state.pagina_historico)
     
     if historico["dados"]:
@@ -1927,7 +1921,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.markdown("---")
         st.markdown("### 🗑️ Exclusão de Registros (APENAS ADMIN)")
         
-        # NOVO: Botão para selecionar todos da página
         if st.session_state.perfil == "ADMIN":
             col_sel_all, col_sel_clear = st.columns(2)
             with col_sel_all:
@@ -1954,7 +1947,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             with col_data:
                 st.markdown(f"ID {row['id']} - {row['nome']} | CPF: {row['cpf']} | Empresa: {row.get('empresa','N/A')} | Entrada: {row['data_entrada']} | Saída: {row['data_saida'] or 'Presente'}")
         
-        # NOVO: Exclusão em lote usando batch operation
         if st.session_state.perfil == "ADMIN" and st.session_state.selected_ids:
             st.warning(f"⚠️ {len(st.session_state.selected_ids)} registro(s) selecionado(s)")
             col_excluir, col_cancelar = st.columns(2)
@@ -1973,7 +1965,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     st.session_state.selected_ids = []
                     st.rerun()
         
-        # Botões de exclusão originais mantidos
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         with col_btn1:
             if st.button("🗑️ Excluir Selecionados", key="excluir_selecionados"):
@@ -2039,9 +2030,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
-        # ====================== DUAS COLUNAS PARA AS FERRAMENTAS ======================
         col_ferramenta1, col_ferramenta2 = st.columns(2)
-        
         with col_ferramenta1:
             st.markdown("### 🗑️ Limpeza de Registros Duplicados")
             st.markdown("""
@@ -2050,7 +2039,6 @@ if st.session_state.perfil == "ADMIN":
             - Remove TODOS os registros duplicados, mantendo apenas o mais antigo (menor ID)
             - **NÃO altera as movimentações** (apenas os cadastros)
             """)
-            
             try:
                 todas_pessoas = supabase.table("Pessoas").select("cpf, nome, empresa, id").execute().data
                 if todas_pessoas:
@@ -2058,26 +2046,17 @@ if st.session_state.perfil == "ADMIN":
                     duplicados = df_check[df_check.duplicated(subset=['cpf'], keep=False)]
                     qtd_cpfs_duplicados = len(duplicados['cpf'].unique()) if not duplicados.empty else 0
                     qtd_registros_duplicados = len(duplicados)
-                    
                     col_stats1, col_stats2, col_stats3 = st.columns(3)
                     with col_stats1:
                         st.metric("Total de Cadastros", len(todas_pessoas))
                     with col_stats2:
-                        st.metric("CPFs Duplicados", qtd_cpfs_duplicados, 
-                                 delta="⚠️" if qtd_cpfs_duplicados > 0 else "✓")
+                        st.metric("CPFs Duplicados", qtd_cpfs_duplicados, delta="⚠️" if qtd_cpfs_duplicados > 0 else "✓")
                     with col_stats3:
-                        st.metric("Registros Duplicados", qtd_registros_duplicados,
-                                 delta=f"-{qtd_registros_duplicados - qtd_cpfs_duplicados} a remover" if qtd_registros_duplicados > 0 else "✓")
-                    
+                        st.metric("Registros Duplicados", qtd_registros_duplicados, delta=f"-{qtd_registros_duplicados - qtd_cpfs_duplicados} a remover" if qtd_registros_duplicados > 0 else "✓")
                     if qtd_registros_duplicados > 0:
                         st.warning(f"⚠️ Detectados {qtd_registros_duplicados} registro(s) duplicado(s) em {qtd_cpfs_duplicados} CPF(s) diferente(s).")
-                        
                         with st.expander("📋 Ver detalhes dos CPFs duplicados"):
-                            cpfs_dup = duplicados.groupby('cpf').agg({
-                                'nome': list,
-                                'empresa': list,
-                                'id': list
-                            }).reset_index()
+                            cpfs_dup = duplicados.groupby('cpf').agg({'nome': list, 'empresa': list, 'id': list}).reset_index()
                             for _, row in cpfs_dup.iterrows():
                                 st.write(f"**CPF:** {row['cpf']} - **Total de registros:** {len(row['nome'])}")
                                 for i, (nome, empresa, id_reg) in enumerate(zip(row['nome'], row['empresa'], row['id'])):
@@ -2086,7 +2065,6 @@ if st.session_state.perfil == "ADMIN":
                                     else:
                                         st.write(f"  🔴 **SERÁ REMOVIDO:** ID {id_reg} - {nome} | Empresa: {empresa or 'N/A'}")
                                 st.divider()
-                        
                         if st.button("🗑️ APAGAR REGISTROS DUPLICADOS", key="btn_apagar_duplicados", type="primary"):
                             with st.spinner("Processando limpeza de registros duplicados..."):
                                 resultado = apagar_registros_duplicados()
@@ -2109,7 +2087,6 @@ if st.session_state.perfil == "ADMIN":
                     st.info("Nenhum cadastro encontrado.")
             except Exception as e:
                 st.error(f"Erro ao verificar duplicatas: {e}")
-        
         with col_ferramenta2:
             st.markdown("### 📤 Sincronizar Novos Cadastros")
             st.markdown("""
@@ -2119,21 +2096,13 @@ if st.session_state.perfil == "ADMIN":
             - Registros existentes são atualizados se houver diferenças
             - Suporta arquivos .csv e .xlsx
             """)
-            
-            arquivo_sync = st.file_uploader(
-                "Selecione o arquivo com os cadastros", 
-                type=["csv", "xlsx", "xls"],
-                key="sync_arquivo",
-                help="Arquivo deve conter as colunas: cpf, nome (empresa é opcional)"
-            )
-            
+            arquivo_sync = st.file_uploader("Selecione o arquivo com os cadastros", type=["csv", "xlsx", "xls"], key="sync_arquivo", help="Arquivo deve conter as colunas: cpf, nome (empresa é opcional)")
             if arquivo_sync:
                 if st.button("🔄 SINCRONIZAR CADASTROS", key="btn_sincronizar", type="primary"):
                     with st.spinner("Processando sincronização..."):
                         resultado = sincronizar_novos_cadastros(arquivo_sync)
                         if resultado["sucesso"]:
                             st.success("✅ Sincronização concluída!")
-                            
                             col_res1, col_res2, col_res3 = st.columns(3)
                             with col_res1:
                                 st.metric("📝 Inseridos", resultado.get("inseridos", 0), delta="+")
@@ -2141,23 +2110,19 @@ if st.session_state.perfil == "ADMIN":
                                 st.metric("🔄 Atualizados", resultado.get("atualizados", 0), delta="~")
                             with col_res3:
                                 st.metric("⏭️ Ignorados", resultado.get("ignorados", 0), delta="=")
-                            
                             st.info(resultado["mensagem"])
-                            
                             if resultado.get("erros"):
                                 with st.expander(f"⚠️ {len(resultado['erros'])} erro(s) encontrados"):
                                     for erro in resultado["erros"][:20]:
                                         st.error(erro)
                                     if len(resultado["erros"]) > 20:
                                         st.warning(f"... e mais {len(resultado['erros']) - 20} erros não exibidos")
-                            
                             invalidar_cache()
                             st.balloons()
                             time.sleep(2)
                             st.rerun()
                         else:
                             st.error(f"❌ {resultado['mensagem']}")
-            
             st.markdown("---")
             st.markdown("**📋 Exemplo de formato do arquivo (CSV):**")
             st.code("""
@@ -2169,7 +2134,6 @@ cpf,nome,empresa
             st.caption("💡 O CPF deve conter 11 dígitos. A coluna 'empresa' é opcional.")
         
         st.markdown("---")
-        
         try:
             todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
         except:
