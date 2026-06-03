@@ -102,11 +102,12 @@ def excluir_multiplos_registros(ids, tabela="movimentacao"):
         return {"sucesso": False, "mensagem": f"Erro: {e}"}
 
 def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
-    """Retorna histórico com paginação - NOVA FUNÇÃO"""
+    """Retorna histórico com paginação - USANDO count='estimated' para maior velocidade"""
     inicio = time.time()
     offset = (pagina - 1) * itens_por_pagina
     
     try:
+        # Usar estimated em vez de exact para tabelas grandes
         total = supabase.table("movimentacao").select("id", count="estimated").execute()
         total_registros = total.count if hasattr(total, 'count') else 0
         
@@ -135,8 +136,9 @@ def buscar_pessoa_por_cpf_debounced(cpf):
     except:
         return None
 
+# ====================== FUNÇÃO OTIMIZADA DE ESTATÍSTICAS (USANDO MATERIALIZED VIEW) ======================
 def get_estatisticas_cached():
-    """Retorna estatísticas com cache - NOVA FUNÇÃO"""
+    """Retorna estatísticas usando a materialized view (consulta única)"""
     cache_key = "estatisticas"
     cached = cache_estatisticas.get(cache_key)
     if cached:
@@ -144,41 +146,36 @@ def get_estatisticas_cached():
     
     inicio = time.time()
     try:
-        presentes_data = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute()
-        cadastrados_data = supabase.table("Pessoas").select("id", count="exact").execute()
-        setores_data = supabase.table("movimentacao").select("setor_destino").execute()
-        
-        setores_unicos = len(set(p['setor_destino'] for p in setores_data.data)) if setores_data.data else 11
-        
-        resultado = {
-            "total_presentes": presentes_data.count if hasattr(presentes_data, 'count') else 0,
-            "total_cadastrados": cadastrados_data.count if hasattr(cadastrados_data, 'count') else 0,
-            "setores_unicos": setores_unicos
-        }
-        
+        # Consulta única à materialized view
+        result = supabase.table("estatisticas_dashboard").select("*").execute()
+        if result.data and len(result.data) > 0:
+            stats = result.data[0]
+        else:
+            # Fallback se a view ainda não foi criada ou está vazia
+            stats = {
+                "total_presentes": 0,
+                "total_cadastrados": 0,
+                "setores_unicos": 11
+            }
         registrar_tempo_query((time.time() - inicio) * 1000)
-        cache_estatisticas.set(cache_key, resultado)
-        return resultado
+        cache_estatisticas.set(cache_key, stats)
+        return stats
     except Exception as e:
+        # Em caso de erro (ex.: view não existe), retorna valores padrão
+        print(f"Erro ao consultar estatisticas_dashboard: {e}")
         return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
 
-def get_presentes_cached():
-    """Retorna lista de presentes com cache - NOVA FUNÇÃO"""
-    cache_key = "presentes"
-    cached = cache_presentes.get(cache_key)
-    if cached:
-        return cached
-    
-    inicio = time.time()
+def refresh_estatisticas_view():
+    """Atualiza a materialized view via RPC (função PostgreSQL)"""
     try:
-        dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
-        registrar_tempo_query((time.time() - inicio) * 1000)
-        cache_presentes.set(cache_key, dados.data)
-        return dados.data
-    except:
-        return []
+        supabase_admin.rpc('refresh_estatisticas_dashboard').execute()
+        invalidar_cache()  # limpa o cache local
+        return True
+    except Exception as e:
+        st.error(f"Erro ao atualizar estatísticas: {e}")
+        return False
 
-# ====================== NOVAS FUNÇÕES DE TIMEZONE ======================
+# ====================== FUNÇÕES DE TIMEZONE ======================
 def get_timezone_offset():
     """Retorna offset em horas (ex: -3) configurado no Supabase. Padrão 0."""
     try:
@@ -1101,6 +1098,7 @@ def gerar_html_consolidado(df):
     html += secao(outros_setores, "Prestadores de Serviços", "🏢")
     html += '<div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div></body></html>'
     return html
+
 # ====================== FUNÇÕES DE VALIDAÇÃO CPF ======================
 def validar_cpf(cpf):
     cpf_limpo = re.sub(r'\D', '', cpf)
@@ -1393,7 +1391,7 @@ with st.sidebar:
     else:
         st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">📦 Versão: 13.1 (CYBER)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item">📦 Versão: 13.2 (CYBER OTIMIZADO)</div>', unsafe_allow_html=True)
 
 # ====================== ADMIN: CONFIGURAÇÕES (SÓ APARECE PARA ADMIN) ======================
 if st.session_state.perfil == "ADMIN":
@@ -1676,6 +1674,15 @@ with st.expander("📊 Métricas de Performance", expanded=False):
         total_cached = len(cache_estatisticas.cache_data) + len(cache_pessoas.cache_data) + len(cache_presentes.cache_data)
         st.metric("💾 Registros em cache", total_cached)
     st.caption(f"⚙️ Configurações: Cache TTL: {CACHE_TTL_PADRAO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
+    
+    # Botão para atualizar a materialized view manualmente
+    if st.button("🔄 Atualizar Estatísticas (View)", key="refresh_stats_view", use_container_width=True):
+        with st.spinner("Atualizando estatísticas..."):
+            if refresh_estatisticas_view():
+                st.success("Estatísticas atualizadas com sucesso!")
+                st.rerun()
+            else:
+                st.error("Falha ao atualizar estatísticas. Verifique se a view e a função existem no Supabase.")
 
 # ====================== DASHBOARD (COM CACHE) ======================
 st.markdown("---")
@@ -2389,4 +2396,3 @@ st.markdown("""
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
 </div>
 """, unsafe_allow_html=True)
-
