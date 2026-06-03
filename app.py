@@ -446,10 +446,21 @@ def gerar_html_consolidado(df):
         tabela = df_filtro[existentes].to_html(escape=True, index=False)
         return f"<div class='section'><h2>{icone} {titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>"
 
-    df_cc = df[df['setor_destino'].str.contains('C.C', case=False, na=False)]
+    # FILTROS CORRIGIDOS:
+    # 1. C.C comum (exclui qualquer setor que contenha "PRESTADOR")
+    df_cc = df[
+        df['setor_destino'].str.contains('C.C', case=False, na=False) &
+        ~df['setor_destino'].str.contains('PRESTADOR', case=False, na=False)
+    ]
+    # 2. GRSA (mantém igual)
     df_gr = df[df['setor_destino'].str.contains('GRSA', case=False, na=False)]
+    # 3. Brasanitas (mantém igual)
     df_br = df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
-    outros = df[~df['setor_destino'].str.contains('C.C|GRSA|Brasanitas', case=False, na=False)]
+    # 4. Prestadores: todos os demais, inclusive "C.C PRESTADOR DE SERVIÇOS"
+    outros = df[
+        ~df['setor_destino'].str.contains('C.C|GRSA|Brasanitas', case=False, na=False) |
+        df['setor_destino'].str.contains('PRESTADOR', case=False, na=False)
+    ]
 
     html = f"""
     <!DOCTYPE html>
