@@ -1070,7 +1070,7 @@ if dados:
 else:
     st.info("Nenhuma pessoa presente no momento")
 
-# ====================== HISTÓRICO COM DATA_EDITOR ======================
+# ====================== HISTÓRICO COM DATA_EDITOR (CORRIGIDO) ======================
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     col_prev, col_page, col_next = st.columns([1,2,1])
@@ -1111,28 +1111,28 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.markdown("---")
         st.markdown("### 🗑️ Exclusão de Registros (APENAS ADMIN)")
         
-        # Usar data_editor para seleção múltipla eficiente
+        # Preparar DataFrame para edição
         df_edit = df.copy()
+        # Garantir que todas as colunas sejam string (exceto a de seleção)
+        for col in df_edit.columns:
+            if col != "id":
+                df_edit[col] = df_edit[col].astype(str).fillna("")
+        # Inserir coluna de seleção como booleano
         df_edit.insert(0, "Selecionar", False)
         if st.session_state.selected_ids:
             df_edit["Selecionar"] = df_edit["id"].isin(st.session_state.selected_ids)
         
+        # Data editor sem configuração customizada (deixa o Streamlit inferir)
         edited_df = st.data_editor(
             df_edit,
             column_config={
-                "Selecionar": st.column_config.CheckboxColumn("Selecionar", default=False),
-                "id": st.column_config.TextColumn("ID"),
-                "nome": st.column_config.TextColumn("Nome"),
-                "cpf": st.column_config.TextColumn("CPF"),
-                "empresa": st.column_config.TextColumn("Empresa"),
-                "setor_destino": st.column_config.TextColumn("Setor"),
-                "data_entrada": st.column_config.TextColumn("Entrada"),
-                "data_saida": st.column_config.TextColumn("Saída")
+                "Selecionar": st.column_config.CheckboxColumn("Selecionar", default=False)
             },
             hide_index=True,
             use_container_width=True,
             key="data_editor_historico"
         )
+        
         # Atualizar seleção
         novos_selecionados = edited_df[edited_df["Selecionar"]]["id"].tolist()
         if novos_selecionados != st.session_state.selected_ids:
@@ -1176,6 +1176,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 st.session_state.pending_clear_all = True
                 st.rerun()
         
+        # Confirmações de exclusão
         if st.session_state.pending_delete_ids:
             require_admin()
             st.error(f"⚠️ Excluir {len(st.session_state.pending_delete_ids)} registro(s)?")
