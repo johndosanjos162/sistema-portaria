@@ -1,6 +1,6 @@
 import streamlit as st
 from supabase import create_client
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 from PIL import Image
 import base64
@@ -177,6 +177,41 @@ def get_presentes_cached():
         return dados.data
     except:
         return []
+
+# ====================== NOVAS FUNÇÕES DE TIMEZONE ======================
+def get_timezone_offset():
+    """Retorna offset em horas (ex: -3) configurado no Supabase. Padrão 0."""
+    try:
+        result = supabase.table("app_config").select("value").eq("key", "timezone_offset").execute()
+        if result.data and result.data[0]['value']:
+            return float(result.data[0]['value'])
+    except:
+        pass
+    return 0.0
+
+def save_timezone_offset(offset_horas):
+    """Salva offset no Supabase."""
+    try:
+        supabase_admin.table("app_config").upsert({
+            "key": "timezone_offset",
+            "value": str(offset_horas),
+            "updated_at": datetime.now().isoformat()
+        }).execute()
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar offset: {e}")
+        return False
+
+def get_current_datetime():
+    """Retorna datetime atual com o offset configurado."""
+    offset = get_timezone_offset()
+    now_utc = datetime.utcnow()
+    now_offset = now_utc + timedelta(hours=offset)
+    return now_offset
+
+def format_datetime_str(dt):
+    """Formata datetime para string no padrão do banco."""
+    return dt.strftime("%d/%m/%Y %H:%M:%S")
 
 # ====================== CAMADA 1: CREDENCIAIS (via secrets) ======================
 try:
@@ -1236,7 +1271,7 @@ if "pessoa_confirmada" not in st.session_state:
     st.session_state.pessoa_confirmada = None
 if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
-if "pagina_historico" not in st.session_state:  # NOVO
+if "pagina_historico" not in st.session_state:
     st.session_state.pagina_historico = 1
 
 st.session_state.theme_config = get_theme_config()
@@ -1323,7 +1358,7 @@ st.markdown(f"""
 col1, col2, col3, col4 = st.columns([6,1,1,1])
 with col3:
     if st.button("🔄 ATUALIZAR", key="btn_atualizar", use_container_width=True):
-        invalidar_cache()  # NOVO: Limpar cache ao atualizar
+        invalidar_cache()
         st.rerun()
 with col4:
     if st.button("🚪 SAIR", key="sair_final", use_container_width=True):
@@ -1375,6 +1410,20 @@ if st.session_state.perfil == "ADMIN":
             st.success("✅ Sessões expiradas removidas!")
             st.rerun()
         st.caption("Ações disponíveis apenas para o administrador.")
+    
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("⏱️ Configurar Horário (Global)", expanded=False):
+        st.markdown("### Ajuste de Fuso Horário")
+        st.markdown("Defina o offset em relação ao UTC (ex.: -3 para Brasília)")
+        offset_atual = get_timezone_offset()
+        novo_offset = st.number_input("Offset (horas)", value=offset_atual, step=0.5, format="%.1f", key="offset_global")
+        if st.button("💾 Salvar Offset", key="salvar_offset"):
+            if save_timezone_offset(novo_offset):
+                st.success(f"✅ Offset alterado para {novo_offset} horas. Todos os novos registros usarão este horário.")
+                st.rerun()
+            else:
+                st.error("Erro ao salvar offset.")
+        st.caption("Exemplo: Brasília (UTC-3) = -3 | Londres (UTC+0) = 0")
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
@@ -1719,7 +1768,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
                             "nome": sanitizar_texto(novo_nome).strip().upper(),
                             "empresa": sanitizar_texto(novo_empresa).strip().upper() if novo_empresa else ""
                         }).execute()
-                        invalidar_cache()  # NOVO: Limpar cache após modificação
+                        invalidar_cache()
                         st.success("✅ Cadastro salvo!")
                         st.balloons()
                         st.rerun()
@@ -1728,7 +1777,7 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
         else:
             st.error("CPF e Nome obrigatórios.")
 
-# ====================== REGISTRO DE ENTRADA (COM DEBOUNCE) ======================
+# ====================== REGISTRO DE ENTRADA (COM DEBOUNCE E EDIÇÃO DE HORÁRIO) ======================
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados / Instrumentadores"], horizontal=True, key="tipo_pessoa")
@@ -1747,7 +1796,6 @@ with col_btn:
             if not validar_cpf(cpf_limpo):
                 st.error("CPF inválido")
             else:
-                # NOVO: Usando busca com debounce
                 pessoa = buscar_pessoa_por_cpf_debounced(cpf_limpo)
                 if pessoa:
                     st.session_state.pessoa_confirmada = {"cpf": cpf_limpo, "nome": pessoa['nome'], "empresa": pessoa.get('empresa', '')}
@@ -1759,29 +1807,41 @@ with col_btn:
         st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
 
 setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
-if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
-    if st.session_state.get("pessoa_confirmada"):
+
+if st.session_state.get("pessoa_confirmada"):
+    with st.expander("⏱️ Opções de horário", expanded=False):
+        editar_horario = st.checkbox("✏️ Editar horário da entrada", key="editar_horario_entrada")
+        if editar_horario:
+            dt_padrao = get_current_datetime()
+            data_entrada = st.date_input("Data de entrada", value=dt_padrao.date(), key="data_entrada_edit")
+            hora_entrada = st.time_input("Horário de entrada", value=dt_padrao.time(), key="hora_entrada_edit")
+            dt_entrada = datetime.combine(data_entrada, hora_entrada)
+            data_entrada_str = format_datetime_str(dt_entrada)
+        else:
+            data_entrada_str = format_datetime_str(get_current_datetime())
+    
+    if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
         p = st.session_state.pessoa_confirmada
         try:
             supabase.table("movimentacao").insert({
                 "cpf": p['cpf'], "nome": p['nome'], "empresa": p['empresa'],
                 "setor_destino": setor_escolhido,
-                "data_entrada": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                "data_entrada": data_entrada_str,
                 "data_saida": ""
             }).execute()
-            invalidar_cache()  # NOVO: Limpar cache após modificação
-            st.success(f"Entrada registrada para {setor_escolhido}!")
+            invalidar_cache()
+            st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
             st.session_state.pessoa_confirmada = None
             st.rerun()
         except Exception as e:
             st.error(f"Erro: {e}")
-    else:
-        st.warning("Confirme o CPF primeiro.")
+else:
+    # Não mostrar opção de horário se não houver pessoa confirmada
+    pass
 
-# ====================== PESSOAS PRESENTES (COM CACHE) ======================
+# ====================== PESSOAS PRESENTES (COM CACHE E EDIÇÃO DE HORÁRIO NA SAÍDA) ======================
 st.markdown("---")
 st.markdown("### 📍 Pessoas Presentes")
-# NOVO: Usando cache para presentes
 dados = get_presentes_cached()
 
 if dados:
@@ -1799,19 +1859,31 @@ if dados:
                 else:
                     st.error("Não encontrado")
                     st.session_state.pessoa_saida = None
+    
     if st.session_state.get("pessoa_saida"):
         p = st.session_state.pessoa_saida
         st.markdown(f"**{p['nome']}** - CPF: {p['cpf']} - Setor: {p['setor_destino']}")
+        with st.expander("⏱️ Editar horário de saída", expanded=False):
+            editar_saida = st.checkbox("✏️ Personalizar horário", key="editar_saida_cpf")
+            if editar_saida:
+                dt_padrao_saida = get_current_datetime()
+                data_saida = st.date_input("Data de saída", value=dt_padrao_saida.date(), key="data_saida_cpf")
+                hora_saida = st.time_input("Horário de saída", value=dt_padrao_saida.time(), key="hora_saida_cpf")
+                dt_saida = datetime.combine(data_saida, hora_saida)
+                saida_str = format_datetime_str(dt_saida)
+            else:
+                saida_str = format_datetime_str(get_current_datetime())
         if st.button("🚪 Registrar Saída", key="sair_pesquisado"):
             try:
-                supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                invalidar_cache()  # NOVO: Limpar cache após modificação
-                st.success("Saída registrada")
+                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                invalidar_cache()
+                st.success(f"Saída registrada às {saida_str}")
                 st.session_state.pessoa_saida = None
                 st.rerun()
             except Exception as e:
                 st.error(f"Erro: {e}")
         st.markdown("---")
+    
     st.markdown("#### 📋 Lista completa")
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     with tabs[0]:
@@ -1820,13 +1892,27 @@ if dados:
             col1.write(f"**{p['nome']}**")
             col2.write(f"📍 {p['setor_destino']}")
             col3.write(f"🏢 {p.get('empresa','N/A')}")
-            if col4.button("🚪 Saída", key=f"saida_{p['id']}"):
-                try:
-                    supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                    invalidar_cache()  # NOVO: Limpar cache após modificação
-                    st.rerun()
-                except:
-                    pass
+            with col4:
+                with st.popover("🚪 Saída"):
+                    st.write(f"Registrar saída de **{p['nome']}**")
+                    with st.expander("⏱️ Horário", expanded=False):
+                        editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_{p['id']}")
+                        if editar_horario_saida:
+                            dt_padrao = get_current_datetime()
+                            data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_{p['id']}")
+                            hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_{p['id']}")
+                            dt_saida = datetime.combine(data_s, hora_s)
+                            saida_str = format_datetime_str(dt_saida)
+                        else:
+                            saida_str = format_datetime_str(get_current_datetime())
+                    if st.button("Confirmar Saída", key=f"confirm_saida_{p['id']}"):
+                        try:
+                            supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                            invalidar_cache()
+                            st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro: {e}")
             st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
     for i, setor in enumerate(["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"], 1):
         with tabs[i]:
@@ -1837,21 +1923,34 @@ if dados:
                 col1.write(f"**{p['nome']}**")
                 col2.write(f"🏢 {p.get('empresa','N/A')}")
                 col3.write(f"🕒 {p['data_entrada']}")
-                if col4.button("🚪 Saída", key=f"saida2_{p['id']}"):
-                    try:
-                        supabase.table("movimentacao").update({"data_saida": datetime.now().strftime("%d/%m/%Y %H:%M:%S")}).eq("id", p['id']).execute()
-                        invalidar_cache()  # NOVO: Limpar cache após modificação
-                        st.rerun()
-                    except:
-                        pass
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida2_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida2_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida2_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida2_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
                 st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
 else:
     st.info("Nenhuma pessoa presente no momento")
 
-# ====================== HISTÓRICO COM PAGINAÇÃO (NOVO) ======================
+# ====================== HISTÓRICO COM PAGINAÇÃO ======================
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
-    # NOVO: Controles de paginação
     col_prev, col_page, col_next = st.columns([1, 2, 1])
     
     with col_prev:
@@ -1870,7 +1969,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 st.session_state.pagina_historico += 1
                 st.rerun()
     
-    # Carregar dados da página atual
     historico = get_historico_paginado(st.session_state.pagina_historico)
     
     if historico["dados"]:
@@ -1894,7 +1992,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.markdown("---")
         st.markdown("### 🗑️ Exclusão de Registros (APENAS ADMIN)")
         
-        # NOVO: Botão para selecionar todos da página
         if st.session_state.perfil == "ADMIN":
             col_sel_all, col_sel_clear = st.columns(2)
             with col_sel_all:
@@ -1921,7 +2018,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             with col_data:
                 st.markdown(f"ID {row['id']} - {row['nome']} | CPF: {row['cpf']} | Empresa: {row.get('empresa','N/A')} | Entrada: {row['data_entrada']} | Saída: {row['data_saida'] or 'Presente'}")
         
-        # NOVO: Exclusão em lote usando batch operation
         if st.session_state.perfil == "ADMIN" and st.session_state.selected_ids:
             st.warning(f"⚠️ {len(st.session_state.selected_ids)} registro(s) selecionado(s)")
             col_excluir, col_cancelar = st.columns(2)
@@ -1940,7 +2036,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     st.session_state.selected_ids = []
                     st.rerun()
         
-        # Botões de exclusão originais mantidos
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         with col_btn1:
             if st.button("🗑️ Excluir Selecionados", key="excluir_selecionados"):
@@ -2006,7 +2101,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
     with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
-        # ====================== DUAS COLUNAS PARA AS FERRAMENTAS ======================
         col_ferramenta1, col_ferramenta2 = st.columns(2)
         
         with col_ferramenta1:
