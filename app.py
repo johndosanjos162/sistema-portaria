@@ -1058,17 +1058,27 @@ def gerar_html_impressao(df, titulo):
 def gerar_html_consolidado(df):
     if df.empty:
         return None
-    def secao(df_filtro, titulo):
+
+    def secao(df_filtro, titulo, icone=""):
         df_filtro = df_filtro.copy().fillna('')
         if df_filtro.empty:
-            return f"<div class='section'><h2>{titulo}</h2><p>Nenhum registro.</p></div>"
+            return f"<div class='section'><h2>{icone} {titulo}</h2><p>Nenhum registro.</p></div>"
         colunas = ['id','nome','cpf','empresa','setor_destino','data_entrada','data_saida']
         existentes = [c for c in colunas if c in df_filtro.columns]
         tabela = df_filtro[existentes].to_html(escape=True, index=False)
-        return f"<div class='section'><h2>{titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>"
+        return f"<div class='section'><h2>{icone} {titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>"
+
+    # Classificação por setor_destino
+    df_cc = df[df['setor_destino'].str.contains('C.C', case=False, na=False)]
+    df_gr = df[df['setor_destino'].str.contains('GRSA', case=False, na=False)]
+    df_br = df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
+    
+    # Prestadores: todos os setores que não são C.C, GRSA nem Brasanitas
+    outros_setores = df[~df['setor_destino'].str.contains('C.C|GRSA|Brasanitas', case=False, na=False)]
+    
     html = f"""
     <!DOCTYPE html>
-    <html><head><meta charset="UTF-8"><title>RELATÓRIO CONSOLIDADO</title>
+    <html><head><meta charset="UTF-8"><title>RELATÓRIO CONSOLIDADO POR SETOR</title>
     <style>
         body{{font-family:'Segoe UI',Arial,sans-serif;margin:2cm;}}
         h1{{text-align:center;color:#0a2b3e;}}
@@ -1082,22 +1092,15 @@ def gerar_html_consolidado(df):
         @media print{{body{{margin:1cm;}}.no-print{{display:none;}}}}
     </style></head>
     <body>
-        <h1>JOHN ACESSOS - RELATÓRIO CONSOLIDADO</h1>
+        <h1>JOHN ACESSOS - RELATÓRIO CONSOLIDADO POR SETOR</h1>
         <div class="sub">Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
     """
-    html += secao(df[df['setor_destino'].str.contains('GRSA', case=False, na=False)], "🔧 GRSA")
-    html += secao(df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)], "🏭 Brasanitas")
-    html += secao(df[df['setor_destino'].str.contains('C.C', case=False, na=False)], "🏥 C.C")
-    empresas_excluir = ["BRASANITAS", "GRSA", "C.C"]
-    todas_empresas = df['empresa'].dropna().unique()
-    prestadores = [e for e in todas_empresas if e.upper() not in [x.upper() for x in empresas_excluir]]
-    if prestadores:
-        html += secao(df[df['empresa'].isin(prestadores)], "🏢 Prestadores de Serviços")
-    else:
-        html += "<div class='section'><h2>🏢 Prestadores de Serviços</h2><p>Nenhum registro.</p></div>"
+    html += secao(df_cc, "C.C", "🏥")
+    html += secao(df_gr, "GRSA", "🔧")
+    html += secao(df_br, "Brasanitas", "🏭")
+    html += secao(outros_setores, "Prestadores de Serviços", "🏢")
     html += '<div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div></body></html>'
     return html
-
 # ====================== FUNÇÕES DE VALIDAÇÃO CPF ======================
 def validar_cpf(cpf):
     cpf_limpo = re.sub(r'\D', '', cpf)
