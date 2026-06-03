@@ -107,7 +107,7 @@ def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
     offset = (pagina - 1) * itens_por_pagina
     
     try:
-        total = supabase.table("movimentacao").select("id", count="exact").execute()
+        total = supabase.table("movimentacao").select("id", count="estimated").execute()
         total_registros = total.count if hasattr(total, 'count') else 0
         
         dados = supabase.table("movimentacao")\
