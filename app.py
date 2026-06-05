@@ -16,31 +16,105 @@ CACHE_TTL_PADRAO = 30
 ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
 
-# ====================== CLASSES DE CACHE ======================
-class TimedCache:
-    def __init__(self, ttl_seconds=CACHE_TTL_PADRAO):
-        self.ttl_seconds = ttl_seconds
-        self.cache_data = {}
-        self.cache_times = {}
-        self.hits = 0
-        self.misses = 0
-    def get(self, key):
-        now = time.time()
-        if key in self.cache_data and (now - self.cache_times.get(key, 0)) < self.ttl_seconds:
-            self.hits += 1
-            return self.cache_data[key]
-        self.misses += 1
-        return None
-    def set(self, key, value):
-        self.cache_data[key] = value
-        self.cache_times[key] = time.time()
-    def clear(self):
-        self.cache_data.clear()
-        self.cache_times.clear()
-    def get_hit_ratio(self):
-        total = self.hits + self.misses
-        return (self.hits / total * 100) if total > 0 else 0
+# ====================== FUNÇÕES DO SUPABASE ======================
+try:
+    url = st.secrets["SUPABASE_URL"]
+    anon_key = st.secrets["SUPABASE_KEY"]
+    service_key = st.secrets["SUPABASE_SERVICE_KEY"]
+    supabase = create_client(url, anon_key)
+    supabase_admin = create_client(url, service_key)
+    supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
+except Exception as e:
+    st.error(f"❌ Erro de conexão com Supabase: {e}")
+    st.stop()
 
+# ====================== SUPABASE REALTIME (ATUALIZAÇÃO AUTOMÁTICA) ======================
+if "realtime_channel" not in st.session_state:
+    def handle_realtime_change(payload):
+        """Callback chamada quando há INSERT ou UPDATE na movimentacao"""
+        st.cache_data.clear()
+        st.rerun()
+    
+    channel = supabase.channel("movimentacao_changes")
+    channel.on("postgres_changes", schema="public", table="movimentacao", 
+               event="INSERT", callback=handle_realtime_change)
+    channel.on("postgres_changes", schema="public", table="movimentacao", 
+               event="UPDATE", callback=handle_realtime_change)
+    channel.subscribe()
+    st.session_state.realtime_channel = channel
+
+ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
+VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
+
+# ====================== CACHE OTIMIZADO (st.cache_data) ======================
+@st.cache_data(ttl=30, show_spinner=False)
+def get_estatisticas_cached():
+    """Versão cacheada usando materialized view (se existir) ou view comum"""
+    try:
+        # Tenta usar a materialized view (mais rápida)
+        result = supabase.table("estatisticas_dashboard_mv").select("*").execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+    except Exception:
+        pass
+    # Fallback para a view original
+    try:
+        result = supabase.table("estatisticas_dashboard").select("*").execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0]
+    except Exception:
+        pass
+    return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
+
+@st.cache_data(ttl=60, show_spinner=False)
+def get_presentes_cached():
+    """Lista de pessoas presentes com apenas colunas necessárias"""
+    try:
+        dados = supabase.table("movimentacao")\
+            .select("id, cpf, nome, empresa, setor_destino, data_entrada")\
+            .eq("data_saida", "")\
+            .execute()
+        return dados.data
+    except Exception:
+        return []
+
+@st.cache_data(ttl=300, show_spinner=False)
+def get_pessoa_por_cpf(cpf):
+    """Busca pessoa pelo CPF com cache longo"""
+    try:
+        pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf).execute()
+        return pessoa.data[0] if pessoa.data else None
+    except Exception:
+        return None
+
+def invalidar_cache():
+    """Limpa todo o cache do Streamlit"""
+    st.cache_data.clear()
+
+def refresh_estatisticas_view():
+    """Atualiza a materialized view e limpa cache"""
+    try:
+        supabase_admin.rpc('refresh_estatisticas_dashboard_mv').execute()
+    except Exception:
+        try:
+            supabase_admin.sql("REFRESH MATERIALIZED VIEW estatisticas_dashboard_mv").execute()
+        except Exception:
+            pass
+    invalidar_cache()
+    return True
+
+def registrar_tempo_query(tempo_ms):
+    if "tempos_query" not in st.session_state:
+        st.session_state.tempos_query = []
+    st.session_state.tempos_query.append(tempo_ms)
+    if len(st.session_state.tempos_query) > 100:
+        st.session_state.tempos_query = st.session_state.tempos_query[-100:]
+
+def get_tempo_medio_query():
+    tempos = st.session_state.get("tempos_query", [])
+    return sum(tempos) / len(tempos) if tempos else 0
+
+# ====================== FUNÇÕES AUXILIARES (MANTIDAS ORIGINAIS) ======================
 def debounce(wait_time=DEBOUNCE_WAIT_MS):
     def decorator(func):
         last_call = 0
@@ -56,44 +130,11 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
         return wrapper
     return decorator
 
-# Instâncias de cache (serão preenchidas após conexão)
-cache_estatisticas = TimedCache(ttl_seconds=30)
-cache_pessoas = TimedCache(ttl_seconds=60)
-cache_presentes = TimedCache(ttl_seconds=10)
+@debounce(wait_time=DEBOUNCE_WAIT_MS)
+def buscar_pessoa_por_cpf_debounced(cpf):
+    """Usa o cache interno para evitar consultas repetidas"""
+    return get_pessoa_por_cpf(cpf)
 
-# ====================== FUNÇÕES AUXILIARES ======================
-def invalidar_cache():
-    cache_estatisticas.clear()
-    cache_pessoas.clear()
-    cache_presentes.clear()
-
-def registrar_tempo_query(tempo_ms):
-    if "tempos_query" not in st.session_state:
-        st.session_state.tempos_query = []
-    st.session_state.tempos_query.append(tempo_ms)
-    if len(st.session_state.tempos_query) > 100:
-        st.session_state.tempos_query = st.session_state.tempos_query[-100:]
-
-def get_tempo_medio_query():
-    tempos = st.session_state.get("tempos_query", [])
-    return sum(tempos) / len(tempos) if tempos else 0
-
-# ====================== FUNÇÕES DO SUPABASE (DEVEM VIR ANTES DO USO) ======================
-try:
-    url = st.secrets["SUPABASE_URL"]
-    anon_key = st.secrets["SUPABASE_KEY"]
-    service_key = st.secrets["SUPABASE_SERVICE_KEY"]
-    supabase = create_client(url, anon_key)
-    supabase_admin = create_client(url, service_key)
-    supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
-except Exception as e:
-    st.error(f"❌ Erro de conexão com Supabase: {e}")
-    st.stop()
-
-ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
-VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
-
-# ====================== FUNÇÕES DE PERFORMANCE ======================
 def excluir_multiplos_registros(ids, tabela="movimentacao"):
     if not ids:
         return {"sucesso": False, "mensagem": "Nenhum ID para excluir"}
@@ -125,54 +166,6 @@ def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
     except Exception as e:
         return {"dados": [], "total": 0, "pagina": 1, "total_paginas": 1}
 
-@debounce(wait_time=DEBOUNCE_WAIT_MS)
-def buscar_pessoa_por_cpf_debounced(cpf):
-    try:
-        pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf).execute()
-        return pessoa.data[0] if pessoa.data else None
-    except:
-        return None
-
-def get_estatisticas_cached():
-    cache_key = "estatisticas"
-    cached = cache_estatisticas.get(cache_key)
-    if cached:
-        return cached
-    inicio = time.time()
-    try:
-        result = supabase.table("estatisticas_dashboard").select("*").execute()
-        if result.data and len(result.data) > 0:
-            stats = result.data[0]
-        else:
-            stats = {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
-        registrar_tempo_query((time.time() - inicio) * 1000)
-        cache_estatisticas.set(cache_key, stats)
-        return stats
-    except Exception as e:
-        return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
-
-def refresh_estatisticas_view():
-    try:
-        supabase_admin.rpc('refresh_estatisticas_dashboard').execute()
-        invalidar_cache()
-        return True
-    except Exception as e:
-        st.error(f"Erro ao atualizar estatísticas: {e}")
-        return False
-
-def get_presentes_cached():
-    cache_key = "presentes"
-    cached = cache_presentes.get(cache_key)
-    if cached:
-        return cached
-    try:
-        dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
-        cache_presentes.set(cache_key, dados.data)
-        return dados.data
-    except:
-        return []
-
-# ====================== FUNÇÕES DE TIMEZONE ======================
 def get_timezone_offset():
     try:
         result = supabase.table("app_config").select("value").eq("key", "timezone_offset").execute()
@@ -203,7 +196,6 @@ def get_current_datetime():
 def format_datetime_str(dt):
     return dt.strftime("%d/%m/%Y %H:%M:%S")
 
-# ====================== FUNÇÕES DE AVATAR E TEMA ======================
 def compress_avatar_image(uploaded_file, max_size_kb=200):
     img = Image.open(uploaded_file)
     if img.mode in ('RGBA', 'LA', 'P'):
@@ -317,13 +309,11 @@ def apply_theme_css():
     elif bg_type == "solid":
         bg_value = config.get("value", "#0a0a1a")
         st.markdown(f'<style>.stApp {{ background: {bg_value} !important; }}</style>', unsafe_allow_html=True)
-    # Demais opções (url, video, futuristic) podem ser incluídas mas manteremos o essencial
     elif bg_type == "futuristic":
         futuristic_background_script()
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
 
-# ====================== FUNÇÕES DE SESSÃO ======================
 MAX_TENTATIVAS_LOGIN = 5
 SESSION_TIMEOUT_MINUTOS = 5
 
@@ -404,7 +394,6 @@ def require_any_login():
         st.error("❌ Você precisa estar logado.")
         st.stop()
 
-# ====================== FUNÇÕES DE RELATÓRIOS PDF ======================
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
@@ -446,17 +435,12 @@ def gerar_html_consolidado(df):
         tabela = df_filtro[existentes].to_html(escape=True, index=False)
         return f"<div class='section'><h2>{icone} {titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>"
 
-    # FILTROS CORRIGIDOS:
-    # 1. C.C comum (exclui qualquer setor que contenha "PRESTADOR")
     df_cc = df[
         df['setor_destino'].str.contains('C.C', case=False, na=False) &
         ~df['setor_destino'].str.contains('PRESTADOR', case=False, na=False)
     ]
-    # 2. GRSA (mantém igual)
     df_gr = df[df['setor_destino'].str.contains('GRSA', case=False, na=False)]
-    # 3. Brasanitas (mantém igual)
     df_br = df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
-    # 4. Prestadores: todos os demais, inclusive "C.C PRESTADOR DE SERVIÇOS"
     outros = df[
         ~df['setor_destino'].str.contains('C.C|GRSA|Brasanitas', case=False, na=False) |
         df['setor_destino'].str.contains('PRESTADOR', case=False, na=False)
@@ -488,7 +472,6 @@ def gerar_html_consolidado(df):
     html += '<div class="no-print" style="text-align:center;margin-top:30px;"><button onclick="window.print();">🖨️ Imprimir / PDF</button></div></body></html>'
     return html
 
-# ====================== FUNÇÕES DE CPF E UTILITÁRIOS ======================
 def validar_cpf(cpf):
     cpf_limpo = re.sub(r'\D', '', cpf)
     return cpf_limpo.isdigit() and len(cpf_limpo) == 11
@@ -598,7 +581,6 @@ if "pessoa_saida" not in st.session_state:
 if "pagina_historico" not in st.session_state:
     st.session_state.pagina_historico = 1
 
-# Carregar configurações iniciais
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
@@ -1089,9 +1071,6 @@ if st.session_state.perfil == "ADMIN":
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
-        # Mantenha as opções de tema originais (resumidas aqui para brevidade)
-        st.markdown("Configuração de tema disponível no código original.")
-        # Para não estender demais, mantemos apenas um seletor simples
         tipo = st.selectbox("Tipo de fundo", ["Gradiente padrão", "Cor sólida", "Futurista Dinâmico (Canvas)"])
         if tipo == "Cor sólida":
             cor = st.color_picker("Escolha a cor", value="#0a0a1a")
@@ -1144,11 +1123,10 @@ with st.expander("📊 Métricas de Performance", expanded=False):
         tempo_medio = get_tempo_medio_query()
         st.metric("⏱️ Tempo médio de query", f"{tempo_medio:.0f}ms" if tempo_medio > 0 else "Calculando...")
     with col_m2:
-        hit_ratio = cache_estatisticas.get_hit_ratio()
-        st.metric("🎯 Cache hit ratio", f"{hit_ratio:.0f}%")
+        # O cache hit ratio não se aplica mais ao st.cache_data, mas mantemos a métrica como 0
+        st.metric("🎯 Cache hit ratio", "N/A (st.cache_data)")
     with col_m3:
-        total_cached = len(cache_estatisticas.cache_data) + len(cache_pessoas.cache_data) + len(cache_presentes.cache_data)
-        st.metric("💾 Registros em cache", total_cached)
+        st.metric("💾 Cache ativo", "st.cache_data (automático)")
     st.caption(f"⚙️ Configurações: Cache TTL: {CACHE_TTL_PADRAO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
     if st.button("🔄 Atualizar Estatísticas (View)", key="refresh_stats_view", use_container_width=True):
         with st.spinner("Atualizando..."):
