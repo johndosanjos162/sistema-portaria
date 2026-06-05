@@ -1025,11 +1025,7 @@ with col2:   # botão ATUALIZAR
     if st.button("🔄 ATUALIZAR", key="btn_atualizar", use_container_width=True):
         invalidar_cache()
         st.rerun()
-with col3:   # botão LIMPAR CACHE (nova funcionalidade)
-    if st.button("🧹 LIMPAR CACHE", key="btn_limpar_cache", use_container_width=True):
-        invalidar_cache()
-        st.success("✅ Cache limpo manualmente!")
-        st.rerun()
+        
 with col4:   # botão SAIR
     if st.button("🚪 SAIR", key="sair_final", use_container_width=True):
         remover_sessao()
