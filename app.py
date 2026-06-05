@@ -28,20 +28,19 @@ except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
     st.stop()
 
-# ====================== SUPABASE REALTIME (ATUALIZAÇÃO AUTOMÁTICA) ======================
-if "realtime_channel" not in st.session_state:
-    def handle_realtime_change(payload):
-        """Callback chamada quando há INSERT ou UPDATE na movimentacao"""
+# ====================== ATUALIZAÇÃO AUTOMÁTICA (POLLING) ======================
+# Substitui o Realtime que causava NotImplementedError
+if "ultima_atualizacao" not in st.session_state:
+    st.session_state.ultima_atualizacao = time.time()
+
+def verificar_atualizacao_automatica():
+    """Verifica a cada X segundos se deve atualizar o cache"""
+    agora = time.time()
+    intervalo = 5  # segundos (pode ajustar para 10, 15 conforme necessidade)
+    if agora - st.session_state.ultima_atualizacao > intervalo:
+        st.session_state.ultima_atualizacao = agora
         st.cache_data.clear()
         st.rerun()
-    
-    channel = supabase.channel("movimentacao_changes")
-    channel.on("postgres_changes", schema="public", table="movimentacao", 
-               event="INSERT", callback=handle_realtime_change)
-    channel.on("postgres_changes", schema="public", table="movimentacao", 
-               event="UPDATE", callback=handle_realtime_change)
-    channel.subscribe()
-    st.session_state.realtime_channel = channel
 
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
 VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
@@ -587,7 +586,7 @@ st.session_state.avatar_url = get_avatar_url()
 # ====================== CONFIGURAÇÃO DA PÁGINA ======================
 st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
 
-# ====================== CSS FUTURISTA (MANTIDO ORIGINAL) ======================
+# ====================== CSS FUTURISTA ======================
 st.markdown("""
 <style>
     /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
@@ -973,6 +972,9 @@ if not st.session_state.logado:
     st.stop()
 
 # ====================== APÓS LOGIN ======================
+# Chamada da atualização automática
+verificar_atualizacao_automatica()
+
 apply_theme_css()
 
 if st.session_state.session_id:
@@ -1123,7 +1125,6 @@ with st.expander("📊 Métricas de Performance", expanded=False):
         tempo_medio = get_tempo_medio_query()
         st.metric("⏱️ Tempo médio de query", f"{tempo_medio:.0f}ms" if tempo_medio > 0 else "Calculando...")
     with col_m2:
-        # O cache hit ratio não se aplica mais ao st.cache_data, mas mantemos a métrica como 0
         st.metric("🎯 Cache hit ratio", "N/A (st.cache_data)")
     with col_m3:
         st.metric("💾 Cache ativo", "st.cache_data (automático)")
