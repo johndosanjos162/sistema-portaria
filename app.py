@@ -78,7 +78,7 @@ def get_tempo_medio_query():
     tempos = st.session_state.get("tempos_query", [])
     return sum(tempos) / len(tempos) if tempos else 0
 
-# ====================== FUNÇÕES DO SUPABASE (DEVEM VIR ANTES DO USO) ======================
+# ====================== FUNÇÕES DO SUPABASE ======================
 try:
     url = st.secrets["SUPABASE_URL"]
     anon_key = st.secrets["SUPABASE_KEY"]
@@ -317,7 +317,6 @@ def apply_theme_css():
     elif bg_type == "solid":
         bg_value = config.get("value", "#0a0a1a")
         st.markdown(f'<style>.stApp {{ background: {bg_value} !important; }}</style>', unsafe_allow_html=True)
-    # Demais opções (url, video, futuristic) podem ser incluídas mas manteremos o essencial
     elif bg_type == "futuristic":
         futuristic_background_script()
     else:
@@ -446,20 +445,33 @@ def gerar_html_consolidado(df):
         tabela = df_filtro[existentes].to_html(escape=True, index=False)
         return f"<div class='section'><h2>{icone} {titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>"
 
-    # FILTROS CORRIGIDOS:
-    # 1. C.C comum (exclui qualquer setor que contenha "PRESTADOR")
+    # Máscaras para prestadores específicos
+    prest_gr = df['setor_destino'].str.contains('PREST_GRSA', case=False, na=False)
+    prest_br = df['setor_destino'].str.contains('PREST_BRASANITAS', case=False, na=False)
+    prest_geral = df['setor_destino'].str.contains('PRESTADOR', case=False, na=False)
+
+    # 1. C.C comum (exclui prestadores)
     df_cc = df[
         df['setor_destino'].str.contains('C.C', case=False, na=False) &
-        ~df['setor_destino'].str.contains('PRESTADOR', case=False, na=False)
+        ~prest_geral
     ]
-    # 2. GRSA (mantém igual)
-    df_gr = df[df['setor_destino'].str.contains('GRSA', case=False, na=False)]
-    # 3. Brasanitas (mantém igual)
-    df_br = df[df['setor_destino'].str.contains('Brasanitas', case=False, na=False)]
-    # 4. Prestadores: todos os demais, inclusive "C.C PRESTADOR DE SERVIÇOS"
+
+    # 2. GRSA – exclui PREST_GRSA
+    df_gr = df[
+        df['setor_destino'].str.contains('GRSA', case=False, na=False) &
+        ~prest_gr
+    ]
+
+    # 3. Brasanitas – exclui PREST_BRASANITAS
+    df_br = df[
+        df['setor_destino'].str.contains('Brasanitas', case=False, na=False) &
+        ~prest_br
+    ]
+
+    # 4. Prestadores de Serviços: inclui PREST_GRSA, PREST_BRASANITAS, PRESTADOR DE SERVIÇOS e todos os demais
     outros = df[
         ~df['setor_destino'].str.contains('C.C|GRSA|Brasanitas', case=False, na=False) |
-        df['setor_destino'].str.contains('PRESTADOR', case=False, na=False)
+        prest_geral | prest_gr | prest_br
     ]
 
     html = f"""
@@ -605,7 +617,7 @@ st.session_state.avatar_url = get_avatar_url()
 # ====================== CONFIGURAÇÃO DA PÁGINA ======================
 st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
 
-# ====================== CSS FUTURISTA (MANTIDO ORIGINAL) ======================
+# ====================== CSS FUTURISTA ======================
 st.markdown("""
 <style>
     /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
@@ -1089,9 +1101,6 @@ if st.session_state.perfil == "ADMIN":
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
-        # Mantenha as opções de tema originais (resumidas aqui para brevidade)
-        st.markdown("Configuração de tema disponível no código original.")
-        # Para não estender demais, mantemos apenas um seletor simples
         tipo = st.selectbox("Tipo de fundo", ["Gradiente padrão", "Cor sólida", "Futurista Dinâmico (Canvas)"])
         if tipo == "Cor sólida":
             cor = st.color_picker("Escolha a cor", value="#0a0a1a")
