@@ -56,8 +56,8 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
         return wrapper
     return decorator
 
-# Instâncias de cache (serão preenchidas após conexão)
-cache_estatisticas = TimedCache(ttl_seconds=30)
+# Instâncias de cache
+cache_estatisticas = TimedCache(ttl_seconds=10)  # TTL reduzido para 10s
 cache_pessoas = TimedCache(ttl_seconds=60)
 cache_presentes = TimedCache(ttl_seconds=10)
 
@@ -134,31 +134,36 @@ def buscar_pessoa_por_cpf_debounced(cpf):
         return None
 
 def get_estatisticas_cached():
+    """Retorna estatísticas em tempo real (presentes, cadastrados, setores)"""
     cache_key = "estatisticas"
     cached = cache_estatisticas.get(cache_key)
     if cached:
         return cached
     inicio = time.time()
     try:
-        result = supabase.table("estatisticas_dashboard").select("*").execute()
-        if result.data and len(result.data) > 0:
-            stats = result.data[0]
-        else:
-            stats = {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
+        # Total de pessoas presentes (data_saida vazia)
+        total_presentes = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute().count
+        # Total de pessoas cadastradas
+        total_cadastrados = supabase.table("Pessoas").select("id", count="exact").execute().count
+        # Setores únicos (distintos) na movimentação
+        result_setores = supabase.table("movimentacao").select("setor_destino").execute()
+        setores_unicos = len(set(r['setor_destino'] for r in result_setores.data if r.get('setor_destino'))) if result_setores.data else 11
+        stats = {
+            "total_presentes": total_presentes or 0,
+            "total_cadastrados": total_cadastrados or 0,
+            "setores_unicos": setores_unicos
+        }
         registrar_tempo_query((time.time() - inicio) * 1000)
         cache_estatisticas.set(cache_key, stats)
         return stats
     except Exception as e:
+        # Fallback em caso de erro
         return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
 
 def refresh_estatisticas_view():
-    try:
-        supabase_admin.rpc('refresh_estatisticas_dashboard').execute()
-        invalidar_cache()
-        return True
-    except Exception as e:
-        st.error(f"Erro ao atualizar estatísticas: {e}")
-        return False
+    """Compatibilidade com versões anteriores - apenas invalida cache"""
+    invalidar_cache()
+    return True
 
 def get_presentes_cached():
     cache_key = "presentes"
@@ -1213,7 +1218,7 @@ with col4:
     </div>
     """, unsafe_allow_html=True)
 
-# ====================== CADASTRO DE PESSOAS ======================
+# ====================== CADASTRO DE NOVA PESSOA ======================
 st.markdown("---")
 st.markdown("### ✚ Cadastro de Nova Pessoa")
 with st.expander("📋 Formulário de Cadastro", expanded=True):
