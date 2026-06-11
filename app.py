@@ -10,6 +10,8 @@ import json
 import io
 import time
 from functools import wraps
+import plotly.express as px
+import plotly.graph_objects as go
 
 # ====================== CONFIGURAÇÕES ======================
 CACHE_TTL_PADRAO = 30
@@ -60,12 +62,14 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
 cache_estatisticas = TimedCache(ttl_seconds=10)  # TTL reduzido para 10s
 cache_pessoas = TimedCache(ttl_seconds=60)
 cache_presentes = TimedCache(ttl_seconds=10)
+cache_fluxo_acesso = TimedCache(ttl_seconds=30)
 
 # ====================== FUNÇÕES AUXILIARES ======================
 def invalidar_cache():
     cache_estatisticas.clear()
     cache_pessoas.clear()
     cache_presentes.clear()
+    cache_fluxo_acesso.clear()
 
 def registrar_tempo_query(tempo_ms):
     if "tempos_query" not in st.session_state:
@@ -92,6 +96,80 @@ except Exception as e:
 
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
 VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
+
+# ====================== FUNÇÃO DE FLUXO DE ACESSO ======================
+def get_fluxo_acesso_por_hora():
+    """Retorna os dados de fluxo de acesso agrupados por hora do dia"""
+    cache_key = "fluxo_acesso_hora"
+    cached = cache_fluxo_acesso.get(cache_key)
+    if cached:
+        return cached
+    
+    try:
+        # Busca todos os registros de movimentação com data de entrada
+        dados = supabase.table("movimentacao").select("data_entrada").execute()
+        
+        if not dados.data:
+            return pd.DataFrame()
+        
+        horas = []
+        for registro in dados.data:
+            data_entrada = registro.get('data_entrada', '')
+            if data_entrada:
+                try:
+                    # Extrai a hora do formato "dd/mm/aaaa HH:MM:SS"
+                    hora_str = data_entrada.split()[1] if ' ' in data_entrada else ''
+                    if hora_str:
+                        hora = int(hora_str.split(':')[0])
+                        horas.append(hora)
+                except:
+                    continue
+        
+        if not horas:
+            return pd.DataFrame()
+        
+        # Conta frequência por hora
+        df_horas = pd.DataFrame(horas, columns=['hora'])
+        fluxo = df_horas.groupby('hora').size().reset_index(name='total_acessos')
+        
+        # Mapeia os turnos
+        def mapear_turno(hora):
+            if 0 <= hora < 6:
+                return "🌙 Madrugada (00h-06h)"
+            elif 6 <= hora < 12:
+                return "🌅 Manhã (06h-12h)"
+            elif 12 <= hora < 18:
+                return "☀️ Tarde (12h-18h)"
+            else:
+                return "🌙 Noite (18h-00h)"
+        
+        fluxo['turno'] = fluxo['hora'].apply(mapear_turno)
+        
+        # Ordena por hora
+        fluxo = fluxo.sort_values('hora')
+        
+        cache_fluxo_acesso.set(cache_key, fluxo)
+        return fluxo
+    
+    except Exception as e:
+        print(f"Erro ao obter fluxo de acesso: {e}")
+        return pd.DataFrame()
+
+def get_total_acessos_hoje():
+    """Retorna o total de acessos registrados hoje"""
+    try:
+        hoje = get_current_datetime().strftime("%d/%m/%Y")
+        dados = supabase.table("movimentacao").select("data_entrada").execute()
+        
+        total_hoje = 0
+        for registro in dados.data:
+            data_entrada = registro.get('data_entrada', '')
+            if data_entrada and data_entrada.startswith(hoje):
+                total_hoje += 1
+        
+        return total_hoje
+    except:
+        return 0
 
 # ====================== FUNÇÕES DE PERFORMANCE ======================
 def excluir_multiplos_registros(ids, tabela="movimentacao"):
@@ -955,6 +1033,20 @@ st.markdown("""
         70% { box-shadow: 0 0 0 10px rgba(0,255,0,0); }
         100% { box-shadow: 0 0 0 0 rgba(0,255,0,0); }
     }
+    /* Estilos para o gráfico de pizza */
+    .chart-container {
+        background: rgba(10, 15, 30, 0.3);
+        border-radius: 20px;
+        padding: 15px;
+        border: 1px solid rgba(0, 255, 255, 0.2);
+    }
+    .chart-title {
+        font-size: 14px;
+        color: #0ff;
+        text-align: center;
+        margin-bottom: 10px;
+        font-family: 'Space Mono', monospace;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1208,15 +1300,112 @@ with col3:
     </div>
     """, unsafe_allow_html=True)
 
+# NOVO: Card 4 - Gráfico de Pizza de Fluxo de Acesso
 with col4:
-    st.markdown("""
-    <div class="dashboard-card">
-        <div class="card-header"><div class="card-icon">🛡️</div><div class="status-indicator">24/7</div></div>
-        <div class="card-title">SEGURANÇA</div>
-        <div class="card-value">ATIVA</div>
-        <div class="card-footer">🔒 PROTEÇÃO</div>
-    </div>
-    """, unsafe_allow_html=True)
+    with st.spinner("Carregando análise de fluxo..."):
+        fluxo_df = get_fluxo_acesso_por_hora()
+        total_hoje = get_total_acessos_hoje()
+        
+        if not fluxo_df.empty:
+            # Prepara os dados para o gráfico de pizza por turno
+            turno_data = fluxo_df.groupby('turno')['total_acessos'].sum().reset_index()
+            
+            # Cores personalizadas para o gráfico
+            cores = {
+                '🌅 Manhã (06h-12h)': '#00ffcc',
+                '☀️ Tarde (12h-18h)': '#ff6b6b',
+                '🌙 Noite (18h-00h)': '#7c3aed',
+                '🌙 Madrugada (00h-06h)': '#f59e0b'
+            }
+            
+            # Cria o gráfico de pizza interativo com Plotly
+            fig = go.Figure(data=[go.Pie(
+                labels=turno_data['turno'],
+                values=turno_data['total_acessos'],
+                hole=0.4,
+                marker=dict(
+                    colors=[cores.get(t, '#a855f7') for t in turno_data['turno']],
+                    line=dict(color='rgba(0,0,0,0.5)', width=2)
+                ),
+                textinfo='percent+label',
+                textposition='auto',
+                hoverinfo='label+percent+value',
+                hovertemplate='<b>%{label}</b><br>📊 Acessos: %{value}<br>📈 Percentual: %{percent}<extra></extra>',
+                textfont=dict(size=12, color='white'),
+                pull=[0.02, 0.02, 0.02, 0.02]
+            )])
+            
+            fig.update_layout(
+                title=dict(
+                    text=f"📊 FLUXO DE ACESSO POR TURNO<br><span style='font-size:12px;'>Total hoje: {total_hoje} acessos</span>",
+                    font=dict(color='#0ff', size=14, family='Space Mono'),
+                    x=0.5,
+                    xanchor='center'
+                ),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='white'),
+                height=280,
+                margin=dict(t=50, b=20, l=20, r=20),
+                showlegend=False,
+                annotations=[
+                    dict(
+                        text=f"🏥<br>{total_hoje}",
+                        x=0.5,
+                        y=0.5,
+                        font=dict(size=18, color='#0ff', family='Space Mono'),
+                        showarrow=False
+                    )
+                ]
+            )
+            
+            # Adiciona efeito de glow no gráfico
+            fig.update_traces(
+                textposition='inside',
+                textfont_size=11,
+                hoverlabel=dict(bgcolor="rgba(0,0,0,0.8)", font_size=12, font_family="Space Mono"),
+                rotation=90,
+                sort=False
+            )
+            
+            # Exibe o gráfico dentro do card
+            st.markdown("""
+            <div class="dashboard-card" style="padding: 0.5rem;">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div class="status-indicator">FLUXO</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+            
+            st.markdown("""
+                <div class="card-footer" style="justify-content: center;">
+                    📊 Análise de fluxo - Horários de pico
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Adiciona informações adicionais abaixo do gráfico
+            if not fluxo_df.empty:
+                hora_pico = fluxo_df.loc[fluxo_df['total_acessos'].idxmax()]
+                col_info1, col_info2 = st.columns(2)
+                with col_info1:
+                    st.caption(f"⏰ Hora de pico: **{int(hora_pico['hora'])}h** ({hora_pico['total_acessos']} acessos)")
+                with col_info2:
+                    st.caption(f"📈 Média por hora: **{fluxo_df['total_acessos'].mean():.0f}** acessos")
+        else:
+            st.markdown("""
+            <div class="dashboard-card">
+                <div class="card-header"><div class="card-icon">📊</div><div class="status-indicator">FLUXO</div></div>
+                <div class="card-title">ANÁLISE DE FLUXO</div>
+                <div style="text-align: center; padding: 20px;">
+                    <span style="font-size: 24px;">📭</span>
+                    <div style="color: #aaa;">Nenhum dado de acesso registrado</div>
+                </div>
+                <div class="card-footer">⏳ AGUARDANDO DADOS</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 # ====================== CADASTRO DE NOVA PESSOA ======================
 st.markdown("---")
