@@ -59,7 +59,7 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
     return decorator
 
 # Instâncias de cache
-cache_estatisticas = TimedCache(ttl_seconds=10)  # TTL reduzido para 10s
+cache_estatisticas = TimedCache(ttl_seconds=10)
 cache_pessoas = TimedCache(ttl_seconds=60)
 cache_presentes = TimedCache(ttl_seconds=10)
 cache_fluxo_acesso = TimedCache(ttl_seconds=30)
@@ -106,9 +106,7 @@ def get_fluxo_acesso_por_hora():
         return cached
     
     try:
-        # Busca todos os registros de movimentação com data de entrada
         dados = supabase.table("movimentacao").select("data_entrada").execute()
-        
         if not dados.data:
             return pd.DataFrame()
         
@@ -117,7 +115,6 @@ def get_fluxo_acesso_por_hora():
             data_entrada = registro.get('data_entrada', '')
             if data_entrada:
                 try:
-                    # Extrai a hora do formato "dd/mm/aaaa HH:MM:SS"
                     hora_str = data_entrada.split()[1] if ' ' in data_entrada else ''
                     if hora_str:
                         hora = int(hora_str.split(':')[0])
@@ -128,11 +125,9 @@ def get_fluxo_acesso_por_hora():
         if not horas:
             return pd.DataFrame()
         
-        # Conta frequência por hora
         df_horas = pd.DataFrame(horas, columns=['hora'])
         fluxo = df_horas.groupby('hora').size().reset_index(name='total_acessos')
         
-        # Mapeia os turnos
         def mapear_turno(hora):
             if 0 <= hora < 6:
                 return "🌙 Madrugada (00h-06h)"
@@ -144,29 +139,22 @@ def get_fluxo_acesso_por_hora():
                 return "🌙 Noite (18h-00h)"
         
         fluxo['turno'] = fluxo['hora'].apply(mapear_turno)
-        
-        # Ordena por hora
         fluxo = fluxo.sort_values('hora')
-        
         cache_fluxo_acesso.set(cache_key, fluxo)
         return fluxo
-    
     except Exception as e:
         print(f"Erro ao obter fluxo de acesso: {e}")
         return pd.DataFrame()
 
 def get_total_acessos_hoje():
-    """Retorna o total de acessos registrados hoje"""
     try:
         hoje = get_current_datetime().strftime("%d/%m/%Y")
         dados = supabase.table("movimentacao").select("data_entrada").execute()
-        
         total_hoje = 0
         for registro in dados.data:
             data_entrada = registro.get('data_entrada', '')
             if data_entrada and data_entrada.startswith(hoje):
                 total_hoje += 1
-        
         return total_hoje
     except:
         return 0
@@ -212,18 +200,14 @@ def buscar_pessoa_por_cpf_debounced(cpf):
         return None
 
 def get_estatisticas_cached():
-    """Retorna estatísticas em tempo real (presentes, cadastrados, setores)"""
     cache_key = "estatisticas"
     cached = cache_estatisticas.get(cache_key)
     if cached:
         return cached
     inicio = time.time()
     try:
-        # Total de pessoas presentes (data_saida vazia)
         total_presentes = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute().count
-        # Total de pessoas cadastradas
         total_cadastrados = supabase.table("Pessoas").select("id", count="exact").execute().count
-        # Setores únicos (distintos) na movimentação
         result_setores = supabase.table("movimentacao").select("setor_destino").execute()
         setores_unicos = len(set(r['setor_destino'] for r in result_setores.data if r.get('setor_destino'))) if result_setores.data else 11
         stats = {
@@ -235,11 +219,9 @@ def get_estatisticas_cached():
         cache_estatisticas.set(cache_key, stats)
         return stats
     except Exception as e:
-        # Fallback em caso de erro
         return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
 
 def refresh_estatisticas_view():
-    """Compatibilidade com versões anteriores - apenas invalida cache"""
     invalidar_cache()
     return True
 
@@ -528,30 +510,25 @@ def gerar_html_consolidado(df):
         tabela = df_filtro[existentes].to_html(escape=True, index=False)
         return f"<div class='section'><h2>{icone} {titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>"
 
-    # Máscaras para prestadores específicos
     prest_gr = df['setor_destino'].str.contains('PREST_GRSA', case=False, na=False)
     prest_br = df['setor_destino'].str.contains('PREST_BRASANITAS', case=False, na=False)
     prest_geral = df['setor_destino'].str.contains('PRESTADOR', case=False, na=False)
 
-    # 1. C.C comum (exclui prestadores)
     df_cc = df[
         df['setor_destino'].str.contains('C.C', case=False, na=False) &
         ~prest_geral
     ]
 
-    # 2. GRSA – exclui PREST_GRSA
     df_gr = df[
         df['setor_destino'].str.contains('GRSA', case=False, na=False) &
         ~prest_gr
     ]
 
-    # 3. Brasanitas – exclui PREST_BRASANITAS
     df_br = df[
         df['setor_destino'].str.contains('Brasanitas', case=False, na=False) &
         ~prest_br
     ]
 
-    # 4. Prestadores de Serviços: inclui PREST_GRSA, PREST_BRASANITAS, PRESTADOR DE SERVIÇOS e todos os demais
     outros = df[
         ~df['setor_destino'].str.contains('C.C|GRSA|Brasanitas', case=False, na=False) |
         prest_geral | prest_gr | prest_br
@@ -1033,7 +1010,6 @@ st.markdown("""
         70% { box-shadow: 0 0 0 10px rgba(0,255,0,0); }
         100% { box-shadow: 0 0 0 0 rgba(0,255,0,0); }
     }
-    /* Estilos para o gráfico de pizza */
     .chart-container {
         background: rgba(10, 15, 30, 0.3);
         border-radius: 20px;
@@ -1307,26 +1283,18 @@ with col4:
         total_hoje = get_total_acessos_hoje()
         
         if not fluxo_df.empty:
-            # Prepara os dados para o gráfico de pizza por turno
             turno_data = fluxo_df.groupby('turno')['total_acessos'].sum().reset_index()
-            
-            # Cores personalizadas para o gráfico
             cores = {
                 '🌅 Manhã (06h-12h)': '#00ffcc',
                 '☀️ Tarde (12h-18h)': '#ff6b6b',
                 '🌙 Noite (18h-00h)': '#7c3aed',
                 '🌙 Madrugada (00h-06h)': '#f59e0b'
             }
-            
-            # Cria o gráfico de pizza interativo com Plotly
             fig = go.Figure(data=[go.Pie(
                 labels=turno_data['turno'],
                 values=turno_data['total_acessos'],
                 hole=0.4,
-                marker=dict(
-                    colors=[cores.get(t, '#a855f7') for t in turno_data['turno']],
-                    line=dict(color='rgba(0,0,0,0.5)', width=2)
-                ),
+                marker=dict(colors=[cores.get(t, '#a855f7') for t in turno_data['turno']], line=dict(color='rgba(0,0,0,0.5)', width=2)),
                 textinfo='percent+label',
                 textposition='auto',
                 hoverinfo='label+percent+value',
@@ -1334,41 +1302,18 @@ with col4:
                 textfont=dict(size=12, color='white'),
                 pull=[0.02, 0.02, 0.02, 0.02]
             )])
-            
             fig.update_layout(
-                title=dict(
-                    text=f"📊 FLUXO DE ACESSO POR TURNO<br><span style='font-size:12px;'>Total hoje: {total_hoje} acessos</span>",
-                    font=dict(color='#0ff', size=14, family='Space Mono'),
-                    x=0.5,
-                    xanchor='center'
-                ),
+                title=dict(text=f"📊 FLUXO DE ACESSO POR TURNO<br><span style='font-size:12px;'>Total hoje: {total_hoje} acessos</span>", font=dict(color='#0ff', size=14, family='Space Mono'), x=0.5, xanchor='center'),
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
                 font=dict(color='white'),
                 height=280,
                 margin=dict(t=50, b=20, l=20, r=20),
                 showlegend=False,
-                annotations=[
-                    dict(
-                        text=f"🏥<br>{total_hoje}",
-                        x=0.5,
-                        y=0.5,
-                        font=dict(size=18, color='#0ff', family='Space Mono'),
-                        showarrow=False
-                    )
-                ]
+                annotations=[dict(text=f"🏥<br>{total_hoje}", x=0.5, y=0.5, font=dict(size=18, color='#0ff', family='Space Mono'), showarrow=False)]
             )
+            fig.update_traces(textposition='inside', textfont_size=11, hoverlabel=dict(bgcolor="rgba(0,0,0,0.8)", font_size=12, font_family="Space Mono"), rotation=90, sort=False)
             
-            # Adiciona efeito de glow no gráfico
-            fig.update_traces(
-                textposition='inside',
-                textfont_size=11,
-                hoverlabel=dict(bgcolor="rgba(0,0,0,0.8)", font_size=12, font_family="Space Mono"),
-                rotation=90,
-                sort=False
-            )
-            
-            # Exibe o gráfico dentro do card
             st.markdown("""
             <div class="dashboard-card" style="padding: 0.5rem;">
                 <div class="card-header">
@@ -1376,9 +1321,7 @@ with col4:
                     <div class="status-indicator">FLUXO</div>
                 </div>
             """, unsafe_allow_html=True)
-            
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-            
             st.markdown("""
                 <div class="card-footer" style="justify-content: center;">
                     📊 Análise de fluxo - Horários de pico
@@ -1386,7 +1329,6 @@ with col4:
             </div>
             """, unsafe_allow_html=True)
             
-            # Adiciona informações adicionais abaixo do gráfico
             if not fluxo_df.empty:
                 hora_pico = fluxo_df.loc[fluxo_df['total_acessos'].idxmax()]
                 col_info1, col_info2 = st.columns(2)
@@ -1542,58 +1484,35 @@ if dados:
         st.markdown("---")
     
     st.markdown("#### 📋 Lista completa")
+    # Definição dos setores exatos para terceirizados
+    setores_terceirizados_exatos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
+    
+    # Criar abas
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
+    
+    # Aba Prestador de Serviço: todos que NÃO têm setor exato igual a um dos três terceirizados
     with tabs[0]:
-        for p in dados:
-            col1, col2, col3, col4 = st.columns([4,3,2,2])
-            col1.write(f"**{p['nome']}**")
-            col2.write(f"📍 {p['setor_destino']}")
-            col3.write(f"🏢 {p.get('empresa','N/A')}")
-            with col4:
-                with st.popover("🚪 Saída"):
-                    st.write(f"Registrar saída de **{p['nome']}**")
-                    with st.expander("⏱️ Horário", expanded=False):
-                        editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_{p['id']}")
-                        if editar_horario_saida:
-                            dt_padrao = get_current_datetime()
-                            data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_{p['id']}")
-                            hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_{p['id']}")
-                            dt_saida = datetime.combine(data_s, hora_s)
-                            saida_str = format_datetime_str(dt_saida)
-                        else:
-                            saida_str = format_datetime_str(get_current_datetime())
-                    if st.button("Confirmar Saída", key=f"confirm_saida_{p['id']}"):
-                        try:
-                            supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
-                            invalidar_cache()
-                            st.success(f"Saída registrada para {p['nome']} às {saida_str}")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erro: {e}")
-            st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
-    for i, setor in enumerate(["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"], 1):
-        with tabs[i]:
-            setor_clean = setor.split()[-1]
-            pessoas_setor = [p for p in dados if setor_clean in p['setor_destino']]
-            for p in pessoas_setor:
+        prestadores = [p for p in dados if p['setor_destino'] not in setores_terceirizados_exatos]
+        if prestadores:
+            for p in prestadores:
                 col1, col2, col3, col4 = st.columns([4,3,2,2])
                 col1.write(f"**{p['nome']}**")
-                col2.write(f"🏢 {p.get('empresa','N/A')}")
-                col3.write(f"🕒 {p['data_entrada']}")
+                col2.write(f"📍 {p['setor_destino']}")
+                col3.write(f"🏢 {p.get('empresa','N/A')}")
                 with col4:
                     with st.popover("🚪 Saída"):
                         st.write(f"Registrar saída de **{p['nome']}**")
                         with st.expander("⏱️ Horário", expanded=False):
-                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida2_{p['id']}")
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_prest_{p['id']}")
                             if editar_horario_saida:
                                 dt_padrao = get_current_datetime()
-                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida2_{p['id']}")
-                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida2_{p['id']}")
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_prest_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_prest_{p['id']}")
                                 dt_saida = datetime.combine(data_s, hora_s)
                                 saida_str = format_datetime_str(dt_saida)
                             else:
                                 saida_str = format_datetime_str(get_current_datetime())
-                        if st.button("Confirmar Saída", key=f"confirm_saida2_{p['id']}"):
+                        if st.button("Confirmar Saída", key=f"confirm_saida_prest_{p['id']}"):
                             try:
                                 supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
                                 invalidar_cache()
@@ -1602,6 +1521,110 @@ if dados:
                             except Exception as e:
                                 st.error(f"Erro: {e}")
                 st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Nenhum prestador de serviço presente no momento.")
+    
+    # Aba C.C
+    with tabs[1]:
+        pessoas_cc = [p for p in dados if p['setor_destino'] == "🏥 C.C"]
+        if pessoas_cc:
+            for p in pessoas_cc:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"🏢 {p.get('empresa','N/A')}")
+                col3.write(f"🕒 {p['data_entrada']}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_cc_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_cc_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_cc_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_cc_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Ninguém presente no setor C.C.")
+    
+    # Aba GRSA
+    with tabs[2]:
+        pessoas_gr = [p for p in dados if p['setor_destino'] == "🔧 GRSA"]
+        if pessoas_gr:
+            for p in pessoas_gr:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"🏢 {p.get('empresa','N/A')}")
+                col3.write(f"🕒 {p['data_entrada']}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_gr_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_gr_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_gr_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_gr_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Ninguém presente no setor GRSA.")
+    
+    # Aba Brasanitas
+    with tabs[3]:
+        pessoas_br = [p for p in dados if p['setor_destino'] == "🏭 Brasanitas"]
+        if pessoas_br:
+            for p in pessoas_br:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"🏢 {p.get('empresa','N/A')}")
+                col3.write(f"🕒 {p['data_entrada']}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_br_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_br_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_br_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_br_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Ninguém presente no setor Brasanitas.")
 else:
     st.info("Nenhuma pessoa presente no momento")
 
