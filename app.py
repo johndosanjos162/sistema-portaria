@@ -1897,31 +1897,200 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         st.info("Nenhum registro encontrado.")
 
 # ====================== GESTÃO DE CADASTROS (ADMIN) ======================
+st.markdown("---")
 if st.session_state.perfil == "ADMIN":
-    st.markdown("---")
-    with st.expander("⚙️ Gestão de Cadastros", expanded=False):
+    with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
         col_ferramenta1, col_ferramenta2 = st.columns(2)
         with col_ferramenta1:
-            st.markdown("### 🗑️ Limpeza de Duplicados")
-            if st.button("🗑️ APAGAR REGISTROS DUPLICADOS", key="btn_apagar_duplicados", type="primary"):
-                with st.spinner("Processando..."):
-                    resultado = apagar_registros_duplicados()
-                    if resultado["sucesso"]:
-                        st.success(resultado["mensagem"])
-                        st.rerun()
+            st.markdown("### 🗑️ Limpeza de Registros Duplicados")
+            try:
+                todas_pessoas = supabase.table("Pessoas").select("cpf, nome, empresa, id").execute().data
+                if todas_pessoas:
+                    df_check = pd.DataFrame(todas_pessoas)
+                    duplicados = df_check[df_check.duplicated(subset=['cpf'], keep=False)]
+                    qtd_cpfs_dup = len(duplicados['cpf'].unique()) if not duplicados.empty else 0
+                    qtd_reg_dup = len(duplicados)
+                    col_stats1, col_stats2, col_stats3 = st.columns(3)
+                    col_stats1.metric("Total de Cadastros", len(todas_pessoas))
+                    col_stats2.metric("CPFs Duplicados", qtd_cpfs_dup, delta="⚠️" if qtd_cpfs_dup > 0 else "✓")
+                    col_stats3.metric("Registros Duplicados", qtd_reg_dup, delta=f"-{qtd_reg_dup - qtd_cpfs_dup} a remover" if qtd_reg_dup > 0 else "✓")
+                    if qtd_reg_dup > 0:
+                        st.warning(f"Detectados {qtd_reg_dup} registro(s) duplicado(s)")
+                        if st.button("🗑️ APAGAR REGISTROS DUPLICADOS", key="btn_apagar_duplicados", type="primary"):
+                            with st.spinner("Processando..."):
+                                resultado = apagar_registros_duplicados()
+                                if resultado["sucesso"]:
+                                    if resultado.get("duplicados_removidos", 0) > 0:
+                                        st.success(resultado["mensagem"])
+                                        st.balloons()
+                                        time.sleep(2)
+                                        st.rerun()
+                                    else:
+                                        st.info(resultado["mensagem"])
+                                else:
+                                    st.error(resultado["mensagem"])
                     else:
-                        st.error(resultado["mensagem"])
+                        st.success("Nenhum CPF duplicado encontrado!")
+                else:
+                    st.info("Nenhum cadastro encontrado.")
+            except Exception as e:
+                st.error(f"Erro ao verificar duplicatas: {e}")
         with col_ferramenta2:
-            st.markdown("### 📤 Sincronizar Cadastros")
-            arquivo_sync = st.file_uploader("Arquivo CSV/Excel", type=["csv","xlsx","xls"], key="sync_arquivo")
-            if arquivo_sync and st.button("🔄 SINCRONIZAR", key="btn_sincronizar", type="primary"):
-                with st.spinner("Processando..."):
-                    resultado = sincronizar_novos_cadastros(arquivo_sync)
-                    if resultado["sucesso"]:
-                        st.success("✅ Sincronização concluída!")
-                        st.rerun()
-                    else:
-                        st.error(resultado["mensagem"])
+            st.markdown("### 📤 Sincronizar Novos Cadastros")
+            arquivo_sync = st.file_uploader("Selecione o arquivo CSV/Excel", type=["csv","xlsx","xls"], key="sync_arquivo")
+            if arquivo_sync:
+                if st.button("🔄 SINCRONIZAR CADASTROS", key="btn_sincronizar", type="primary"):
+                    with st.spinner("Processando sincronização..."):
+                        resultado = sincronizar_novos_cadastros(arquivo_sync)
+                        if resultado["sucesso"]:
+                            st.success("✅ Sincronização concluída!")
+                            col_res1, col_res2, col_res3 = st.columns(3)
+                            col_res1.metric("Inseridos", resultado.get("inseridos", 0), delta="+")
+                            col_res2.metric("Atualizados", resultado.get("atualizados", 0), delta="~")
+                            col_res3.metric("Ignorados", resultado.get("ignorados", 0), delta="=")
+                            st.info(resultado["mensagem"])
+                            if resultado.get("erros"):
+                                with st.expander(f"⚠️ {len(resultado['erros'])} erro(s)"):
+                                    for erro in resultado["erros"][:20]:
+                                        st.error(erro)
+                            invalidar_cache()
+                            st.balloons()
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error(resultado["mensagem"])
+        st.markdown("---")
+        try:
+            todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
+        except:
+            todos = []
+        if not todos:
+            st.info("Nenhum cadastro")
+        else:
+            br = [p for p in todos if p.get('empresa', '').upper() == "BRASANITAS"]
+            gr = [p for p in todos if p.get('empresa', '').upper() == "GRSA"]
+            outros = [p for p in todos if p.get('empresa', '').upper() not in ["BRASANITAS","GRSA"]]
+            tab1, tab2, tab3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 Prestadores"])
+            with tab1:
+                st.markdown(f"**Total:** {len(br)}")
+                for p in br:
+                    col1, col2, col3, col4 = st.columns([3,2,1,1])
+                    col1.write(f"**{p['nome']}**")
+                    col2.write(f"CPF: {p['cpf']}")
+                    with col3:
+                        with st.popover("✏️ Editar"):
+                            with st.form(f"edit_br_{p['id']}"):
+                                novo_nome = st.text_input("Nome", p['nome'], key=f"nome_br_{p['id']}")
+                                novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_br_{p['id']}")
+                                nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_br_{p['id']}")
+                                if st.form_submit_button("Salvar"):
+                                    if validar_cpf(novo_cpf):
+                                        try:
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            if not conflito:
+                                                supabase_admin.table("Pessoas").update({
+                                                    "nome": sanitizar_texto(novo_nome).upper(),
+                                                    "cpf": sanitizar_cpf(novo_cpf),
+                                                    "empresa": sanitizar_texto(nova_emp).upper()
+                                                }).eq("id", p['id']).execute()
+                                                invalidar_cache()
+                                                st.success("Atualizado!")
+                                                st.rerun()
+                                            else:
+                                                st.error("CPF já existe")
+                                        except Exception as e:
+                                            st.error(f"Erro: {e}")
+                                    else:
+                                        st.error("CPF inválido")
+                    with col4:
+                        with st.popover("🗑️ Excluir"):
+                            st.warning(f"Excluir {p['nome']}?")
+                            if st.button("Confirmar", key=f"del_br_{p['id']}"):
+                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.rerun()
+                    st.divider()
+            with tab2:
+                st.markdown(f"**Total:** {len(gr)}")
+                for p in gr:
+                    col1, col2, col3, col4 = st.columns([3,2,1,1])
+                    col1.write(f"**{p['nome']}**")
+                    col2.write(f"CPF: {p['cpf']}")
+                    with col3:
+                        with st.popover("✏️ Editar"):
+                            with st.form(f"edit_gr_{p['id']}"):
+                                novo_nome = st.text_input("Nome", p['nome'], key=f"nome_gr_{p['id']}")
+                                novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_gr_{p['id']}")
+                                nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_gr_{p['id']}")
+                                if st.form_submit_button("Salvar"):
+                                    if validar_cpf(novo_cpf):
+                                        try:
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            if not conflito:
+                                                supabase_admin.table("Pessoas").update({
+                                                    "nome": sanitizar_texto(novo_nome).upper(),
+                                                    "cpf": sanitizar_cpf(novo_cpf),
+                                                    "empresa": sanitizar_texto(nova_emp).upper()
+                                                }).eq("id", p['id']).execute()
+                                                invalidar_cache()
+                                                st.success("Atualizado!")
+                                                st.rerun()
+                                            else:
+                                                st.error("CPF já existe")
+                                        except Exception as e:
+                                            st.error(f"Erro: {e}")
+                                    else:
+                                        st.error("CPF inválido")
+                    with col4:
+                        with st.popover("🗑️ Excluir"):
+                            st.warning(f"Excluir {p['nome']}?")
+                            if st.button("Confirmar", key=f"del_gr_{p['id']}"):
+                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.rerun()
+                    st.divider()
+            with tab3:
+                st.markdown(f"**Total:** {len(outros)}")
+                search = st.text_input("🔍 Pesquisar", key="search_outros")
+                filtrados = [p for p in outros if search.lower() in p['nome'].lower() or search.lower() in p['cpf'] or search.lower() in p.get('empresa','').lower()] if search else outros
+                for p in filtrados:
+                    col1, col2, col3, col4, col5 = st.columns([2,2,2,1,1])
+                    col1.write(f"**{p['nome']}**")
+                    col2.write(f"CPF: {p['cpf']}")
+                    col3.write(f"Empresa: {p.get('empresa','N/A')}")
+                    with col4:
+                        with st.popover("✏️ Editar"):
+                            with st.form(f"edit_out_{p['id']}"):
+                                novo_nome = st.text_input("Nome", p['nome'], key=f"nome_out_{p['id']}")
+                                novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_out_{p['id']}")
+                                nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_out_{p['id']}")
+                                if st.form_submit_button("Salvar"):
+                                    if validar_cpf(novo_cpf):
+                                        try:
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            if not conflito:
+                                                supabase_admin.table("Pessoas").update({
+                                                    "nome": sanitizar_texto(novo_nome).upper(),
+                                                    "cpf": sanitizar_cpf(novo_cpf),
+                                                    "empresa": sanitizar_texto(nova_emp).upper()
+                                                }).eq("id", p['id']).execute()
+                                                invalidar_cache()
+                                                st.success("Atualizado!")
+                                                st.rerun()
+                                            else:
+                                                st.error("CPF já existe")
+                                        except Exception as e:
+                                            st.error(f"Erro: {e}")
+                                    else:
+                                        st.error("CPF inválido")
+                    with col5:
+                        with st.popover("🗑️ Excluir"):
+                            st.warning(f"Excluir {p['nome']}?")
+                            if st.button("Confirmar", key=f"del_out_{p['id']}"):
+                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.rerun()
+                    st.divider()
 
 apply_theme_css()
 st.markdown("---")
