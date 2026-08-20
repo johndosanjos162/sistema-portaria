@@ -13,10 +13,16 @@ from functools import wraps
 import plotly.express as px
 import plotly.graph_objects as go
 
-# ====================== IMPORTAÇÕES DO RECONHECIMENTO FACIAL ======================
-import cv2
-import face_recognition
-import numpy as np
+# ====================== IMPORTAÇÕES DO RECONHECIMENTO FACIAL (COM TRATAMENTO DE ERRO) ======================
+try:
+    import cv2
+    import face_recognition
+    import numpy as np
+    FACIAL_AVAILABLE = True
+except ImportError as e:
+    FACIAL_AVAILABLE = False
+    # Não exibe warning aqui porque ainda não temos o st configurado
+    # O warning será exibido na página principal
 
 # ====================== CONFIGURAÇÕES ======================
 CACHE_TTL_PADRAO = 30
@@ -199,7 +205,7 @@ def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
 @debounce(wait_time=DEBOUNCE_WAIT_MS)
 def buscar_pessoa_por_cpf_debounced(cpf):
     try:
-        pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf).execute()
+        pessoa = supabase.table("pessoas").select("nome, empresa").eq("cpf", cpf).execute()
         return pessoa.data[0] if pessoa.data else None
     except:
         return None
@@ -212,7 +218,7 @@ def get_estatisticas_cached():
     inicio = time.time()
     try:
         total_presentes = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute().count
-        total_cadastrados = supabase.table("Pessoas").select("id", count="exact").execute().count
+        total_cadastrados = supabase.table("pessoas").select("id", count="exact").execute().count
         result_setores = supabase.table("movimentacao").select("setor_destino").execute()
         setores_unicos = len(set(r['setor_destino'] for r in result_setores.data if r.get('setor_destino'))) if result_setores.data else 11
         stats = {
@@ -580,9 +586,9 @@ def sanitizar_texto(texto):
 
 def apagar_registros_duplicados():
     try:
-        todas_pessoas = supabase_admin.table("Pessoas").select("*").execute().data
+        todas_pessoas = supabase_admin.table("pessoas").select("*").execute().data
         if not todas_pessoas:
-            return {"sucesso": False, "mensagem": "Nenhum registro encontrado na tabela Pessoas"}
+            return {"sucesso": False, "mensagem": "Nenhum registro encontrado na tabela pessoas"}
         grupos_por_cpf = {}
         for pessoa in todas_pessoas:
             cpf = pessoa['cpf']
@@ -597,7 +603,7 @@ def apagar_registros_duplicados():
             registro_principal = registros_ordenados[0]
             ids_para_remover = [r['id'] for r in registros_ordenados[1:]]
             for id_remover in ids_para_remover:
-                supabase_admin.table("Pessoas").delete().eq("id", id_remover).execute()
+                supabase_admin.table("pessoas").delete().eq("id", id_remover).execute()
                 total_removidos += 1
             resultados.append(f"CPF {cpf}: mantido ID {registro_principal['id']} - {registro_principal['nome']} | Removidos: {len(ids_para_remover)}")
         return {"sucesso": True, "mensagem": f"Limpeza concluída! {total_removidos} registro(s) duplicado(s) removido(s).", "duplicados_removidos": total_removidos, "detalhes": resultados}
@@ -626,7 +632,7 @@ def sincronizar_novos_cadastros(arquivo_csv):
                     erros.append(f"Linha {idx+2}: Nome não pode estar vazio")
                     registros_ignorados += 1
                     continue
-                existe = supabase_admin.table("Pessoas").select("id, nome, empresa").eq("cpf", cpf).execute().data
+                existe = supabase_admin.table("pessoas").select("id, nome, empresa").eq("cpf", cpf).execute().data
                 if existe:
                     precisa_atualizar = False
                     if existe[0]['nome'] != nome:
@@ -634,12 +640,12 @@ def sincronizar_novos_cadastros(arquivo_csv):
                     if empresa and existe[0].get('empresa', '') != empresa:
                         precisa_atualizar = True
                     if precisa_atualizar:
-                        supabase_admin.table("Pessoas").update({"nome": nome, "empresa": empresa}).eq("cpf", cpf).execute()
+                        supabase_admin.table("pessoas").update({"nome": nome, "empresa": empresa}).eq("cpf", cpf).execute()
                         registros_atualizados += 1
                     else:
                         registros_ignorados += 1
                 else:
-                    supabase_admin.table("Pessoas").insert({"cpf": cpf, "nome": nome, "empresa": empresa}).execute()
+                    supabase_admin.table("pessoas").insert({"cpf": cpf, "nome": nome, "empresa": empresa}).execute()
                     registros_inseridos += 1
             except Exception as e:
                 erros.append(f"Linha {idx+2}: {str(e)}")
@@ -654,8 +660,11 @@ def sincronizar_novos_cadastros(arquivo_csv):
 # ====================== FUNÇÕES DE RECONHECIMENTO FACIAL ======================
 def carregar_usuarios_com_encoding():
     """Busca todos os usuários que têm encoding salvo no banco"""
+    if not FACIAL_AVAILABLE:
+        return []
+    
     try:
-        response = supabase.table("Pessoas").select("id, nome, cpf, empresa, encoding").execute()
+        response = supabase.table("pessoas").select("id, nome, cpf, empresa, encoding").execute()
         
         usuarios = []
         for item in response.data:
@@ -679,9 +688,12 @@ def carregar_usuarios_com_encoding():
 
 def salvar_encoding_no_banco(usuario_id, encoding_list):
     """Salva o encoding facial de um usuário no banco"""
+    if not FACIAL_AVAILABLE:
+        return False
+    
     try:
         encoding_json = json.dumps(encoding_list.tolist())
-        supabase.table("Pessoas").update({
+        supabase.table("pessoas").update({
             "encoding": encoding_json
         }).eq("id", usuario_id).execute()
         return True
@@ -714,8 +726,7 @@ def determinar_tipo_registro_facial(cpf):
     """Verifica o último registro do usuário para decidir se é entrada ou saída"""
     try:
         ultimo = supabase.table("movimentacao")\
-            .select("data_entrada, data_saida")\
-            .eq("cpf", cpf)\
+            .select("data_entrada, data_saida")\            .eq("cpf", cpf)\
             .order("id", desc=True)\
             .limit(1)\
             .execute()
@@ -733,6 +744,19 @@ def determinar_tipo_registro_facial(cpf):
 
 # ====================== PÁGINA DE RECONHECIMENTO FACIAL ======================
 def pagina_reconhecimento_facial():
+    """Página de reconhecimento facial com verificação de disponibilidade"""
+    
+    # Verifica se o reconhecimento facial está disponível
+    if not FACIAL_AVAILABLE:
+        st.warning("⚠️ Reconhecimento facial indisponível neste ambiente.")
+        st.info("""
+        Para usar o reconhecimento facial, você precisa:
+        1. Executar o app localmente com Python instalado
+        2. Instalar as dependências: `pip install opencv-python face-recognition numpy`
+        3. Ou usar o Streamlit Cloud com Python 3.11 e as bibliotecas no requirements.txt
+        """)
+        return
+    
     st.markdown("## 🎯 Reconhecimento Facial - Ponto Eletrônico")
     st.markdown("---")
     
@@ -743,7 +767,7 @@ def pagina_reconhecimento_facial():
         st.info("Selecione um usuário já cadastrado para associar o rosto dele.")
         
         try:
-            todos_usuarios = supabase.table("Pessoas").select("id, nome, cpf, empresa, encoding").execute().data
+            todos_usuarios = supabase.table("pessoas").select("id, nome, cpf, empresa, encoding").execute().data
             sem_encoding = [u for u in todos_usuarios if not u.get("encoding")]
         except:
             sem_encoding = []
@@ -1403,7 +1427,7 @@ if st.session_state.perfil == "ADMIN":
     with st.sidebar.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
         st.markdown("### Exportar Cadastros")
         try:
-            todas_pessoas = supabase.table("Pessoas").select("nome, cpf, empresa").execute().data
+            todas_pessoas = supabase.table("pessoas").select("nome, cpf, empresa").execute().data
             if todas_pessoas:
                 df_todas = pd.DataFrame(todas_pessoas)
                 csv = df_todas.to_csv(index=False, encoding='utf-8-sig')
@@ -1574,11 +1598,11 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
             else:
                 cpf_limpo = sanitizar_cpf(novo_cpf)
                 try:
-                    existe = supabase.table("Pessoas").select("id, empresa").eq("cpf", cpf_limpo).execute().data
+                    existe = supabase.table("pessoas").select("id, empresa").eq("cpf", cpf_limpo).execute().data
                     if existe:
                         st.error(f"❌ Pessoa já cadastrada (Empresa: {existe[0].get('empresa', 'N/A')})")
                     else:
-                        supabase.table("Pessoas").insert({
+                        supabase.table("pessoas").insert({
                             "cpf": cpf_limpo,
                             "nome": sanitizar_texto(novo_nome).strip().upper(),
                             "empresa": sanitizar_texto(novo_empresa).strip().upper() if novo_empresa else ""
@@ -1983,7 +2007,7 @@ if st.session_state.perfil == "ADMIN":
         with col_ferramenta1:
             st.markdown("### 🗑️ Limpeza de Registros Duplicados")
             try:
-                todas_pessoas = supabase.table("Pessoas").select("cpf, nome, empresa, id").execute().data
+                todas_pessoas = supabase.table("pessoas").select("cpf, nome, empresa, id").execute().data
                 if todas_pessoas:
                     df_check = pd.DataFrame(todas_pessoas)
                     duplicados = df_check[df_check.duplicated(subset=['cpf'], keep=False)]
@@ -2040,7 +2064,7 @@ if st.session_state.perfil == "ADMIN":
                             st.error(resultado["mensagem"])
         st.markdown("---")
         try:
-            todos = supabase.table("Pessoas").select("id, nome, cpf, empresa, encoding").order("nome").execute().data
+            todos = supabase.table("pessoas").select("id, nome, cpf, empresa, encoding").order("nome").execute().data
         except:
             todos = []
         if not todos:
@@ -2070,9 +2094,9 @@ if st.session_state.perfil == "ADMIN":
                                 if st.form_submit_button("Salvar"):
                                     if validar_cpf(novo_cpf):
                                         try:
-                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            conflito = supabase.table("pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
                                             if not conflito:
-                                                supabase_admin.table("Pessoas").update({
+                                                supabase_admin.table("pessoas").update({
                                                     "nome": sanitizar_texto(novo_nome).upper(),
                                                     "cpf": sanitizar_cpf(novo_cpf),
                                                     "empresa": sanitizar_texto(nova_emp).upper()
@@ -2090,7 +2114,7 @@ if st.session_state.perfil == "ADMIN":
                         with st.popover("🗑️ Excluir"):
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_br_{p['id']}"):
-                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
+                                supabase_admin.table("pessoas").delete().eq("id", p['id']).execute()
                                 invalidar_cache()
                                 st.rerun()
                     st.divider()
@@ -2111,9 +2135,9 @@ if st.session_state.perfil == "ADMIN":
                                 if st.form_submit_button("Salvar"):
                                     if validar_cpf(novo_cpf):
                                         try:
-                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            conflito = supabase.table("pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
                                             if not conflito:
-                                                supabase_admin.table("Pessoas").update({
+                                                supabase_admin.table("pessoas").update({
                                                     "nome": sanitizar_texto(novo_nome).upper(),
                                                     "cpf": sanitizar_cpf(novo_cpf),
                                                     "empresa": sanitizar_texto(nova_emp).upper()
@@ -2131,7 +2155,7 @@ if st.session_state.perfil == "ADMIN":
                         with st.popover("🗑️ Excluir"):
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_gr_{p['id']}"):
-                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
+                                supabase_admin.table("pessoas").delete().eq("id", p['id']).execute()
                                 invalidar_cache()
                                 st.rerun()
                     st.divider()
@@ -2155,9 +2179,9 @@ if st.session_state.perfil == "ADMIN":
                                 if st.form_submit_button("Salvar"):
                                     if validar_cpf(novo_cpf):
                                         try:
-                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            conflito = supabase.table("pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
                                             if not conflito:
-                                                supabase_admin.table("Pessoas").update({
+                                                supabase_admin.table("pessoas").update({
                                                     "nome": sanitizar_texto(novo_nome).upper(),
                                                     "cpf": sanitizar_cpf(novo_cpf),
                                                     "empresa": sanitizar_texto(nova_emp).upper()
@@ -2175,165 +2199,175 @@ if st.session_state.perfil == "ADMIN":
                         with st.popover("🗑️ Excluir"):
                             st.warning(f"Excluir {p['nome']}?")
                             if st.button("Confirmar", key=f"del_out_{p['id']}"):
-                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
+                                supabase_admin.table("pessoas").delete().eq("id", p['id']).execute()
                                 invalidar_cache()
                                 st.rerun()
                     st.divider()
             
             # Aba de Reconhecimento Facial integrada
             with tab_facial:
-                st.markdown("### 🎯 Gerenciamento de Reconhecimento Facial")
-                st.info("Aqui você pode gerenciar os rostos cadastrados e ver quem já possui encoding.")
-                
-                # Estatísticas de cadastro facial
-                total_com_encoding = len([p for p in todos if p.get('encoding')])
-                total_sem_encoding = len([p for p in todos if not p.get('encoding')])
-                
-                col_stat1, col_stat2 = st.columns(2)
-                col_stat1.metric("✅ Com rosto cadastrado", total_com_encoding)
-                col_stat2.metric("❌ Sem rosto cadastrado", total_sem_encoding)
-                
-                st.markdown("---")
-                
-                # Botão para ir para a página de reconhecimento
-                st.markdown("### 📸 Capturar rosto para um usuário específico")
-                
-                # Mostra apenas usuários sem encoding
-                sem_encoding_list = [p for p in todos if not p.get('encoding')]
-                
-                if sem_encoding_list:
-                    opcoes_facial = [f"{p['nome']} - CPF: {p['cpf']} ({p.get('empresa', 'N/A')})" for p in sem_encoding_list]
-                    usuario_selecionado_facial = st.selectbox("Selecione o usuário:", opcoes_facial, key="facial_select_gestao")
-                    
-                    if usuario_selecionado_facial:
-                        idx = opcoes_facial.index(usuario_selecionado_facial)
-                        usuario_facial = sem_encoding_list[idx]
-                        
-                        st.markdown(f"**Usuário:** {usuario_facial['nome']}")
-                        st.markdown(f"**CPF:** {usuario_facial['cpf']}")
-                        st.markdown(f"**Empresa:** {usuario_facial.get('empresa', 'N/A')}")
-                        
-                        if st.button("📸 Capturar Rosto (Gestão)", key="facial_btn_capturar_gestao", type="primary"):
-                            with st.spinner("Iniciando câmera..."):
-                                webcam = cv2.VideoCapture(0)
-                                if not webcam.isOpened():
-                                    st.error("❌ Não foi possível acessar a câmera.")
-                                else:
-                                    st.info("📷 Olhe para a câmera. Capturando em 3 segundos...")
-                                    time.sleep(3)
-                                    
-                                    frames = []
-                                    for i in range(5):
-                                        sucesso, frame = webcam.read()
-                                        if sucesso:
-                                            frames.append(frame)
-                                        time.sleep(0.5)
-                                    
-                                    webcam.release()
-                                    
-                                    encoding_encontrado = None
-                                    for frame in frames:
-                                        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                                        locais = face_recognition.face_locations(rgb)
-                                        encodings = face_recognition.face_encodings(rgb, locais)
-                                        
-                                        if encodings:
-                                            encoding_encontrado = encodings[0]
-                                            break
-                                    
-                                    if encoding_encontrado is not None:
-                                        if salvar_encoding_no_banco(usuario_facial["id"], encoding_encontrado):
-                                            st.success(f"✅ Rosto de {usuario_facial['nome']} cadastrado com sucesso!")
-                                            st.balloons()
-                                            time.sleep(2)
-                                            st.rerun()
-                                        else:
-                                            st.error("❌ Erro ao salvar no banco.")
-                                    else:
-                                        st.error("❌ Nenhum rosto detectado. Tente novamente com melhor iluminação.")
+                # Verifica se o reconhecimento facial está disponível
+                if not FACIAL_AVAILABLE:
+                    st.warning("⚠️ Reconhecimento facial indisponível neste ambiente.")
+                    st.info("""
+                    Para usar o reconhecimento facial, você precisa:
+                    1. Executar o app localmente com Python instalado
+                    2. Instalar as dependências: `pip install opencv-python face-recognition numpy`
+                    3. Ou usar o Streamlit Cloud com Python 3.11 e as bibliotecas no requirements.txt
+                    """)
                 else:
-                    st.success("✅ Todos os usuários já têm rosto cadastrado!")
-                
-                st.markdown("---")
-                
-                # Opção de reconhecimento ao vivo na própria página
-                st.markdown("### 🔍 Reconhecimento Ao Vivo")
-                if st.button("🎥 INICIAR RECONHECIMENTO (Gestão)", key="facial_btn_iniciar_gestao", type="primary"):
+                    st.markdown("### 🎯 Gerenciamento de Reconhecimento Facial")
+                    st.info("Aqui você pode gerenciar os rostos cadastrados e ver quem já possui encoding.")
+                    
+                    # Estatísticas de cadastro facial
+                    total_com_encoding = len([p for p in todos if p.get('encoding')])
+                    total_sem_encoding = len([p for p in todos if not p.get('encoding')])
+                    
+                    col_stat1, col_stat2 = st.columns(2)
+                    col_stat1.metric("✅ Com rosto cadastrado", total_com_encoding)
+                    col_stat2.metric("❌ Sem rosto cadastrado", total_sem_encoding)
+                    
                     st.markdown("---")
                     
-                    placeholder = st.empty()
-                    status_placeholder = st.empty()
+                    # Botão para ir para a página de reconhecimento
+                    st.markdown("### 📸 Capturar rosto para um usuário específico")
                     
-                    usuarios_cadastrados = carregar_usuarios_com_encoding()
+                    # Mostra apenas usuários sem encoding
+                    sem_encoding_list = [p for p in todos if not p.get('encoding')]
                     
-                    if not usuarios_cadastrados:
-                        st.warning("⚠️ Nenhum usuário com rosto cadastrado.")
-                    else:
-                        ultimo_registro = {}
+                    if sem_encoding_list:
+                        opcoes_facial = [f"{p['nome']} - CPF: {p['cpf']} ({p.get('empresa', 'N/A')})" for p in sem_encoding_list]
+                        usuario_selecionado_facial = st.selectbox("Selecione o usuário:", opcoes_facial, key="facial_select_gestao")
                         
-                        webcam = cv2.VideoCapture(0)
-                        if not webcam.isOpened():
-                            st.error("❌ Não foi possível acessar a câmera.")
-                        else:
-                            status_placeholder.info("🔴 Reconhecimento ativo. Aperte 'q' no teclado para parar.")
+                        if usuario_selecionado_facial:
+                            idx = opcoes_facial.index(usuario_selecionado_facial)
+                            usuario_facial = sem_encoding_list[idx]
                             
-                            while True:
-                                sucesso, frame = webcam.read()
-                                if not sucesso:
-                                    st.error("❌ Falha ao capturar frame.")
-                                    break
-                                
-                                frame_pequeno = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-                                rgb = cv2.cvtColor(frame_pequeno, cv2.COLOR_BGR2RGB)
-                                
-                                locais = face_recognition.face_locations(rgb)
-                                encodings = face_recognition.face_encodings(rgb, locais)
-                                
-                                for (top, right, bottom, left), encoding in zip(locais, encodings):
-                                    top *= 4
-                                    right *= 4
-                                    bottom *= 4
-                                    left *= 4
-                                    
-                                    reconhecido = False
-                                    for usuario in usuarios_cadastrados:
-                                        match = face_recognition.compare_faces(
-                                            [usuario["encoding"]], 
-                                            encoding, 
-                                            tolerance=0.6
-                                        )
+                            st.markdown(f"**Usuário:** {usuario_facial['nome']}")
+                            st.markdown(f"**CPF:** {usuario_facial['cpf']}")
+                            st.markdown(f"**Empresa:** {usuario_facial.get('empresa', 'N/A')}")
+                            
+                            if st.button("📸 Capturar Rosto (Gestão)", key="facial_btn_capturar_gestao", type="primary"):
+                                with st.spinner("Iniciando câmera..."):
+                                    webcam = cv2.VideoCapture(0)
+                                    if not webcam.isOpened():
+                                        st.error("❌ Não foi possível acessar a câmera.")
+                                    else:
+                                        st.info("📷 Olhe para a câmera. Capturando em 3 segundos...")
+                                        time.sleep(3)
                                         
-                                        if match[0]:
-                                            reconhecido = True
-                                            usuario_id = usuario["id"]
-                                            tempo_atual = time.time()
+                                        frames = []
+                                        for i in range(5):
+                                            sucesso, frame = webcam.read()
+                                            if sucesso:
+                                                frames.append(frame)
+                                            time.sleep(0.5)
+                                        
+                                        webcam.release()
+                                        
+                                        encoding_encontrado = None
+                                        for frame in frames:
+                                            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                                            locais = face_recognition.face_locations(rgb)
+                                            encodings = face_recognition.face_encodings(rgb, locais)
                                             
-                                            if usuario_id in ultimo_registro and (tempo_atual - ultimo_registro[usuario_id] < 5):
+                                            if encodings:
+                                                encoding_encontrado = encodings[0]
                                                 break
-                                            
-                                            tipo = determinar_tipo_registro_facial(usuario["cpf"])
-                                            
-                                            if registrar_ponto_facial(usuario, tipo):
-                                                ultimo_registro[usuario_id] = tempo_atual
-                                                status_placeholder.success(f"✅ {usuario['nome']} - {tipo} registrada com sucesso!")
+                                        
+                                        if encoding_encontrado is not None:
+                                            if salvar_encoding_no_banco(usuario_facial["id"], encoding_encontrado):
+                                                st.success(f"✅ Rosto de {usuario_facial['nome']} cadastrado com sucesso!")
                                                 st.balloons()
-                                            break
-                                    
-                                    cor = (0, 255, 0) if reconhecido else (0, 0, 255)
-                                    cv2.rectangle(frame, (left, top), (right, bottom), cor, 2)
-                                    
-                                    if reconhecido:
-                                        cv2.putText(frame, usuario["nome"], (left, top - 10), 
-                                                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                                
-                                placeholder.image(frame, channels="BGR", use_container_width=True)
-                                
-                                if cv2.waitKey(1) & 0xFF == ord('q'):
-                                    break
+                                                time.sleep(2)
+                                                st.rerun()
+                                            else:
+                                                st.error("❌ Erro ao salvar no banco.")
+                                        else:
+                                            st.error("❌ Nenhum rosto detectado. Tente novamente com melhor iluminação.")
+                    else:
+                        st.success("✅ Todos os usuários já têm rosto cadastrado!")
+                    
+                    st.markdown("---")
+                    
+                    # Opção de reconhecimento ao vivo na própria página
+                    st.markdown("### 🔍 Reconhecimento Ao Vivo")
+                    if st.button("🎥 INICIAR RECONHECIMENTO (Gestão)", key="facial_btn_iniciar_gestao", type="primary"):
+                        st.markdown("---")
+                        
+                        placeholder = st.empty()
+                        status_placeholder = st.empty()
+                        
+                        usuarios_cadastrados = carregar_usuarios_com_encoding()
+                        
+                        if not usuarios_cadastrados:
+                            st.warning("⚠️ Nenhum usuário com rosto cadastrado.")
+                        else:
+                            ultimo_registro = {}
                             
-                            webcam.release()
-                            cv2.destroyAllWindows()
-                            status_placeholder.info("🛑 Reconhecimento encerrado.")
+                            webcam = cv2.VideoCapture(0)
+                            if not webcam.isOpened():
+                                st.error("❌ Não foi possível acessar a câmera.")
+                            else:
+                                status_placeholder.info("🔴 Reconhecimento ativo. Aperte 'q' no teclado para parar.")
+                                
+                                while True:
+                                    sucesso, frame = webcam.read()
+                                    if not sucesso:
+                                        st.error("❌ Falha ao capturar frame.")
+                                        break
+                                    
+                                    frame_pequeno = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+                                    rgb = cv2.cvtColor(frame_pequeno, cv2.COLOR_BGR2RGB)
+                                    
+                                    locais = face_recognition.face_locations(rgb)
+                                    encodings = face_recognition.face_encodings(rgb, locais)
+                                    
+                                    for (top, right, bottom, left), encoding in zip(locais, encodings):
+                                        top *= 4
+                                        right *= 4
+                                        bottom *= 4
+                                        left *= 4
+                                        
+                                        reconhecido = False
+                                        for usuario in usuarios_cadastrados:
+                                            match = face_recognition.compare_faces(
+                                                [usuario["encoding"]], 
+                                                encoding, 
+                                                tolerance=0.6
+                                            )
+                                            
+                                            if match[0]:
+                                                reconhecido = True
+                                                usuario_id = usuario["id"]
+                                                tempo_atual = time.time()
+                                                
+                                                if usuario_id in ultimo_registro and (tempo_atual - ultimo_registro[usuario_id] < 5):
+                                                    break
+                                                
+                                                tipo = determinar_tipo_registro_facial(usuario["cpf"])
+                                                
+                                                if registrar_ponto_facial(usuario, tipo):
+                                                    ultimo_registro[usuario_id] = tempo_atual
+                                                    status_placeholder.success(f"✅ {usuario['nome']} - {tipo} registrada com sucesso!")
+                                                    st.balloons()
+                                                break
+                                        
+                                        cor = (0, 255, 0) if reconhecido else (0, 0, 255)
+                                        cv2.rectangle(frame, (left, top), (right, bottom), cor, 2)
+                                        
+                                        if reconhecido:
+                                            cv2.putText(frame, usuario["nome"], (left, top - 10), 
+                                                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                                    
+                                    placeholder.image(frame, channels="BGR", use_container_width=True)
+                                    
+                                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                                        break
+                                
+                                webcam.release()
+                                cv2.destroyAllWindows()
+                                status_placeholder.info("🛑 Reconhecimento encerrado.")
 
 apply_theme_css()
 st.markdown("---")
