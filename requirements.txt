@@ -1,5 +1,21 @@
-streamlit
-supabase
-pandas
-Pillow
-plotly>=5.17.0
+# ==================== CORE DO APP ====================
+streamlit>=1.28.0
+supabase>=2.0.0
+pandas>=2.1.0
+plotly>=5.18.0
+Pillow>=10.1.0
+
+# ==================== IA E MONITORAMENTO ====================
+psutil>=5.9.0          # Monitoramento de CPU, memória e recursos do sistema (para a IA)
+requests>=2.31.0       # Para chamadas HTTP adicionais (se necessário)
+
+# ==================== DESENVOLVIMENTO E EVOLUÇÃO ====================
+python-dotenv>=1.0.0   # Gerenciar variáveis de ambiente (.env) localmente
+black>=23.0.0          # Formatação automática de código (melhoria contínua)
+flake8>=6.0.0          # Análise estática de código (identifica bugs e más práticas)
+mypy>=1.0.0            # Verificação de tipos (código mais robusto)
+isort>=5.12.0          # Organização automática de imports
+
+# ==================== UTILITÁRIOS ====================
+python-dateutil>=2.8.2
+pytz>=2023.3
