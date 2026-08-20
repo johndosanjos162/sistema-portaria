@@ -13,13 +13,13 @@ from functools import wraps
 import plotly.express as px
 import plotly.graph_objects as go
 
-# ====================== IMPORTAÇÕES DO RECONHECIMENTO FACIAL (COM TRATAMENTO DE ERRO) ======================
+# ====================== IMPORTAÇÕES DO RECONHECIMENTO FACIAL ======================
 try:
     import cv2
     import face_recognition
     import numpy as np
     FACIAL_AVAILABLE = True
-except ImportError as e:
+except ImportError:
     FACIAL_AVAILABLE = False
 
 # ====================== CONFIGURAÇÕES ======================
@@ -347,19 +347,13 @@ def compress_image_to_base64(uploaded_file, max_size_kb=500):
 def get_theme_config():
     padrao = {
         "type": "gradient",
-        "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
-        "apply_to_login": False,
-        "image_adjust": "cover",
-        "image_position": "center",
-        "video_loop": True
+        "value": "#0a0a1a",
+        "apply_to_login": False
     }
     try:
         result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
         if result.data:
             config = json.loads(result.data[0]['value'])
-            config.setdefault("image_adjust", "cover")
-            config.setdefault("image_position", "center")
-            config.setdefault("video_loop", True)
             return config
         else:
             save_theme_config(padrao)
@@ -381,64 +375,25 @@ def save_theme_config(config):
         st.error(f"Erro ao salvar tema global: {e}")
         return False
 
-def futuristic_background_script():
-    """Versão corrigida sem canvas JavaScript para evitar erros de renderização"""
-    st.markdown("""
-    <style>
-        .stApp {
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2a 50%, #0a0a1a 100%) !important;
-            animation: gradientShift 15s ease-in-out infinite alternate;
-            background-size: 400% 400%;
-            min-height: 100vh;
-        }
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        .stApp::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 40%, rgba(0,255,255,0.04) 0%, transparent 50%),
-                radial-gradient(circle at 80% 60%, rgba(255,0,255,0.04) 0%, transparent 50%);
-            pointer-events: none;
-            z-index: -1;
-        }
-        .stApp::after {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image: 
-                linear-gradient(rgba(0,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,255,255,0.02) 1px, transparent 1px);
-            background-size: 50px 50px;
-            pointer-events: none;
-            z-index: -1;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
 def apply_theme_css():
+    """Aplica tema sem usar canvas/JavaScript para evitar erro removeChild"""
     config = st.session_state.get("theme_config", get_theme_config())
     bg_type = config.get("type", "gradient")
-    if bg_type == "gradient":
-        bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
-        st.markdown(f'<style>.stApp {{ background: {bg_value} !important; background-attachment: fixed; background-size: cover; }}</style>', unsafe_allow_html=True)
-    elif bg_type == "solid":
-        bg_value = config.get("value", "#0a0a1a")
-        st.markdown(f'<style>.stApp {{ background: {bg_value} !important; }}</style>', unsafe_allow_html=True)
-    elif bg_type == "futuristic":
-        futuristic_background_script()
+    
+    if bg_type == "solid":
+        cor = config.get("value", "#0a0a1a")
+        st.markdown(f"""
+        <style>
+            .stApp {{ background: {cor} !important; }}
+        </style>
+        """, unsafe_allow_html=True)
     else:
-        st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
+        # Sempre usa o fundo escuro sólido para evitar problemas
+        st.markdown("""
+        <style>
+            .stApp { background: #0a0a1a !important; }
+        </style>
+        """, unsafe_allow_html=True)
 
 # ====================== FUNÇÕES DE SESSÃO ======================
 MAX_TENTATIVAS_LOGIN = 5
@@ -785,6 +740,7 @@ def determinar_tipo_registro_facial(cpf):
     except:
         return "ENTRADA"
 
+# ====================== PÁGINA DE RECONHECIMENTO FACIAL ======================
 def pagina_reconhecimento_facial():
     """Página de reconhecimento facial com verificação de disponibilidade"""
     
@@ -984,43 +940,40 @@ st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
 # ====================== CONFIGURAÇÃO DA PÁGINA ======================
-st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="JOHN ACESSOS - CYBER SECURITY 2026", 
+    layout="wide", 
+    page_icon="🛡️", 
+    initial_sidebar_state="expanded"
+)
 
-# ====================== CSS FUTURISTA ======================
+# ====================== CSS BÁSICO (SEM JAVASCRIPT) ======================
 st.markdown("""
 <style>
+    /* ESTILOS BÁSICOS - SEM JAVASCRIPT PARA EVITAR ERRO removeChild */
     html, body {
         margin: 0;
         padding: 0;
         height: 100%;
         width: 100%;
-        overflow: hidden;
+        background: #0a0a1a;
     }
     .stApp {
-        transition: background 0.3s ease;
-        height: 100%;
-        overflow: auto;
+        background: #0a0a1a !important;
+        min-height: 100vh;
     }
     header[data-testid="stHeader"] {
-        background: transparent !important;
-        box-shadow: none !important;
+        background: rgba(10, 10, 26, 0.8) !important;
         backdrop-filter: blur(8px);
         border-bottom: 1px solid rgba(0, 255, 255, 0.2);
     }
-    header[data-testid="stHeader"] button {
-        color: #0ff !important;
-        text-shadow: 0 0 3px #0ff;
-    }
     [data-testid="stSidebar"] {
-        background: rgba(10, 10, 25, 0.65) !important;
-        backdrop-filter: blur(16px);
-        border-right: 1px solid rgba(0, 255, 255, 0.3);
-        box-shadow: 4px 0 30px rgba(0, 255, 255, 0.1);
+        background: rgba(10, 10, 25, 0.9) !important;
+        border-right: 1px solid rgba(0, 255, 255, 0.2);
     }
     .avatar-container {
         text-align: center;
         margin-bottom: 25px;
-        position: relative;
     }
     .avatar-image {
         width: 130px;
@@ -1028,209 +981,111 @@ st.markdown("""
         border-radius: 50%;
         object-fit: cover;
         border: 2px solid #0ff;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.3);
-        transition: 0.3s;
-        filter: drop-shadow(0 0 8px cyan);
-    }
-    .avatar-image:hover {
-        transform: scale(1.02);
-        box-shadow: 0 0 30px cyan;
-        border-color: #f0f;
-    }
-    .glow-ring {
-        position: absolute;
-        top: -5px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 140px;
-        height: 140px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(0,255,255,0.2), transparent);
-        pointer-events: none;
-        animation: pulseRing 2s infinite;
-    }
-    @keyframes pulseRing {
-        0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
-        100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
     }
     .dashboard-card {
-        background: rgba(10, 15, 30, 0.45);
-        backdrop-filter: blur(12px);
-        border-radius: 28px;
+        background: rgba(10, 15, 30, 0.6);
+        backdrop-filter: blur(8px);
+        border-radius: 20px;
         padding: 1.2rem 1rem;
         margin: 0.5rem;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 15px rgba(0,255,255,0.2);
-        transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
-        position: relative;
-        overflow: hidden;
-        cursor: default;
-        z-index: 1;
-    }
-    .dashboard-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.15), transparent);
-        transition: left 0.6s ease;
-        z-index: 0;
-        pointer-events: none;
-    }
-    .dashboard-card:hover::before {
-        left: 100%;
-    }
-    .dashboard-card::after {
-        content: '';
-        position: absolute;
-        top: -2px;
-        left: -2px;
-        right: -2px;
-        bottom: -2px;
-        background: linear-gradient(45deg, cyan, magenta, cyan, #0ff);
-        border-radius: 30px;
-        z-index: -1;
-        opacity: 0;
-        transition: opacity 0.4s;
-    }
-    .dashboard-card:hover::after {
-        opacity: 0.6;
+        border: 1px solid rgba(0, 255, 255, 0.2);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
     }
     .dashboard-card:hover {
-        transform: translateY(-6px);
-        border-color: rgba(0, 255, 255, 0.8);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 25px cyan;
+        transform: translateY(-4px);
+        border-color: rgba(0, 255, 255, 0.5);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 20px rgba(0,255,255,0.1);
     }
     .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 12px;
-        position: relative;
-        z-index: 2;
     }
     .card-icon {
         font-size: 2.5rem;
-        filter: drop-shadow(0 0 6px cyan);
-        transition: 0.2s;
-    }
-    .dashboard-card:hover .card-icon {
-        transform: scale(1.05);
-        filter: drop-shadow(0 0 12px magenta);
-    }
-    .status-indicator {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(0,0,0,0.5);
-        padding: 4px 10px;
-        border-radius: 30px;
-        font-size: 0.7rem;
-        font-family: 'Space Mono', monospace;
-        border: 1px solid rgba(0, 255, 255, 0.4);
-        backdrop-filter: blur(4px);
-    }
-    .status-led {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background-color: #0f0;
-        box-shadow: 0 0 6px #0f0;
-        animation: pulseLed 1.2s infinite;
-    }
-    @keyframes pulseLed {
-        0% { opacity: 0.4; transform: scale(0.8); }
-        100% { opacity: 1; transform: scale(1.2); }
     }
     .card-title {
         font-size: 0.85rem;
-        letter-spacing: 3px;
+        letter-spacing: 2px;
         text-transform: uppercase;
         color: #aaf;
         font-weight: 500;
         margin-bottom: 8px;
-        position: relative;
-        z-index: 2;
     }
     .card-value {
         font-size: 2.8rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #fff, cyan);
+        background: linear-gradient(135deg, #fff, #00ffff);
         -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         background-clip: text;
-        color: transparent;
-        text-shadow: 0 0 20px rgba(0,255,255,0.5);
         line-height: 1.2;
-        font-family: 'Space Mono', monospace;
-        margin-bottom: 4px;
-        position: relative;
-        z-index: 2;
     }
     .card-footer {
         font-size: 0.7rem;
-        color: rgba(0, 255, 255, 0.7);
-        font-family: monospace;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        color: rgba(0, 255, 255, 0.6);
         margin-top: 8px;
-        position: relative;
-        z-index: 2;
     }
-    .stButton>button, .stForm button {
+    .stButton>button {
         background: rgba(0,20,40,0.7) !important;
-        backdrop-filter: blur(8px);
         border: 1px solid #0ff !important;
         border-radius: 40px !important;
         color: #0ff !important;
         font-weight: bold;
         transition: 0.2s;
-        box-shadow: 0 0 5px rgba(0,255,255,0.3);
     }
-    .stButton>button:hover, .stForm button:hover {
+    .stButton>button:hover {
         background: rgba(0,255,255,0.15) !important;
-        border-color: magenta !important;
-        color: magenta !important;
-        box-shadow: 0 0 15px magenta;
-        transform: scale(1.02);
+        border-color: #ff00ff !important;
+        color: #ff00ff !important;
+        box-shadow: 0 0 15px rgba(255,0,255,0.3);
     }
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
+    .stTextInput>div>div>input {
         background: rgba(0, 10, 20, 0.7) !important;
-        backdrop-filter: blur(8px);
         border: 1px solid #0ff !important;
         border-radius: 16px !important;
         color: #0ff !important;
-        font-family: 'Space Mono', monospace;
-        transition: 0.2s;
     }
-    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
-        border-color: magenta !important;
-        box-shadow: 0 0 12px magenta;
+    .stTextInput>div>div>input:focus {
+        border-color: #ff00ff !important;
+        box-shadow: 0 0 12px rgba(255,0,255,0.2);
     }
-    .stForm, .stExpander, .stTabs [data-baseweb="tab-list"] {
-        background: rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(8px);
-        border-radius: 20px;
-        border: 1px solid rgba(0,255,255,0.2);
-        padding: 5px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background: transparent;
-        color: #ccc;
+    .status-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0,0,0,0.5);
+        padding: 4px 12px;
         border-radius: 30px;
-        font-weight: 500;
+        font-size: 0.7rem;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        color: #0ff;
     }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.2));
-        color: #0ff !important;
-        text-shadow: 0 0 3px cyan;
+    .badge-admin {
+        background: linear-gradient(135deg, #00ffff, #ff00ff);
+        padding: 4px 15px;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 11px;
+        color: #000;
     }
-    .stDataFrame {
-        background: rgba(0,0,0,0.4) !important;
-        border: 1px solid cyan !important;
-        border-radius: 16px;
+    .footer {
+        text-align: center;
+        padding: 15px;
+        color: #6b7280;
+        font-size: 9px;
+        border-top: 1px solid rgba(0,255,255,0.1);
+        margin-top: 25px;
+    }
+    .info-item {
+        margin-bottom: 12px;
+        font-size: 13px;
+        display: flex;
+        gap: 8px;
+        color: #eef !important;
     }
     .live-indicator {
         display: inline-flex;
@@ -1240,7 +1095,6 @@ st.markdown("""
         padding: 4px 12px;
         border-radius: 40px;
         font-size: 12px;
-        font-family: monospace;
         border: 1px solid #0ff;
         color: #0ff;
     }
@@ -1249,89 +1103,31 @@ st.markdown("""
         height: 10px;
         background-color: #0f0;
         border-radius: 50%;
-        box-shadow: 0 0 5px #0f0;
         animation: pulse 1s infinite;
     }
     @keyframes pulse {
-        0% { opacity: 0.4; transform: scale(0.8);}
-        100% { opacity: 1; transform: scale(1.2);}
-    }
-    .footer {
-        text-align: center;
-        padding: 15px;
-        color: #6b7280;
-        font-size: 9px;
-        border-top: 1px solid rgba(0,255,255,0.2);
-        margin-top: 25px;
-    }
-    h1, h2, h3, p, label, .info-item, .stMarkdown, .stRadio label, .stCheckbox label {
-        color: #eef !important;
-        text-shadow: 0 0 2px rgba(0,0,0,0.5);
-    }
-    .info-item {
-        margin-bottom: 12px;
-        font-size: 13px;
-        display: flex;
-        gap: 8px;
-        font-family: 'Space Mono', monospace;
-    }
-    .badge-admin {
-        background: linear-gradient(135deg, cyan, magenta);
-        padding: 4px 15px;
-        border-radius: 30px;
-        font-weight: 700;
-        font-size: 11px;
-        color: #000;
+        0% { opacity: 0.4; transform: scale(0.8); }
+        100% { opacity: 1; transform: scale(1.2); }
     }
     .session-indicator {
         background: rgba(0,0,0,0.6);
         border-radius: 30px;
         padding: 4px 12px;
         font-size: 12px;
-        font-family: monospace;
-        color: cyan;
+        color: #0ff;
         display: inline-flex;
         align-items: center;
         gap: 5px;
     }
-    .sync-card {
-        background: linear-gradient(135deg, rgba(0,255,255,0.05), rgba(0,100,100,0.1));
-        border-radius: 15px;
-        padding: 15px;
-        margin: 10px 0;
-        border: 1px solid rgba(0,255,255,0.3);
-    }
-    .success-animation {
-        animation: glowPulse 0.5s ease-in-out;
-    }
-    @keyframes glowPulse {
-        0% { box-shadow: 0 0 0 0 rgba(0,255,0,0.7); }
-        70% { box-shadow: 0 0 0 10px rgba(0,255,0,0); }
-        100% { box-shadow: 0 0 0 0 rgba(0,255,0,0); }
-    }
-    .chart-container {
-        background: rgba(10, 15, 30, 0.3);
-        border-radius: 20px;
-        padding: 15px;
-        border: 1px solid rgba(0, 255, 255, 0.2);
-    }
-    .chart-title {
-        font-size: 14px;
-        color: #0ff;
-        text-align: center;
-        margin-bottom: 10px;
-        font-family: 'Space Mono', monospace;
+    h1, h2, h3, p, label, .stMarkdown {
+        color: #eef !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
-    theme = st.session_state.theme_config
-    if theme.get("apply_to_login", False):
-        apply_theme_css()
-    else:
-        st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
+    st.markdown('<style>.stApp{background:#0a0a1a !important;}</style>', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -1375,8 +1171,6 @@ if not st.session_state.logado:
     st.stop()
 
 # ====================== APÓS LOGIN ======================
-apply_theme_css()
-
 if st.session_state.session_id:
     atualizar_atividade_sessao()
     limpar_sessoes_expiradas()
@@ -1387,11 +1181,10 @@ else:
 # ====================== SIDEBAR ======================
 with st.sidebar:
     st.markdown(f"""
-    <div class="avatar-container">
-        <div class="glow-ring"></div>
-        <img src="{st.session_state.avatar_url}" class="avatar-image">
-        <div class="sidebar-title" style="font-size: 20px; margin-top: 12px;">👮‍♂️ JOHN ACESSOS</div>
-        <p style="color:#0ff; font-size: 9px; letter-spacing: 2px;">CYBER SECURITY 2026</p>
+    <div class="avatar-container" style="text-align:center;padding:10px 0;">
+        <img src="{st.session_state.avatar_url}" class="avatar-image" style="width:120px;height:120px;border-radius:50%;border:2px solid cyan;box-shadow:0 0 20px rgba(0,255,255,0.3);">
+        <div style="font-size:20px;margin-top:10px;color:#0ff;">👮‍♂️ JOHN ACESSOS</div>
+        <p style="color:#0ff;font-size:10px;letter-spacing:2px;">CYBER SECURITY 2026</p>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
@@ -1404,8 +1197,6 @@ with st.sidebar:
     st.markdown("### 📡 INFO")
     if st.session_state.get("perfil"):
         st.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
     st.markdown('<div class="info-item">📦 Versão: 13.2 (CYBER OTIMIZADO)</div>', unsafe_allow_html=True)
 
@@ -1443,14 +1234,12 @@ if st.session_state.perfil == "ADMIN":
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
-        tipo = st.selectbox("Tipo de fundo", ["Gradiente padrão", "Cor sólida", "Futurista Dinâmico (CSS)"])
+        tipo = st.selectbox("Tipo de fundo", ["Gradiente padrão", "Cor sólida"])
         if tipo == "Cor sólida":
             cor = st.color_picker("Escolha a cor", value="#0a0a1a")
             nova_config = {"type": "solid", "value": cor, "apply_to_login": False}
-        elif tipo == "Futurista Dinâmico (CSS)":
-            nova_config = {"type": "futuristic", "value": "futuristic", "apply_to_login": False}
         else:
-            nova_config = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
+            nova_config = {"type": "gradient", "value": "#0a0a1a", "apply_to_login": False}
         if st.button("💾 Salvar Tema"):
             if save_theme_config(nova_config):
                 apply_theme_css()
@@ -1488,32 +1277,11 @@ if st.session_state.perfil == "ADMIN":
                 st.success("Avatar restaurado!")
                 safe_rerun()
 
-# ====================== MÉTRICAS DE PERFORMANCE ======================
-with st.expander("📊 Métricas de Performance", expanded=False):
-    col_m1, col_m2, col_m3 = st.columns(3)
-    with col_m1:
-        tempo_medio = get_tempo_medio_query()
-        st.metric("⏱️ Tempo médio de query", f"{tempo_medio:.0f}ms" if tempo_medio > 0 else "Calculando...")
-    with col_m2:
-        hit_ratio = cache_estatisticas.get_hit_ratio()
-        st.metric("🎯 Cache hit ratio", f"{hit_ratio:.0f}%")
-    with col_m3:
-        total_cached = len(cache_estatisticas.cache_data) + len(cache_pessoas.cache_data) + len(cache_presentes.cache_data)
-        st.metric("💾 Registros em cache", total_cached)
-    st.caption(f"⚙️ Configurações: Cache TTL: {CACHE_TTL_PADRAO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
-    if st.button("🔄 Atualizar Estatísticas (View)", key="refresh_stats_view", use_container_width=True):
-        with st.spinner("Atualizando..."):
-            if refresh_estatisticas_view():
-                st.success("Estatísticas atualizadas!")
-                safe_rerun()
-            else:
-                st.error("Falha na atualização. Verifique se a view existe.")
-
 # ====================== DASHBOARD ======================
 st.markdown("---")
 stats = get_estatisticas_cached()
 
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown(f"""
@@ -1544,78 +1312,6 @@ with col3:
         <div class="card-footer">📍 MONITORADOS</div>
     </div>
     """, unsafe_allow_html=True)
-
-with col4:
-    with st.spinner("Carregando análise de fluxo..."):
-        fluxo_df = get_fluxo_acesso_por_hora()
-        total_hoje = get_total_acessos_hoje()
-        
-        if not fluxo_df.empty:
-            turno_data = fluxo_df.groupby('turno')['total_acessos'].sum().reset_index()
-            cores = {
-                '🌅 Manhã (06h-12h)': '#00ffcc',
-                '☀️ Tarde (12h-18h)': '#ff6b6b',
-                '🌙 Noite (18h-00h)': '#7c3aed',
-                '🌙 Madrugada (00h-06h)': '#f59e0b'
-            }
-            fig = go.Figure(data=[go.Pie(
-                labels=turno_data['turno'],
-                values=turno_data['total_acessos'],
-                hole=0.4,
-                marker=dict(colors=[cores.get(t, '#a855f7') for t in turno_data['turno']], line=dict(color='rgba(0,0,0,0.5)', width=2)),
-                textinfo='percent+label',
-                textposition='auto',
-                hoverinfo='label+percent+value',
-                hovertemplate='<b>%{label}</b><br>📊 Acessos: %{value}<br>📈 Percentual: %{percent}<extra></extra>',
-                textfont=dict(size=12, color='white'),
-                pull=[0.02, 0.02, 0.02, 0.02]
-            )])
-            fig.update_layout(
-                title=dict(text=f"📊 FLUXO DE ACESSO POR TURNO<br><span style='font-size:12px;'>Total hoje: {total_hoje} acessos</span>", font=dict(color='#0ff', size=14, family='Space Mono'), x=0.5, xanchor='center'),
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color='white'),
-                height=280,
-                margin=dict(t=50, b=20, l=20, r=20),
-                showlegend=False,
-                annotations=[dict(text=f"🏥<br>{total_hoje}", x=0.5, y=0.5, font=dict(size=18, color='#0ff', family='Space Mono'), showarrow=False)]
-            )
-            fig.update_traces(textposition='inside', textfont_size=11, hoverlabel=dict(bgcolor="rgba(0,0,0,0.8)", font_size=12, font_family="Space Mono"), rotation=90, sort=False)
-            
-            st.markdown("""
-            <div class="dashboard-card" style="padding: 0.5rem;">
-                <div class="card-header">
-                    <div class="card-icon">📊</div>
-                    <div class="status-indicator">FLUXO</div>
-                </div>
-            """, unsafe_allow_html=True)
-            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-            st.markdown("""
-                <div class="card-footer" style="justify-content: center;">
-                    📊 Análise de fluxo - Horários de pico
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if not fluxo_df.empty:
-                hora_pico = fluxo_df.loc[fluxo_df['total_acessos'].idxmax()]
-                col_info1, col_info2 = st.columns(2)
-                with col_info1:
-                    st.caption(f"⏰ Hora de pico: **{int(hora_pico['hora'])}h** ({hora_pico['total_acessos']} acessos)")
-                with col_info2:
-                    st.caption(f"📈 Média por hora: **{fluxo_df['total_acessos'].mean():.0f}** acessos")
-        else:
-            st.markdown("""
-            <div class="dashboard-card">
-                <div class="card-header"><div class="card-icon">📊</div><div class="status-indicator">FLUXO</div></div>
-                <div class="card-title">ANÁLISE DE FLUXO</div>
-                <div style="text-align: center; padding: 20px;">
-                    <span style="font-size: 24px;">📭</span>
-                    <div style="color: #aaa;">Nenhum dado de acesso registrado</div>
-                </div>
-                <div class="card-footer">⏳ AGUARDANDO DADOS</div>
-            </div>
-            """, unsafe_allow_html=True)
 
 # ====================== CADASTRO DE NOVA PESSOA ======================
 st.markdown("---")
