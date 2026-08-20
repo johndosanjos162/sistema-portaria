@@ -6,8 +6,8 @@ plotly>=5.18.0
 Pillow>=10.1.0
 
 # ==================== IA E MONITORAMENTO ====================
-psutil>=5.9.0          # Monitoramento de CPU, memória e recursos do sistema (para a IA)
-requests>=2.31.0       # Para chamadas HTTP adicionais (se necessário)
+psutil>=5.9.0          # Monitoramento de CPU, memória e recursos (para a IA)
+requests>=2.31.0       # Chamadas HTTP adicionais (se necessário)
 
 # ==================== DESENVOLVIMENTO E EVOLUÇÃO ====================
 python-dotenv>=1.0.0   # Gerenciar variáveis de ambiente (.env) localmente
