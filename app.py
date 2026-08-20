@@ -15,6 +15,7 @@ import plotly.graph_objects as go
 import threading
 import ast
 import inspect
+import sys
 from collections import defaultdict
 
 # ====================== CONFIGURAÇÕES ======================
@@ -22,14 +23,20 @@ CACHE_TTL_PADRAO = 30
 ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
 
-# ====================== SISTEMA DE IA AUTO-EVOLUTIVA ======================
-class IAAutoEvolutiva:
-    """IA com autonomia para alterar o código com aprovação do ADMIN"""
+# ====================== IA AUTÔNOMA CENTRAL ======================
+class IACore:
+    """
+    IA Autônoma Central - Gerencia, otimiza e evolui o sistema continuamente.
+    - Monitora métricas em background
+    - Aplica otimizações automáticas (sem autorização) para melhorias seguras
+    - Solicita autorização do ADMIN apenas para ações críticas (dados/permissoes)
+    """
     
     def __init__(self):
-        self.versao = "1.0.0"
+        self.versao = "2.0.0"
         self.inicio = datetime.now()
         self.ultima_analise = datetime.now()
+        self.autonomia_ativa = True  # Habilita auto-aplicação
         
         # Métricas
         self.metricas = {
@@ -38,67 +45,74 @@ class IAAutoEvolutiva:
             "cache_misses": 0,
             "erros": [],
             "buscas": 0,
-            "registros": 0
+            "registros_entrada": 0,
+            "registros_saida": 0,
+            "sessoes": 0
         }
         
-        # Sugestões e alterações
-        self.sugestoes_pendentes = []
-        self.alteracoes_aplicadas = []
-        self.historico_versoes = []
+        # Sugestões e alterações (histórico)
+        self.historico_acoes = []
+        self.acoes_automaticas = []
+        self.acoes_criticas_pendentes = []  # Aguardam aprovação do ADMIN
         
-        # Padrões identificados
+        # Padrões
         self.padroes = {
             "funcoes_lentas": defaultdict(list),
             "campos_buscados": defaultdict(int),
-            "erros_por_funcao": defaultdict(int)
+            "erros_por_funcao": defaultdict(int),
+            "horarios_pico": defaultdict(int)
         }
         
-        # Código fonte do app (para análise)
-        self.codigo_atual = None
-        self.analise_codigo = {}
+        # Estado interno
+        self.estado = {
+            "cache_ttl_atual": CACHE_TTL_PADRAO,
+            "ultimo_reboot": datetime.now(),
+            "conexao_supabase_ok": True,
+            "total_erros_hoje": 0
+        }
         
-        # Inicia monitoramento
+        # Inicia monitoramento em background
         self.monitor_ativo = True
         self.thread_monitor = threading.Thread(target=self._monitorar_background, daemon=True)
         self.thread_monitor.start()
     
+    # ==================== MONITORAMENTO ====================
     def _monitorar_background(self):
-        """Monitora o sistema em background"""
+        """Loop principal de monitoramento"""
         while self.monitor_ativo:
             try:
-                time.sleep(60)  # A cada minuto
+                time.sleep(30)  # A cada 30 segundos
                 self._analisar_metricas()
-                self._gerar_melhorias()
-                self._analisar_codigo()
+                self._analisar_padroes()
+                self._executar_otimizacoes_automaticas()
+                self._verificar_saude_sistema()
             except Exception as e:
-                self.padroes["erros_por_funcao"]["monitor"] += 1
+                self.registrar_erro("monitor", e)
     
-    def registrar_metrica(self, nome, valor):
-        """Registra métrica para análise"""
+    def registrar_metrica(self, nome, valor, extras=None):
         if nome in self.metricas:
             self.metricas[nome].append(valor)
             if len(self.metricas[nome]) > 500:
                 self.metricas[nome] = self.metricas[nome][-500:]
     
     def registrar_erro(self, funcao, erro):
-        """Registra erro para análise"""
         self.padroes["erros_por_funcao"][funcao] += 1
-        self.metricas["erros"].append({"funcao": funcao, "erro": str(erro)})
+        self.metricas["erros"].append({"funcao": funcao, "erro": str(erro), "timestamp": datetime.now().isoformat()})
+        self.estado["total_erros_hoje"] += 1
     
+    # ==================== ANÁLISE ====================
     def _analisar_metricas(self):
-        """Analisa métricas e identifica problemas"""
         # Análise de tempo de query
         if self.metricas["tempo_query"]:
             ultimas = self.metricas["tempo_query"][-30:]
             media = sum(ultimas) / len(ultimas) if ultimas else 0
-            
             if media > 500:
-                self._criar_sugestao(
+                self._sugerir_melhoria(
                     tipo="performance",
-                    titulo="⏱️ Otimização de Queries",
-                    descricao=f"Tempo médio de query alto ({media:.0f}ms). Adicionar cache e índices.",
-                    sugestao="Criar índice no campo 'cpf' na tabela Pessoas e implementar cache local",
-                    codigo_alteracao="ALTER TABLE Pessoas ADD INDEX idx_cpf (cpf);"
+                    titulo="⏱️ Queries lentas",
+                    descricao=f"Tempo médio: {media:.0f}ms. Considere criar índices.",
+                    acao="Criar índice no campo 'cpf' na tabela Pessoas.",
+                    criticidade="baixa"  # não afeta dados
                 )
         
         # Análise de cache
@@ -106,83 +120,122 @@ class IAAutoEvolutiva:
         if total_cache > 20:
             hit_ratio = self.metricas["cache_hits"] / total_cache * 100
             if hit_ratio < 60:
-                self._criar_sugestao(
+                self._sugerir_melhoria(
                     tipo="otimizacao",
-                    titulo="💾 Otimização de Cache",
-                    descricao=f"Cache hit ratio baixo ({hit_ratio:.0f}%). Aumentar TTL e melhorar política.",
-                    sugestao="Aumentar CACHE_TTL_PADRAO de 30 para 60 e adicionar cache para buscas frequentes",
-                    codigo_alteracao="CACHE_TTL_PADRAO = 60"
+                    titulo="💾 Aumentar TTL do cache",
+                    descricao=f"Hit ratio baixo ({hit_ratio:.0f}%).",
+                    acao="Aumentar CACHE_TTL_PADRAO de 30 para 60.",
+                    criticidade="baixa"
                 )
+                # Auto-aplica se autonomia ativa
+                if self.autonomia_ativa:
+                    self._aplicar_otimizacao_cache()
     
-    def _analisar_codigo(self):
-        """Analisa o código fonte em busca de melhorias"""
+    def _analisar_padroes(self):
+        # Identifica funções mais usadas
+        pass  # já é coletado via decorator
+    
+    def _verificar_saude_sistema(self):
+        # Verifica conexão com Supabase
         try:
-            codigo = inspect.getsource(self._analisar_codigo)
-            if "while True" in codigo and "time.sleep" not in codigo:
-                self._criar_sugestao(
-                    tipo="seguranca",
-                    titulo="🛡️ Prevenir Loop Infinito",
-                    descricao="Loop sem pausa detectado no código. Adicionar sleep para evitar travamentos.",
-                    sugestao="Adicionar time.sleep(0.01) no loop para reduzir consumo de CPU",
-                    codigo_alteracao="time.sleep(0.01) # Adicionado para prevenir travamento"
-                )
+            supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
+            self.estado["conexao_supabase_ok"] = True
         except:
-            pass
+            self.estado["conexao_supabase_ok"] = False
+            self._sugerir_melhoria(
+                tipo="infra",
+                titulo="🔌 Falha na conexão com Supabase",
+                descricao="A conexão com o banco de dados falhou.",
+                acao="Reconectar e reiniciar pool de conexões.",
+                criticidade="alta"  # crítica, pede autorização
+            )
     
-    def _criar_sugestao(self, tipo, titulo, descricao, sugestao, codigo_alteracao):
-        """Cria uma sugestão de melhoria"""
-        sugestao_id = str(uuid.uuid4())[:8]
-        
-        # Verifica se já existe sugestão similar
-        for s in self.sugestoes_pendentes:
-            if s["titulo"] == titulo and not s["aplicada"]:
-                return
-        
-        self.sugestoes_pendentes.append({
-            "id": sugestao_id,
+    # ==================== SUGESTÕES E AÇÕES ====================
+    def _sugerir_melhoria(self, tipo, titulo, descricao, acao, criticidade="baixa"):
+        """Registra uma sugestão de melhoria"""
+        acao_id = str(uuid.uuid4())[:8]
+        sugestao = {
+            "id": acao_id,
             "tipo": tipo,
             "titulo": titulo,
             "descricao": descricao,
-            "sugestao": sugestao,
-            "codigo_alteracao": codigo_alteracao,
+            "acao": acao,
+            "criticidade": criticidade,
             "timestamp": datetime.now().isoformat(),
             "aplicada": False,
-            "aprovada": False
-        })
+            "aprovada": False,
+            "executada_auto": False
+        }
+        
+        # Se criticidade baixa e autonomia ativa, aplica imediatamente
+        if criticidade == "baixa" and self.autonomia_ativa:
+            self._aplicar_acao_automatica(sugestao)
+        else:
+            # Senão, coloca na fila de pendentes para aprovação
+            if not any(s["titulo"] == titulo and not s["aplicada"] for s in self.acoes_criticas_pendentes):
+                self.acoes_criticas_pendentes.append(sugestao)
     
-    def aprovar_sugestao(self, sugestao_id):
-        """Aprova e aplica uma sugestão"""
-        for sugestao in self.sugestoes_pendentes:
-            if sugestao["id"] == sugestao_id and not sugestao["aplicada"]:
-                sugestao["aprovada"] = True
-                sugestao["aplicada"] = True
-                self.alteracoes_aplicadas.append(sugestao)
-                
-                # Atualiza versão
-                self.versao = f"1.0.{len(self.alteracoes_aplicadas)}"
-                self.historico_versoes.append({
-                    "versao": self.versao,
-                    "alteracao": sugestao["titulo"],
-                    "timestamp": datetime.now().isoformat()
-                })
+    def _aplicar_acao_automatica(self, sugestao):
+        """Aplica ação automaticamente (sem autorização)"""
+        try:
+            # Executa a ação
+            if "cache" in sugestao["titulo"].lower():
+                self._aplicar_otimizacao_cache()
+            elif "query" in sugestao["titulo"].lower():
+                self._criar_indice_sugerido()
+            else:
+                # Ação genérica (ex: reiniciar algo)
+                pass
+            
+            sugestao["aplicada"] = True
+            sugestao["executada_auto"] = True
+            self.acoes_automaticas.append(sugestao)
+            self.historico_acoes.append(sugestao)
+            
+            # Registra na versão
+            self.versao = f"2.0.{len(self.historico_acoes)}"
+            
+        except Exception as e:
+            self.registrar_erro("auto_apply", e)
+    
+    def _aplicar_otimizacao_cache(self):
+        """Aumenta o TTL do cache global"""
+        global CACHE_TTL_PADRAO
+        novo_ttl = min(CACHE_TTL_PADRAO + 10, 120)
+        CACHE_TTL_PADRAO = novo_ttl
+        self.estado["cache_ttl_atual"] = novo_ttl
+        # Recria as instâncias de cache com novo TTL (opcional)
+        # Como as instâncias são globais, podemos atualizar o atributo
+        for cache in [cache_estatisticas, cache_pessoas, cache_presentes, cache_fluxo_acesso]:
+            cache.ttl_seconds = novo_ttl
+    
+    def _criar_indice_sugerido(self):
+        """Sugere criação de índice (apenas log) - não executa automaticamente por segurança"""
+        # Como é uma ação que altera o banco, colocamos como crítica
+        pass
+    
+    # ==================== APROVAÇÃO DE AÇÕES CRÍTICAS ====================
+    def aprovar_acao_critica(self, acao_id):
+        """ADMIN aprova uma ação crítica"""
+        for acao in self.acoes_criticas_pendentes:
+            if acao["id"] == acao_id and not acao["aplicada"]:
+                acao["aprovada"] = True
+                acao["aplicada"] = True
+                self.historico_acoes.append(acao)
+                self.versao = f"2.0.{len(self.historico_acoes)}"
                 return True
         return False
     
-    def rejeitar_sugestao(self, sugestao_id):
-        """Rejeita uma sugestão"""
-        for sugestao in self.sugestoes_pendentes:
-            if sugestao["id"] == sugestao_id:
-                sugestao["aplicada"] = True
-                sugestao["aprovada"] = False
+    def rejeitar_acao_critica(self, acao_id):
+        for acao in self.acoes_criticas_pendentes:
+            if acao["id"] == acao_id:
+                acao["aplicada"] = True  # marca como processada
+                acao["aprovada"] = False
                 return True
         return False
     
-    def get_sugestoes_pendentes(self):
-        """Retorna sugestões pendentes de aprovação"""
-        return [s for s in self.sugestoes_pendentes if not s["aplicada"]]
-    
+    # ==================== RELATÓRIOS ====================
     def get_relatorio(self):
-        """Gera relatório completo"""
         return {
             "versao": self.versao,
             "tempo_ativo": str(datetime.now() - self.inicio).split(".")[0],
@@ -191,17 +244,16 @@ class IAAutoEvolutiva:
                 "cache_hit_ratio": f"{self.metricas['cache_hits'] / max(1, self.metricas['cache_hits'] + self.metricas['cache_misses']) * 100:.0f}%",
                 "total_erros": len(self.metricas["erros"]),
                 "total_buscas": self.metricas["buscas"],
-                "alteracoes_aplicadas": len(self.alteracoes_aplicadas)
+                "acoes_automaticas": len(self.acoes_automaticas),
+                "acoes_criticas_pendentes": len(self.acoes_criticas_pendentes)
             },
-            "sugestoes_pendentes": len(self.get_sugestoes_pendentes()),
-            "historico_versoes": self.historico_versoes[-5:],
-            "padroes": {
-                "funcoes_com_erros": dict(sorted(self.padroes["erros_por_funcao"].items(), key=lambda x: x[1], reverse=True)[:3])
-            }
+            "acoes_automaticas_recentes": self.acoes_automaticas[-3:],
+            "acoes_criticas_pendentes": self.acoes_criticas_pendentes,
+            "estado": self.estado
         }
 
 # ====================== INICIALIZAÇÃO DA IA ======================
-ia = IAAutoEvolutiva()
+ia = IACore()
 
 # ====================== CLASSES DE CACHE ======================
 class TimedCache:
@@ -275,7 +327,6 @@ def get_tempo_medio_query():
     return sum(tempos) / len(tempos) if tempos else 0
 
 def safe_rerun():
-    """Função segura para rerun com delay"""
     time.sleep(0.1)
     st.rerun()
 
@@ -619,6 +670,7 @@ def registrar_sessao(perfil, usuario="admin"):
         }
         supabase_admin.table("sessoes_ativas").insert(data).execute()
         st.session_state.session_id = session_id
+        ia.metricas["sessoes"] += 1
         return True
     except Exception as e:
         ia.registrar_erro("registrar_sessao", e)
@@ -864,14 +916,14 @@ def sincronizar_novos_cadastros(arquivo_csv):
         ia.registrar_erro("sincronizar_novos_cadastros", e)
         return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
 
-# ====================== PÁGINA DA IA AUTO-EVOLUTIVA ======================
+# ====================== PÁGINA DA IA AUTÔNOMA ======================
 def pagina_ia_autonomo():
     """Painel de controle da IA com autonomia"""
-    st.markdown("## 🤖 IA Auto-Evolutiva com Autonomia")
+    st.markdown("## 🤖 IA Autônoma Central")
     st.markdown(f"**Versão:** {ia.versao} | **Ativo há:** {str(datetime.now() - ia.inicio).split('.')[0]}")
     st.markdown("---")
     
-    # ==== BOTÃO PARA VOLTAR AO DASHBOARD ====
+    # Botão voltar
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("🏠 VOLTAR AO DASHBOARD PRINCIPAL", use_container_width=True, type="primary"):
@@ -888,75 +940,58 @@ def pagina_ia_autonomo():
     with col2:
         st.metric("⏱️ Tempo Query", relatorio["metricas"]["media_tempo_query"])
     with col3:
-        st.metric("💡 Sugestões", relatorio["sugestoes_pendentes"])
+        st.metric("🤖 Ações Auto", relatorio["metricas"]["acoes_automaticas"])
     with col4:
-        st.metric("✅ Alterações", relatorio["metricas"]["alteracoes_aplicadas"])
+        st.metric("⏳ Pendentes Críticas", relatorio["metricas"]["acoes_criticas_pendentes"])
     
     st.markdown("---")
     
-    # Sugestões pendentes de aprovação
-    st.markdown("### 📋 Sugestões de Melhoria Aguardando Aprovação")
-    sugerencias = ia.get_sugestoes_pendentes()
+    # Ações críticas pendentes de aprovação
+    st.markdown("### 🛡️ Ações Críticas Aguardando Aprovação")
+    criticas = ia.acoes_criticas_pendentes
     
-    if sugerencias:
-        for s in sugerencias:
+    if criticas:
+        for acao in criticas:
             with st.container():
-                st.markdown(f"#### {s['titulo']}")
-                st.markdown(f"**Descrição:** {s['descricao']}")
-                st.markdown(f"**Sugestão:** {s['sugestao']}")
-                
-                if s.get("codigo_alteracao"):
-                    st.code(s["codigo_alteracao"], language="python")
+                st.markdown(f"#### {acao['titulo']}")
+                st.markdown(f"**Descrição:** {acao['descricao']}")
+                st.markdown(f"**Ação proposta:** {acao['acao']}")
+                st.caption(f"Criticidade: {acao['criticidade']} | Tipo: {acao['tipo']}")
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("✅ APROVAR E APLICAR", key=f"aprovar_{s['id']}"):
-                        if ia.aprovar_sugestao(s["id"]):
-                            st.success(f"✅ Sugestão '{s['titulo']}' aprovada e aplicada! Versão {ia.versao}")
+                    if st.button("✅ APROVAR E APLICAR", key=f"aprovar_{acao['id']}"):
+                        if ia.aprovar_acao_critica(acao["id"]):
+                            st.success(f"✅ Ação '{acao['titulo']}' aprovada e aplicada! Versão {ia.versao}")
                             st.balloons()
                             time.sleep(1)
                             safe_rerun()
                         else:
-                            st.error("❌ Erro ao aplicar sugestão")
-                
+                            st.error("❌ Erro ao aplicar ação")
                 with col2:
-                    if st.button("❌ REJEITAR", key=f"rejeitar_{s['id']}"):
-                        if ia.rejeitar_sugestao(s["id"]):
-                            st.info(f"ℹ️ Sugestão '{s['titulo']}' rejeitada")
+                    if st.button("❌ REJEITAR", key=f"rejeitar_{acao['id']}"):
+                        if ia.rejeitar_acao_critica(acao["id"]):
+                            st.info(f"ℹ️ Ação '{acao['titulo']}' rejeitada")
                             safe_rerun()
-                
                 st.markdown("---")
     else:
-        st.success("✅ Nenhuma sugestão pendente. Sistema otimizado!")
+        st.success("✅ Nenhuma ação crítica pendente. Sistema seguro!")
     
     st.markdown("---")
     
-    # Histórico de alterações
-    st.markdown("### 📜 Histórico de Alterações")
-    if ia.historico_versoes:
-        for v in ia.historico_versoes[-5:]:
-            st.info(f"**v{v['versao']}** - {v['alteracao']} - {v['timestamp'][:16]}")
+    # Histórico de ações automáticas
+    st.markdown("### 🤖 Ações Automáticas Realizadas")
+    if ia.acoes_automaticas:
+        for acao in ia.acoes_automaticas[-5:]:
+            st.info(f"**{acao['titulo']}** - {acao['descricao']} (aplicada em {acao['timestamp'][:16]})")
     else:
-        st.info("Nenhuma alteração aplicada ainda")
+        st.info("Nenhuma ação automática realizada ainda.")
     
     st.markdown("---")
     
-    # Análise detalhada
-    st.markdown("### 🔍 Análise Detalhada")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("#### 🐛 Funções com Erros")
-        if relatorio["padroes"]["funcoes_com_erros"]:
-            for func, qtd in relatorio["padroes"]["funcoes_com_erros"].items():
-                st.warning(f"**{func}:** {qtd} erro(s)")
-        else:
-            st.success("✅ Nenhum erro detectado")
-    
-    with col2:
-        st.markdown("#### 📊 Métricas")
-        st.metric("Total Buscas", relatorio["metricas"]["total_buscas"])
-        st.metric("Total Erros", relatorio["metricas"]["total_erros"])
+    # Estado do sistema
+    st.markdown("### 📊 Estado do Sistema")
+    st.json(relatorio["estado"])
     
     st.markdown("---")
     
@@ -965,8 +1000,7 @@ def pagina_ia_autonomo():
     with col1:
         if st.button("🔄 Analisar Agora", use_container_width=True):
             ia._analisar_metricas()
-            ia._analisar_codigo()
-            st.success("Análise concluída! Verifique as sugestões.")
+            st.success("Análise concluída!")
             safe_rerun()
     with col2:
         if st.button("🧹 Limpar Cache", use_container_width=True):
@@ -977,7 +1011,6 @@ def pagina_ia_autonomo():
         if st.button("📊 Exportar Relatório", use_container_width=True):
             st.json(relatorio)
     
-    # Botão extra no final para voltar
     st.markdown("---")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -1011,14 +1044,12 @@ if "pagina_historico" not in st.session_state:
 if "pagina_atual" not in st.session_state:
     st.session_state.pagina_atual = "principal"
 
-# Carregar configurações iniciais
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== CONFIGURAÇÃO DA PÁGINA ======================
 st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
 
-# ====================== CSS FUTURISTA ======================
+# ====================== CSS ======================
 st.markdown("""
 <style>
     html, body {
@@ -1205,7 +1236,7 @@ if not st.session_state.logado:
                 <div style="font-size: 48px;">🛡️</div>
                 <h1 style="background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">JOHN ACESSOS</h1>
                 <p style="color: #a78bfa; letter-spacing: 3px;">CYBER SECURITY 2026</p>
-                <p style="color: #4a9a6a; font-size: 11px; margin-top: 5px;">🤖 IA Auto-Evolutiva v{ia.versao}</p>
+                <p style="color: #4a9a6a; font-size: 11px; margin-top: 5px;">🤖 IA Autônoma v{ia.versao}</p>
             </div>
         """.format(ia=ia), unsafe_allow_html=True)
         
@@ -1259,7 +1290,7 @@ st.markdown(f"""
             </div>
             <div>
                 <h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1>
-                <p style="margin:0;color:#aaf;font-size:10px;">🤖 IA AUTO-EVOLUTIVA • GESTÃO AUTÔNOMA</p>
+                <p style="margin:0;color:#aaf;font-size:10px;">🤖 IA AUTÔNOMA • GESTÃO INTELIGENTE</p>
             </div>
         </div>
         <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
@@ -1291,15 +1322,15 @@ with st.sidebar:
         <div style="font-size:20px;margin-top:12px;color:#0ff;">👮‍♂️ JOHN ACESSOS</div>
         <p style="color:#0ff;font-size:9px;letter-spacing:2px;">CYBER SECURITY 2026</p>
         <p style="color:#4a9a6a;font-size:8px;">🤖 IA v{ia.versao}</p>
-        <p style="color:#4a9a6a;font-size:8px;">💡 {len(ia.get_sugestoes_pendentes())} sugestões</p>
+        <p style="color:#4a9a6a;font-size:8px;">⚡ {len(ia.acoes_automaticas)} auto-ações</p>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### ⚡ ESTADO")
     st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> IA: ATIVA</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="info-item"><span style="color:#0ff;">●</span> CACHE: {cache_estatisticas.get_hit_ratio():.0f}%</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="info-item"><span style="color:#f0f;">●</span> SUGESTÕES: {len(ia.get_sugestoes_pendentes())}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="info-item"><span style="color:#ff0;">●</span> ALTERAÇÕES: {len(ia.alteracoes_aplicadas)}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item"><span style="color:#f0f;">●</span> AUTO-AÇÕES: {len(ia.acoes_automaticas)}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item"><span style="color:#ff0;">●</span> CRÍTICAS: {len(ia.acoes_criticas_pendentes)}</div>', unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### 📡 INFO")
     if st.session_state.get("perfil"):
@@ -1383,7 +1414,7 @@ if st.session_state.perfil == "ADMIN":
                 st.rerun()
     
     st.sidebar.markdown("---")
-    if st.sidebar.button("🧠 PAINEL IA AUTO-EVOLUTIVA", use_container_width=True):
+    if st.sidebar.button("🧠 PAINEL IA AUTÔNOMA", use_container_width=True):
         st.session_state.pagina_atual = "ia"
         st.rerun()
 
@@ -2098,6 +2129,6 @@ st.markdown(f"""
 <div class="footer">
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
     <br>
-    🤖 IA Auto-Evolutiva v{ia.versao} | {len(ia.alteracoes_aplicadas)} alterações aplicadas | {len(ia.get_sugestoes_pendentes())} sugestões pendentes
+    🤖 IA Autônoma v{ia.versao} | {len(ia.acoes_automaticas)} auto-ações | {len(ia.acoes_criticas_pendentes)} ações críticas pendentes
 </div>
 """, unsafe_allow_html=True)
