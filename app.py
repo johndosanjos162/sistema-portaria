@@ -21,8 +21,6 @@ try:
     FACIAL_AVAILABLE = True
 except ImportError as e:
     FACIAL_AVAILABLE = False
-    # Não exibe warning aqui porque ainda não temos o st configurado
-    # O warning será exibido na página principal
 
 # ====================== CONFIGURAÇÕES ======================
 CACHE_TTL_PADRAO = 30
@@ -92,6 +90,11 @@ def registrar_tempo_query(tempo_ms):
 def get_tempo_medio_query():
     tempos = st.session_state.get("tempos_query", [])
     return sum(tempos) / len(tempos) if tempos else 0
+
+def safe_rerun():
+    """Função segura para rerun com delay para evitar erros de renderização"""
+    time.sleep(0.15)
+    st.rerun()
 
 # ====================== FUNÇÕES DO SUPABASE ======================
 try:
@@ -379,9 +382,48 @@ def save_theme_config(config):
         return False
 
 def futuristic_background_script():
+    """Versão corrigida sem canvas JavaScript para evitar erros de renderização"""
     st.markdown("""
-    <canvas id="futuristic-canvas"></canvas>
-    <script>/* ... conteúdo original ... */</script>
+    <style>
+        .stApp {
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2a 50%, #0a0a1a 100%) !important;
+            animation: gradientShift 15s ease-in-out infinite alternate;
+            background-size: 400% 400%;
+            min-height: 100vh;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .stApp::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 40%, rgba(0,255,255,0.04) 0%, transparent 50%),
+                radial-gradient(circle at 80% 60%, rgba(255,0,255,0.04) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        .stApp::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(0,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,255,255,0.02) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+            z-index: -1;
+        }
+    </style>
     """, unsafe_allow_html=True)
 
 def apply_theme_css():
@@ -726,7 +768,8 @@ def determinar_tipo_registro_facial(cpf):
     """Verifica o último registro do usuário para decidir se é entrada ou saída"""
     try:
         ultimo = supabase.table("movimentacao")\
-            .select("data_entrada, data_saida")\            .eq("cpf", cpf)\
+            .select("data_entrada, data_saida")\
+            .eq("cpf", cpf)\
             .order("id", desc=True)\
             .limit(1)\
             .execute()
@@ -742,11 +785,9 @@ def determinar_tipo_registro_facial(cpf):
     except:
         return "ENTRADA"
 
-# ====================== PÁGINA DE RECONHECIMENTO FACIAL ======================
 def pagina_reconhecimento_facial():
     """Página de reconhecimento facial com verificação de disponibilidade"""
     
-    # Verifica se o reconhecimento facial está disponível
     if not FACIAL_AVAILABLE:
         st.warning("⚠️ Reconhecimento facial indisponível neste ambiente.")
         st.info("""
@@ -821,8 +862,8 @@ def pagina_reconhecimento_facial():
                                 if salvar_encoding_no_banco(usuario["id"], encoding_encontrado):
                                     st.success(f"✅ Rosto de {usuario['nome']} cadastrado com sucesso!")
                                     st.balloons()
-                                    time.sleep(2)
-                                    st.rerun()
+                                    time.sleep(1)
+                                    safe_rerun()
                                 else:
                                     st.error("❌ Erro ao salvar no banco.")
                             else:
@@ -842,8 +883,11 @@ def pagina_reconhecimento_facial():
             if st.button("🎥 INICIAR RECONHECIMENTO", type="primary", key="facial_btn_iniciar"):
                 st.markdown("---")
                 
-                placeholder = st.empty()
-                status_placeholder = st.empty()
+                # Usa container fixo para o vídeo
+                col_video = st.columns([1])[0]
+                with col_video:
+                    placeholder = st.empty()
+                    status_placeholder = st.empty()
                 
                 ultimo_registro = {}
                 
@@ -945,7 +989,6 @@ st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide
 # ====================== CSS FUTURISTA ======================
 st.markdown("""
 <style>
-    /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
     html, body {
         margin: 0;
         padding: 0;
@@ -1251,15 +1294,6 @@ st.markdown("""
         align-items: center;
         gap: 5px;
     }
-    #futuristic-canvas {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: -9999;
-        pointer-events: none;
-    }
     .sync-card {
         background: linear-gradient(135deg, rgba(0,255,255,0.05), rgba(0,100,100,0.1));
         border-radius: 15px;
@@ -1323,13 +1357,13 @@ if not st.session_state.logado:
                         st.session_state.perfil = "ADMIN"
                         st.session_state.tentativas_login = 0
                         registrar_sessao("ADMIN", "admin")
-                        st.rerun()
+                        safe_rerun()
                     elif senha == VIGILANTE_PASSWORD:
                         st.session_state.logado = True
                         st.session_state.perfil = "VIGILANTE"
                         st.session_state.tentativas_login = 0
                         registrar_sessao("VIGILANTE", "vigilante")
-                        st.rerun()
+                        safe_rerun()
                     else:
                         st.session_state.tentativas_login += 1
                         restantes = MAX_TENTATIVAS_LOGIN - st.session_state.tentativas_login
@@ -1385,13 +1419,13 @@ if st.session_state.perfil == "ADMIN":
         if st.button("🔒 Encerrar outras sessões", use_container_width=True, key="encerrar_sessoes"):
             if encerrar_outras_sessoes():
                 st.success("✅ Todas as outras sessões foram encerradas!")
-                st.rerun()
+                safe_rerun()
             else:
                 st.error("❌ Erro ao encerrar outras sessões.")
         if st.button("🧹 Limpar sessões expiradas", use_container_width=True, key="limpar_sessoes"):
             limpar_sessoes_expiradas()
             st.success("✅ Sessões expiradas removidas!")
-            st.rerun()
+            safe_rerun()
         st.caption("Ações disponíveis apenas para o administrador.")
     
     st.sidebar.markdown("---")
@@ -1402,18 +1436,18 @@ if st.session_state.perfil == "ADMIN":
         if st.button("💾 Salvar Offset", key="salvar_offset"):
             if save_timezone_offset(novo_offset):
                 st.success(f"✅ Offset alterado para {novo_offset} horas. Todos os novos registros usarão este horário.")
-                st.rerun()
+                safe_rerun()
             else:
                 st.error("Erro ao salvar offset.")
         st.caption("Exemplo: Brasília (UTC-3) = -3 | Londres (UTC+0) = 0")
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
-        tipo = st.selectbox("Tipo de fundo", ["Gradiente padrão", "Cor sólida", "Futurista Dinâmico (Canvas)"])
+        tipo = st.selectbox("Tipo de fundo", ["Gradiente padrão", "Cor sólida", "Futurista Dinâmico (CSS)"])
         if tipo == "Cor sólida":
             cor = st.color_picker("Escolha a cor", value="#0a0a1a")
             nova_config = {"type": "solid", "value": cor, "apply_to_login": False}
-        elif tipo == "Futurista Dinâmico (Canvas)":
+        elif tipo == "Futurista Dinâmico (CSS)":
             nova_config = {"type": "futuristic", "value": "futuristic", "apply_to_login": False}
         else:
             nova_config = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
@@ -1421,7 +1455,7 @@ if st.session_state.perfil == "ADMIN":
             if save_theme_config(nova_config):
                 apply_theme_css()
                 st.success("Tema atualizado!")
-                st.rerun()
+                safe_rerun()
     
     st.sidebar.markdown("---")
     with st.sidebar.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
@@ -1444,7 +1478,7 @@ if st.session_state.perfil == "ADMIN":
                     avatar_base64 = compress_avatar_image(uploaded_avatar)
                     if save_avatar_url(avatar_base64):
                         st.success("Avatar atualizado!")
-                        st.rerun()
+                        safe_rerun()
                 except Exception as e:
                     st.error(f"Erro: {e}")
         st.image(st.session_state.avatar_url, width=100, caption="Avatar atual")
@@ -1452,7 +1486,7 @@ if st.session_state.perfil == "ADMIN":
             padrao = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a2a'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='10'%3ESEGURANÇA%3C/text%3E%3C/svg%3E"
             if save_avatar_url(padrao):
                 st.success("Avatar restaurado!")
-                st.rerun()
+                safe_rerun()
 
 # ====================== MÉTRICAS DE PERFORMANCE ======================
 with st.expander("📊 Métricas de Performance", expanded=False):
@@ -1471,7 +1505,7 @@ with st.expander("📊 Métricas de Performance", expanded=False):
         with st.spinner("Atualizando..."):
             if refresh_estatisticas_view():
                 st.success("Estatísticas atualizadas!")
-                st.rerun()
+                safe_rerun()
             else:
                 st.error("Falha na atualização. Verifique se a view existe.")
 
@@ -1610,7 +1644,8 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
                         invalidar_cache()
                         st.success("✅ Cadastro salvo!")
                         st.balloons()
-                        st.rerun()
+                        time.sleep(1)
+                        safe_rerun()
                 except Exception as e:
                     st.error(f"Erro: {e}")
         else:
@@ -1669,7 +1704,7 @@ if st.session_state.get("pessoa_confirmada"):
             invalidar_cache()
             st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
             st.session_state.pessoa_confirmada = None
-            st.rerun()
+            safe_rerun()
         except Exception as e:
             st.error(f"Erro: {e}")
 
@@ -1712,19 +1747,16 @@ if dados:
                 invalidar_cache()
                 st.success(f"Saída registrada às {saida_str}")
                 st.session_state.pessoa_saida = None
-                st.rerun()
+                safe_rerun()
             except Exception as e:
                 st.error(f"Erro: {e}")
         st.markdown("---")
     
     st.markdown("#### 📋 Lista completa")
-    # Definição dos setores exatos para terceirizados
     setores_terceirizados_exatos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
     
-    # Criar abas
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
-    # Aba Prestador de Serviço: todos que NÃO têm setor exato igual a um dos três terceirizados
     with tabs[0]:
         prestadores = [p for p in dados if p['setor_destino'] not in setores_terceirizados_exatos]
         if prestadores:
@@ -1751,14 +1783,13 @@ if dados:
                                 supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
                                 invalidar_cache()
                                 st.success(f"Saída registrada para {p['nome']} às {saida_str}")
-                                st.rerun()
+                                safe_rerun()
                             except Exception as e:
                                 st.error(f"Erro: {e}")
                 st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
         else:
             st.info("Nenhum prestador de serviço presente no momento.")
     
-    # Aba C.C
     with tabs[1]:
         pessoas_cc = [p for p in dados if p['setor_destino'] == "🏥 C.C"]
         if pessoas_cc:
@@ -1785,14 +1816,13 @@ if dados:
                                 supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
                                 invalidar_cache()
                                 st.success(f"Saída registrada para {p['nome']} às {saida_str}")
-                                st.rerun()
+                                safe_rerun()
                             except Exception as e:
                                 st.error(f"Erro: {e}")
                 st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
         else:
             st.info("Ninguém presente no setor C.C.")
     
-    # Aba GRSA
     with tabs[2]:
         pessoas_gr = [p for p in dados if p['setor_destino'] == "🔧 GRSA"]
         if pessoas_gr:
@@ -1819,14 +1849,13 @@ if dados:
                                 supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
                                 invalidar_cache()
                                 st.success(f"Saída registrada para {p['nome']} às {saida_str}")
-                                st.rerun()
+                                safe_rerun()
                             except Exception as e:
                                 st.error(f"Erro: {e}")
                 st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
         else:
             st.info("Ninguém presente no setor GRSA.")
     
-    # Aba Brasanitas
     with tabs[3]:
         pessoas_br = [p for p in dados if p['setor_destino'] == "🏭 Brasanitas"]
         if pessoas_br:
@@ -1853,7 +1882,7 @@ if dados:
                                 supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
                                 invalidar_cache()
                                 st.success(f"Saída registrada para {p['nome']} às {saida_str}")
-                                st.rerun()
+                                safe_rerun()
                             except Exception as e:
                                 st.error(f"Erro: {e}")
                 st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
@@ -1870,7 +1899,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         if st.button("◀ ANTERIOR", key="pag_anterior"):
             if st.session_state.pagina_historico > 1:
                 st.session_state.pagina_historico -= 1
-                st.rerun()
+                safe_rerun()
     with col_page:
         st.markdown(f"<div style='text-align:center'>Página {st.session_state.pagina_historico}</div>", unsafe_allow_html=True)
     with col_next:
@@ -1878,7 +1907,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             historico_data = get_historico_paginado(st.session_state.pagina_historico + 1)
             if st.session_state.pagina_historico < historico_data["total_paginas"]:
                 st.session_state.pagina_historico += 1
-                st.rerun()
+                safe_rerun()
     historico = get_historico_paginado(st.session_state.pagina_historico)
     if historico["dados"]:
         df = pd.DataFrame(historico["dados"])
@@ -1906,11 +1935,11 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     for id_ in ids_pagina:
                         if id_ not in st.session_state.selected_ids:
                             st.session_state.selected_ids.append(id_)
-                    st.rerun()
+                    safe_rerun()
             with col_sel_clear:
                 if st.button("📋 Limpar seleção", key="limpar_selecao_todos"):
                     st.session_state.selected_ids = []
-                    st.rerun()
+                    safe_rerun()
         for row in historico["dados"]:
             col_check, col_data = st.columns([0.5, 9.5])
             with col_check:
@@ -1932,29 +1961,29 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                         st.success(resultado["mensagem"])
                         st.session_state.selected_ids = []
                         invalidar_cache()
-                        st.rerun()
+                        safe_rerun()
                     else:
                         st.error(resultado["mensagem"])
             with col_cancelar:
                 if st.button("❌ Cancelar", key="cancelar_excluir_lote"):
                     st.session_state.selected_ids = []
-                    st.rerun()
+                    safe_rerun()
         col_btn1, col_btn2, col_btn3 = st.columns(3)
         with col_btn1:
             if st.button("🗑️ Excluir Selecionados", key="excluir_selecionados"):
                 require_admin()
                 if st.session_state.selected_ids:
                     st.session_state.pending_delete_ids = st.session_state.selected_ids.copy()
-                    st.rerun()
+                    safe_rerun()
         with col_btn2:
             if st.button("📋 Limpar Seleção", key="limpar_selecao"):
                 st.session_state.selected_ids = []
-                st.rerun()
+                safe_rerun()
         with col_btn3:
             if st.button("⚠️ LIMPAR TODO HISTÓRICO", key="limpar_historico"):
                 require_admin()
                 st.session_state.pending_clear_all = True
-                st.rerun()
+                safe_rerun()
         if st.session_state.pending_delete_ids:
             require_admin()
             st.error(f"⚠️ Excluir {len(st.session_state.pending_delete_ids)} registro(s)?")
@@ -1967,13 +1996,13 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                         st.session_state.selected_ids = []
                         st.session_state.pending_delete_ids = []
                         invalidar_cache()
-                        st.rerun()
+                        safe_rerun()
                     except Exception as e:
                         st.error(f"Erro: {e}")
             with col_canc:
                 if st.button("❌ Cancelar", key="cancelar_excluir"):
                     st.session_state.pending_delete_ids = []
-                    st.rerun()
+                    safe_rerun()
         if st.session_state.pending_clear_all:
             require_admin()
             st.error("🚨 ATENÇÃO: apagar TODOS os registros. Digite 'LIMPAR TUDO'")
@@ -1987,7 +2016,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                             invalidar_cache()
                             st.success("Histórico limpo!")
                             st.session_state.pending_clear_all = False
-                            st.rerun()
+                            safe_rerun()
                         except Exception as e:
                             st.error(f"Erro: {e}")
                     else:
@@ -1995,7 +2024,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             with col_cancel_clear:
                 if st.button("Cancelar", key="cancelar_limpar"):
                     st.session_state.pending_clear_all = False
-                    st.rerun()
+                    safe_rerun()
     else:
         st.info("Nenhum registro encontrado.")
 
@@ -2026,8 +2055,8 @@ if st.session_state.perfil == "ADMIN":
                                     if resultado.get("duplicados_removidos", 0) > 0:
                                         st.success(resultado["mensagem"])
                                         st.balloons()
-                                        time.sleep(2)
-                                        st.rerun()
+                                        time.sleep(1)
+                                        safe_rerun()
                                     else:
                                         st.info(resultado["mensagem"])
                                 else:
@@ -2058,8 +2087,8 @@ if st.session_state.perfil == "ADMIN":
                                         st.error(erro)
                             invalidar_cache()
                             st.balloons()
-                            time.sleep(2)
-                            st.rerun()
+                            time.sleep(1)
+                            safe_rerun()
                         else:
                             st.error(resultado["mensagem"])
         st.markdown("---")
@@ -2070,12 +2099,10 @@ if st.session_state.perfil == "ADMIN":
         if not todos:
             st.info("Nenhum cadastro")
         else:
-            # Filtros por empresa
             br = [p for p in todos if p.get('empresa', '').upper() == "BRASANITAS"]
             gr = [p for p in todos if p.get('empresa', '').upper() == "GRSA"]
             outros = [p for p in todos if p.get('empresa', '').upper() not in ["BRASANITAS","GRSA"]]
             
-            # Criar abas para gestão de pessoas
             tab_br, tab_gr, tab_outros, tab_facial = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 Prestadores", "🎯 Reconhecimento Facial"])
             
             with tab_br:
@@ -2103,7 +2130,7 @@ if st.session_state.perfil == "ADMIN":
                                                 }).eq("id", p['id']).execute()
                                                 invalidar_cache()
                                                 st.success("Atualizado!")
-                                                st.rerun()
+                                                safe_rerun()
                                             else:
                                                 st.error("CPF já existe")
                                         except Exception as e:
@@ -2116,7 +2143,7 @@ if st.session_state.perfil == "ADMIN":
                             if st.button("Confirmar", key=f"del_br_{p['id']}"):
                                 supabase_admin.table("pessoas").delete().eq("id", p['id']).execute()
                                 invalidar_cache()
-                                st.rerun()
+                                safe_rerun()
                     st.divider()
             
             with tab_gr:
@@ -2144,7 +2171,7 @@ if st.session_state.perfil == "ADMIN":
                                                 }).eq("id", p['id']).execute()
                                                 invalidar_cache()
                                                 st.success("Atualizado!")
-                                                st.rerun()
+                                                safe_rerun()
                                             else:
                                                 st.error("CPF já existe")
                                         except Exception as e:
@@ -2157,7 +2184,7 @@ if st.session_state.perfil == "ADMIN":
                             if st.button("Confirmar", key=f"del_gr_{p['id']}"):
                                 supabase_admin.table("pessoas").delete().eq("id", p['id']).execute()
                                 invalidar_cache()
-                                st.rerun()
+                                safe_rerun()
                     st.divider()
             
             with tab_outros:
@@ -2188,7 +2215,7 @@ if st.session_state.perfil == "ADMIN":
                                                 }).eq("id", p['id']).execute()
                                                 invalidar_cache()
                                                 st.success("Atualizado!")
-                                                st.rerun()
+                                                safe_rerun()
                                             else:
                                                 st.error("CPF já existe")
                                         except Exception as e:
@@ -2201,12 +2228,10 @@ if st.session_state.perfil == "ADMIN":
                             if st.button("Confirmar", key=f"del_out_{p['id']}"):
                                 supabase_admin.table("pessoas").delete().eq("id", p['id']).execute()
                                 invalidar_cache()
-                                st.rerun()
+                                safe_rerun()
                     st.divider()
             
-            # Aba de Reconhecimento Facial integrada
             with tab_facial:
-                # Verifica se o reconhecimento facial está disponível
                 if not FACIAL_AVAILABLE:
                     st.warning("⚠️ Reconhecimento facial indisponível neste ambiente.")
                     st.info("""
@@ -2219,7 +2244,6 @@ if st.session_state.perfil == "ADMIN":
                     st.markdown("### 🎯 Gerenciamento de Reconhecimento Facial")
                     st.info("Aqui você pode gerenciar os rostos cadastrados e ver quem já possui encoding.")
                     
-                    # Estatísticas de cadastro facial
                     total_com_encoding = len([p for p in todos if p.get('encoding')])
                     total_sem_encoding = len([p for p in todos if not p.get('encoding')])
                     
@@ -2229,10 +2253,8 @@ if st.session_state.perfil == "ADMIN":
                     
                     st.markdown("---")
                     
-                    # Botão para ir para a página de reconhecimento
                     st.markdown("### 📸 Capturar rosto para um usuário específico")
                     
-                    # Mostra apenas usuários sem encoding
                     sem_encoding_list = [p for p in todos if not p.get('encoding')]
                     
                     if sem_encoding_list:
@@ -2279,8 +2301,8 @@ if st.session_state.perfil == "ADMIN":
                                             if salvar_encoding_no_banco(usuario_facial["id"], encoding_encontrado):
                                                 st.success(f"✅ Rosto de {usuario_facial['nome']} cadastrado com sucesso!")
                                                 st.balloons()
-                                                time.sleep(2)
-                                                st.rerun()
+                                                time.sleep(1)
+                                                safe_rerun()
                                             else:
                                                 st.error("❌ Erro ao salvar no banco.")
                                         else:
@@ -2290,7 +2312,6 @@ if st.session_state.perfil == "ADMIN":
                     
                     st.markdown("---")
                     
-                    # Opção de reconhecimento ao vivo na própria página
                     st.markdown("### 🔍 Reconhecimento Ao Vivo")
                     if st.button("🎥 INICIAR RECONHECIMENTO (Gestão)", key="facial_btn_iniciar_gestao", type="primary"):
                         st.markdown("---")
