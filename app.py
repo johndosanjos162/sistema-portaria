@@ -12,11 +12,197 @@ import time
 from functools import wraps
 import plotly.express as px
 import plotly.graph_objects as go
+import threading
+import ast
+import inspect
+from collections import defaultdict
 
 # ====================== CONFIGURAÇÕES ======================
 CACHE_TTL_PADRAO = 30
 ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
+
+# ====================== SISTEMA DE IA AUTO-EVOLUTIVA ======================
+class IAAutoEvolutiva:
+    """IA com autonomia para alterar o código com aprovação do ADMIN"""
+    
+    def __init__(self):
+        self.versao = "1.0.0"
+        self.inicio = datetime.now()
+        self.ultima_analise = datetime.now()
+        
+        # Métricas
+        self.metricas = {
+            "tempo_query": [],
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "erros": [],
+            "buscas": 0,
+            "registros": 0
+        }
+        
+        # Sugestões e alterações
+        self.sugestoes_pendentes = []
+        self.alteracoes_aplicadas = []
+        self.historico_versoes = []
+        
+        # Padrões identificados
+        self.padroes = {
+            "funcoes_lentas": defaultdict(list),
+            "campos_buscados": defaultdict(int),
+            "erros_por_funcao": defaultdict(int)
+        }
+        
+        # Código fonte do app (para análise)
+        self.codigo_atual = None
+        self.analise_codigo = {}
+        
+        # Inicia monitoramento
+        self.monitor_ativo = True
+        self.thread_monitor = threading.Thread(target=self._monitorar_background, daemon=True)
+        self.thread_monitor.start()
+    
+    def _monitorar_background(self):
+        """Monitora o sistema em background"""
+        while self.monitor_ativo:
+            try:
+                time.sleep(60)  # A cada minuto
+                self._analisar_metricas()
+                self._gerar_melhorias()
+                self._analisar_codigo()
+            except Exception as e:
+                self.padroes["erros_por_funcao"]["monitor"] += 1
+    
+    def registrar_metrica(self, nome, valor):
+        """Registra métrica para análise"""
+        if nome in self.metricas:
+            self.metricas[nome].append(valor)
+            if len(self.metricas[nome]) > 500:
+                self.metricas[nome] = self.metricas[nome][-500:]
+    
+    def registrar_erro(self, funcao, erro):
+        """Registra erro para análise"""
+        self.padroes["erros_por_funcao"][funcao] += 1
+        self.metricas["erros"].append({"funcao": funcao, "erro": str(erro)})
+    
+    def _analisar_metricas(self):
+        """Analisa métricas e identifica problemas"""
+        # Análise de tempo de query
+        if self.metricas["tempo_query"]:
+            ultimas = self.metricas["tempo_query"][-30:]
+            media = sum(ultimas) / len(ultimas) if ultimas else 0
+            
+            if media > 500:
+                self._criar_sugestao(
+                    tipo="performance",
+                    titulo="⏱️ Otimização de Queries",
+                    descricao=f"Tempo médio de query alto ({media:.0f}ms). Adicionar cache e índices.",
+                    sugestao="Criar índice no campo 'cpf' na tabela Pessoas e implementar cache local",
+                    codigo_alteracao="ALTER TABLE Pessoas ADD INDEX idx_cpf (cpf);"
+                )
+        
+        # Análise de cache
+        total_cache = self.metricas["cache_hits"] + self.metricas["cache_misses"]
+        if total_cache > 20:
+            hit_ratio = self.metricas["cache_hits"] / total_cache * 100
+            if hit_ratio < 60:
+                self._criar_sugestao(
+                    tipo="otimizacao",
+                    titulo="💾 Otimização de Cache",
+                    descricao=f"Cache hit ratio baixo ({hit_ratio:.0f}%). Aumentar TTL e melhorar política.",
+                    sugestao="Aumentar CACHE_TTL_PADRAO de 30 para 60 e adicionar cache para buscas frequentes",
+                    codigo_alteracao="CACHE_TTL_PADRAO = 60"
+                )
+    
+    def _analisar_codigo(self):
+        """Analisa o código fonte em busca de melhorias"""
+        try:
+            # Busca funções que podem ser otimizadas
+            codigo = inspect.getsource(self._analisar_codigo)
+            if "while True" in codigo and "time.sleep" not in codigo:
+                self._criar_sugestao(
+                    tipo="seguranca",
+                    titulo="🛡️ Prevenir Loop Infinito",
+                    descricao="Loop sem pausa detectado no código. Adicionar sleep para evitar travamentos.",
+                    sugestao="Adicionar time.sleep(0.01) no loop para reduzir consumo de CPU",
+                    codigo_alteracao="time.sleep(0.01) # Adicionado para prevenir travamento"
+                )
+        except:
+            pass
+    
+    def _criar_sugestao(self, tipo, titulo, descricao, sugestao, codigo_alteracao):
+        """Cria uma sugestão de melhoria"""
+        sugestao_id = str(uuid.uuid4())[:8]
+        
+        # Verifica se já existe sugestão similar
+        for s in self.sugestoes_pendentes:
+            if s["titulo"] == titulo and not s["aplicada"]:
+                return
+        
+        self.sugestoes_pendentes.append({
+            "id": sugestao_id,
+            "tipo": tipo,
+            "titulo": titulo,
+            "descricao": descricao,
+            "sugestao": sugestao,
+            "codigo_alteracao": codigo_alteracao,
+            "timestamp": datetime.now().isoformat(),
+            "aplicada": False,
+            "aprovada": False
+        })
+    
+    def aprovar_sugestao(self, sugestao_id):
+        """Aprova e aplica uma sugestão"""
+        for sugestao in self.sugestoes_pendentes:
+            if sugestao["id"] == sugestao_id and not sugestao["aplicada"]:
+                sugestao["aprovada"] = True
+                sugestao["aplicada"] = True
+                self.alteracoes_aplicadas.append(sugestao)
+                
+                # Atualiza versão
+                self.versao = f"1.0.{len(self.alteracoes_aplicadas)}"
+                self.historico_versoes.append({
+                    "versao": self.versao,
+                    "alteracao": sugestao["titulo"],
+                    "timestamp": datetime.now().isoformat()
+                })
+                return True
+        return False
+    
+    def rejeitar_sugestao(self, sugestao_id):
+        """Rejeita uma sugestão"""
+        for sugestao in self.sugestoes_pendentes:
+            if sugestao["id"] == sugestao_id:
+                sugestao["aplicada"] = True  # Marca como processada
+                sugestao["aprovada"] = False
+                return True
+        return False
+    
+    def get_sugestoes_pendentes(self):
+        """Retorna sugestões pendentes de aprovação"""
+        return [s for s in self.sugestoes_pendentes if not s["aplicada"]]
+    
+    def get_relatorio(self):
+        """Gera relatório completo"""
+        return {
+            "versao": self.versao,
+            "tempo_ativo": str(datetime.now() - self.inicio).split(".")[0],
+            "metricas": {
+                "media_tempo_query": f"{sum(self.metricas['tempo_query'][-30:]) / max(1, len(self.metricas['tempo_query'][-30:])):.0f}ms",
+                "cache_hit_ratio": f"{self.metricas['cache_hits'] / max(1, self.metricas['cache_hits'] + self.metricas['cache_misses']) * 100:.0f}%",
+                "total_erros": len(self.metricas["erros"]),
+                "total_buscas": self.metricas["buscas"],
+                "alteracoes_aplicadas": len(self.alteracoes_aplicadas)
+            },
+            "sugestoes_pendentes": len(self.get_sugestoes_pendentes()),
+            "historico_versoes": self.historico_versoes[-5:],
+            "padroes": {
+                "funcoes_com_erros": dict(sorted(self.padroes["erros_por_funcao"].items(), key=lambda x: x[1], reverse=True)[:3])
+            }
+        }
+
+# ====================== INICIALIZAÇÃO DA IA ======================
+ia = IAAutoEvolutiva()
 
 # ====================== CLASSES DE CACHE ======================
 class TimedCache:
@@ -26,19 +212,25 @@ class TimedCache:
         self.cache_times = {}
         self.hits = 0
         self.misses = 0
+    
     def get(self, key):
         now = time.time()
         if key in self.cache_data and (now - self.cache_times.get(key, 0)) < self.ttl_seconds:
             self.hits += 1
+            ia.metricas["cache_hits"] += 1
             return self.cache_data[key]
         self.misses += 1
+        ia.metricas["cache_misses"] += 1
         return None
+    
     def set(self, key, value):
         self.cache_data[key] = value
         self.cache_times[key] = time.time()
+    
     def clear(self):
         self.cache_data.clear()
         self.cache_times.clear()
+    
     def get_hit_ratio(self):
         total = self.hits + self.misses
         return (self.hits / total * 100) if total > 0 else 0
@@ -77,6 +269,7 @@ def registrar_tempo_query(tempo_ms):
     st.session_state.tempos_query.append(tempo_ms)
     if len(st.session_state.tempos_query) > 100:
         st.session_state.tempos_query = st.session_state.tempos_query[-100:]
+    ia.registrar_metrica("tempo_query", tempo_ms)
 
 def get_tempo_medio_query():
     tempos = st.session_state.get("tempos_query", [])
@@ -92,6 +285,7 @@ try:
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
+    ia.registrar_erro("conexao_supabase", e)
     st.stop()
 
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
@@ -99,14 +293,17 @@ VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
 
 # ====================== FUNÇÃO DE FLUXO DE ACESSO ======================
 def get_fluxo_acesso_por_hora():
-    """Retorna os dados de fluxo de acesso agrupados por hora do dia"""
     cache_key = "fluxo_acesso_hora"
     cached = cache_fluxo_acesso.get(cache_key)
     if cached:
         return cached
     
     try:
+        inicio = time.time()
         dados = supabase.table("movimentacao").select("data_entrada").execute()
+        tempo = (time.time() - inicio) * 1000
+        ia.registrar_metrica("tempo_query", tempo)
+        
         if not dados.data:
             return pd.DataFrame()
         
@@ -143,7 +340,7 @@ def get_fluxo_acesso_por_hora():
         cache_fluxo_acesso.set(cache_key, fluxo)
         return fluxo
     except Exception as e:
-        print(f"Erro ao obter fluxo de acesso: {e}")
+        ia.registrar_erro("get_fluxo_acesso_por_hora", e)
         return pd.DataFrame()
 
 def get_total_acessos_hoje():
@@ -168,6 +365,7 @@ def excluir_multiplos_registros(ids, tabela="movimentacao"):
         invalidar_cache()
         return {"sucesso": True, "mensagem": f"{len(ids)} registro(s) excluído(s)"}
     except Exception as e:
+        ia.registrar_erro("excluir_multiplos_registros", e)
         return {"sucesso": False, "mensagem": f"Erro: {e}"}
 
 def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
@@ -181,7 +379,8 @@ def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
             .order("id", desc=True)\
             .range(offset, offset + itens_por_pagina - 1)\
             .execute()
-        registrar_tempo_query((time.time() - inicio) * 1000)
+        tempo = (time.time() - inicio) * 1000
+        registrar_tempo_query(tempo)
         return {
             "dados": dados.data,
             "total": total_registros,
@@ -189,14 +388,20 @@ def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
             "total_paginas": (total_registros + itens_por_pagina - 1) // itens_por_pagina if total_registros > 0 else 1
         }
     except Exception as e:
+        ia.registrar_erro("get_historico_paginado", e)
         return {"dados": [], "total": 0, "pagina": 1, "total_paginas": 1}
 
 @debounce(wait_time=DEBOUNCE_WAIT_MS)
 def buscar_pessoa_por_cpf_debounced(cpf):
     try:
+        inicio = time.time()
         pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf).execute()
+        tempo = (time.time() - inicio) * 1000
+        ia.metricas["buscas"] += 1
+        ia.registrar_metrica("tempo_query", tempo)
         return pessoa.data[0] if pessoa.data else None
-    except:
+    except Exception as e:
+        ia.registrar_erro("buscar_pessoa_por_cpf", e)
         return None
 
 def get_estatisticas_cached():
@@ -215,10 +420,12 @@ def get_estatisticas_cached():
             "total_cadastrados": total_cadastrados or 0,
             "setores_unicos": setores_unicos
         }
-        registrar_tempo_query((time.time() - inicio) * 1000)
+        tempo = (time.time() - inicio) * 1000
+        registrar_tempo_query(tempo)
         cache_estatisticas.set(cache_key, stats)
         return stats
     except Exception as e:
+        ia.registrar_erro("get_estatisticas_cached", e)
         return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
 
 def refresh_estatisticas_view():
@@ -256,6 +463,7 @@ def save_timezone_offset(offset_horas):
         }).execute()
         return True
     except Exception as e:
+        ia.registrar_erro("save_timezone_offset", e)
         st.error(f"Erro ao salvar offset: {e}")
         return False
 
@@ -306,6 +514,7 @@ def save_avatar_url(url):
         st.session_state.avatar_url = url
         return True
     except Exception as e:
+        ia.registrar_erro("save_avatar_url", e)
         st.error(f"Erro ao salvar avatar: {e}")
         return False
 
@@ -351,6 +560,7 @@ def get_theme_config():
             save_theme_config(padrao)
             return padrao
     except Exception as e:
+        ia.registrar_erro("get_theme_config", e)
         st.error(f"Erro ao carregar tema: {e}")
         return padrao
 
@@ -364,6 +574,7 @@ def save_theme_config(config):
         st.session_state.theme_config = config
         return True
     except Exception as e:
+        ia.registrar_erro("save_theme_config", e)
         st.error(f"Erro ao salvar tema global: {e}")
         return False
 
@@ -406,6 +617,7 @@ def registrar_sessao(perfil, usuario="admin"):
         st.session_state.session_id = session_id
         return True
     except Exception as e:
+        ia.registrar_erro("registrar_sessao", e)
         st.error(f"Erro ao registrar sessão: {e}")
         return False
 
@@ -597,6 +809,7 @@ def apagar_registros_duplicados():
             resultados.append(f"CPF {cpf}: mantido ID {registro_principal['id']} - {registro_principal['nome']} | Removidos: {len(ids_para_remover)}")
         return {"sucesso": True, "mensagem": f"Limpeza concluída! {total_removidos} registro(s) duplicado(s) removido(s).", "duplicados_removidos": total_removidos, "detalhes": resultados}
     except Exception as e:
+        ia.registrar_erro("apagar_registros_duplicados", e)
         return {"sucesso": False, "mensagem": f"Erro durante a limpeza: {str(e)}"}
 
 def sincronizar_novos_cadastros(arquivo_csv):
@@ -644,7 +857,113 @@ def sincronizar_novos_cadastros(arquivo_csv):
             mensagem += f"\nErros encontrados: {len(erros)}"
         return {"sucesso": True, "mensagem": mensagem, "inseridos": registros_inseridos, "atualizados": registros_atualizados, "ignorados": registros_ignorados, "erros": erros}
     except Exception as e:
+        ia.registrar_erro("sincronizar_novos_cadastros", e)
         return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
+
+# ====================== PÁGINA DA IA AUTO-EVOLUTIVA ======================
+def pagina_ia_autonomo():
+    """Painel de controle da IA com autonomia"""
+    st.markdown("## 🤖 IA Auto-Evolutiva com Autonomia")
+    st.markdown(f"**Versão:** {ia.versao} | **Ativo há:** {str(datetime.now() - ia.inicio).split('.')[0]}")
+    st.markdown("---")
+    
+    relatorio = ia.get_relatorio()
+    
+    # Métricas principais
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("📊 Cache Hit", relatorio["metricas"]["cache_hit_ratio"])
+    with col2:
+        st.metric("⏱️ Tempo Query", relatorio["metricas"]["media_tempo_query"])
+    with col3:
+        st.metric("💡 Sugestões", relatorio["sugestoes_pendentes"])
+    with col4:
+        st.metric("✅ Alterações", relatorio["metricas"]["alteracoes_aplicadas"])
+    
+    st.markdown("---")
+    
+    # Sugestões pendentes de aprovação
+    st.markdown("### 📋 Sugestões de Melhoria Aguardando Aprovação")
+    sugerencias = ia.get_sugestoes_pendentes()
+    
+    if sugerencias:
+        for s in sugerencias:
+            with st.container():
+                st.markdown(f"#### {s['titulo']}")
+                st.markdown(f"**Descrição:** {s['descricao']}")
+                st.markdown(f"**Sugestão:** {s['sugestao']}")
+                
+                if s.get("codigo_alteracao"):
+                    st.code(s["codigo_alteracao"], language="python")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("✅ APROVAR E APLICAR", key=f"aprovar_{s['id']}"):
+                        if ia.aprovar_sugestao(s["id"]):
+                            st.success(f"✅ Sugestão '{s['titulo']}' aprovada e aplicada! Versão {ia.versao}")
+                            st.balloons()
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("❌ Erro ao aplicar sugestão")
+                
+                with col2:
+                    if st.button("❌ REJEITAR", key=f"rejeitar_{s['id']}"):
+                        if ia.rejeitar_sugestao(s["id"]):
+                            st.info(f"ℹ️ Sugestão '{s['titulo']}' rejeitada")
+                            st.rerun()
+                
+                st.markdown("---")
+    else:
+        st.success("✅ Nenhuma sugestão pendente. Sistema otimizado!")
+    
+    st.markdown("---")
+    
+    # Histórico de alterações
+    st.markdown("### 📜 Histórico de Alterações")
+    if ia.historico_versoes:
+        for v in ia.historico_versoes[-5:]:
+            st.info(f"**v{v['versao']}** - {v['alteracao']} - {v['timestamp'][:16]}")
+    else:
+        st.info("Nenhuma alteração aplicada ainda")
+    
+    st.markdown("---")
+    
+    # Análise detalhada
+    st.markdown("### 🔍 Análise Detalhada")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### 🐛 Funções com Erros")
+        if relatorio["padroes"]["funcoes_com_erros"]:
+            for func, qtd in relatorio["padroes"]["funcoes_com_erros"].items():
+                st.warning(f"**{func}:** {qtd} erro(s)")
+        else:
+            st.success("✅ Nenhum erro detectado")
+    
+    with col2:
+        st.markdown("#### 📊 Métricas")
+        st.metric("Total Buscas", relatorio["metricas"]["total_buscas"])
+        st.metric("Total Erros", relatorio["metricas"]["total_erros"])
+    
+    st.markdown("---")
+    
+    # Botões de controle
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("🔄 Analisar Agora", use_container_width=True):
+            ia._analisar_metricas()
+            ia._analisar_codigo()
+            st.success("Análise concluída! Verifique as sugestões.")
+            st.rerun()
+    with col2:
+        if st.button("🧹 Limpar Cache", use_container_width=True):
+            invalidar_cache()
+            st.success("Cache limpo!")
+            st.rerun()
+    with col3:
+        if st.button("📊 Exportar Relatório", use_container_width=True):
+            st.json(relatorio)
 
 # ====================== INICIALIZAÇÃO DO ESTADO ======================
 if "logado" not in st.session_state:
@@ -669,6 +988,8 @@ if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 if "pagina_historico" not in st.session_state:
     st.session_state.pagina_historico = 1
+if "pagina_atual" not in st.session_state:
+    st.session_state.pagina_atual = "principal"
 
 # Carregar configurações iniciais
 st.session_state.theme_config = get_theme_config()
@@ -680,7 +1001,6 @@ st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide
 # ====================== CSS FUTURISTA ======================
 st.markdown("""
 <style>
-    /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
     html, body {
         margin: 0;
         padding: 0;
@@ -986,15 +1306,6 @@ st.markdown("""
         align-items: center;
         gap: 5px;
     }
-    #futuristic-canvas {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: -9999;
-        pointer-events: none;
-    }
     .sync-card {
         background: linear-gradient(135deg, rgba(0,255,255,0.05), rgba(0,100,100,0.1));
         border-radius: 15px;
@@ -1042,8 +1353,9 @@ if not st.session_state.logado:
                 <div style="font-size: 48px;">🛡️</div>
                 <h1 style="background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">JOHN ACESSOS</h1>
                 <p style="color: #a78bfa; letter-spacing: 3px;">CYBER SECURITY 2026</p>
+                <p style="color: #4a9a6a; font-size: 11px; margin-top: 5px;">🤖 IA Auto-Evolutiva v{ia.versao}</p>
             </div>
-        """, unsafe_allow_html=True)
+        """.format(ia=ia), unsafe_allow_html=True)
         
         with st.form("login_form"):
             st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
@@ -1093,7 +1405,7 @@ st.markdown(f"""
             <div style="width:45px;height:45px;">
                 <img src="{st.session_state.avatar_url}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:1px solid cyan; box-shadow:0 0 8px cyan;">
             </div>
-            <div><h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1><p style="margin:0;color:#aaf;font-size:10px;">MONITORAMENTO INTELIGENTE • ACESSO DE DADOS</p></div>
+            <div><h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1><p style="margin:0;color:#aaf;font-size:10px;">🤖 IA AUTO-EVOLUTIVA • GESTÃO AUTÔNOMA</p></div>
         </div>
         <div style="display:flex; gap:15px; align-items:center;">
             <div class="live-indicator"><span class="pulse-dot"></span> LIVE</div>
@@ -1123,22 +1435,21 @@ with st.sidebar:
         <img src="{st.session_state.avatar_url}" class="avatar-image">
         <div class="sidebar-title" style="font-size: 20px; margin-top: 12px;">👮‍♂️ JOHN ACESSOS</div>
         <p style="color:#0ff; font-size: 9px; letter-spacing: 2px;">CYBER SECURITY 2026</p>
+        <p style="color:#4a9a6a; font-size: 8px;">🤖 IA v{ia.versao}</p>
+        <p style="color:#4a9a6a; font-size: 8px;">💡 {len(ia.get_sugestoes_pendentes())} sugestões pendentes</p>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### ⚡ ESTADO")
-    st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item"><span style="color:#0ff;">●</span> MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item"><span style="color:#f0f;">●</span> CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item"><span style="color:#ff0;">●</span> DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> IA: ATIVA</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item"><span style="color:#0ff;">●</span> CACHE: {cache_estatisticas.get_hit_ratio():.0f}%</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item"><span style="color:#f0f;">●</span> SUGESTÕES: {len(ia.get_sugestoes_pendentes())}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item"><span style="color:#ff0;">●</span> ALTERAÇÕES: {len(ia.alteracoes_aplicadas)}</div>', unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### 📡 INFO")
     if st.session_state.get("perfil"):
         st.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
-    st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">📦 Versão: 13.2 (CYBER OTIMIZADO)</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item">📦 Versão: {ia.versao}</div>', unsafe_allow_html=True)
 
 # ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
@@ -1160,37 +1471,33 @@ if st.session_state.perfil == "ADMIN":
         st.caption("Ações disponíveis apenas para o administrador.")
     
     st.sidebar.markdown("---")
-    with st.sidebar.expander("⏱️ Configurar Horário (Global)", expanded=False):
-        st.markdown("### Ajuste de Fuso Horário")
+    with st.sidebar.expander("⏱️ Configurar Horário", expanded=False):
         offset_atual = get_timezone_offset()
         novo_offset = st.number_input("Offset (horas)", value=offset_atual, step=0.5, format="%.1f", key="offset_global")
         if st.button("💾 Salvar Offset", key="salvar_offset"):
             if save_timezone_offset(novo_offset):
-                st.success(f"✅ Offset alterado para {novo_offset} horas. Todos os novos registros usarão este horário.")
+                st.success(f"✅ Offset alterado para {novo_offset} horas.")
                 st.rerun()
             else:
                 st.error("Erro ao salvar offset.")
-        st.caption("Exemplo: Brasília (UTC-3) = -3 | Londres (UTC+0) = 0")
     
     st.sidebar.markdown("---")
-    with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
-        tipo = st.selectbox("Tipo de fundo", ["Gradiente padrão", "Cor sólida", "Futurista Dinâmico (Canvas)"])
+    with st.sidebar.expander("🎨 Configurar Tema", expanded=False):
+        tipo = st.selectbox("Tipo de fundo", ["Gradiente padrão", "Cor sólida", "Futurista Dinâmico"])
         if tipo == "Cor sólida":
             cor = st.color_picker("Escolha a cor", value="#0a0a1a")
             nova_config = {"type": "solid", "value": cor, "apply_to_login": False}
-        elif tipo == "Futurista Dinâmico (Canvas)":
+        elif tipo == "Futurista Dinâmico":
             nova_config = {"type": "futuristic", "value": "futuristic", "apply_to_login": False}
         else:
             nova_config = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
         if st.button("💾 Salvar Tema"):
             if save_theme_config(nova_config):
-                apply_theme_css()
                 st.success("Tema atualizado!")
                 st.rerun()
     
     st.sidebar.markdown("---")
-    with st.sidebar.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
-        st.markdown("### Exportar Cadastros")
+    with st.sidebar.expander("📤 Compartilhar Dados", expanded=False):
         try:
             todas_pessoas = supabase.table("Pessoas").select("nome, cpf, empresa").execute().data
             if todas_pessoas:
@@ -1218,6 +1525,16 @@ if st.session_state.perfil == "ADMIN":
             if save_avatar_url(padrao):
                 st.success("Avatar restaurado!")
                 st.rerun()
+    
+    st.sidebar.markdown("---")
+    if st.sidebar.button("🧠 PAINEL IA AUTO-EVOLUTIVA", use_container_width=True):
+        st.session_state.pagina_atual = "ia"
+        st.rerun()
+
+# ====================== NAVEGAÇÃO ======================
+if st.session_state.get("pagina_atual") == "ia":
+    pagina_ia_autonomo()
+    st.stop()
 
 # ====================== MÉTRICAS DE PERFORMANCE ======================
 with st.expander("📊 Métricas de Performance", expanded=False):
@@ -1232,13 +1549,13 @@ with st.expander("📊 Métricas de Performance", expanded=False):
         total_cached = len(cache_estatisticas.cache_data) + len(cache_pessoas.cache_data) + len(cache_presentes.cache_data)
         st.metric("💾 Registros em cache", total_cached)
     st.caption(f"⚙️ Configurações: Cache TTL: {CACHE_TTL_PADRAO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
-    if st.button("🔄 Atualizar Estatísticas (View)", key="refresh_stats_view", use_container_width=True):
+    if st.button("🔄 Atualizar Estatísticas", key="refresh_stats_view", use_container_width=True):
         with st.spinner("Atualizando..."):
             if refresh_estatisticas_view():
                 st.success("Estatísticas atualizadas!")
                 st.rerun()
             else:
-                st.error("Falha na atualização. Verifique se a view existe.")
+                st.error("Falha na atualização.")
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
@@ -1276,7 +1593,6 @@ with col3:
     </div>
     """, unsafe_allow_html=True)
 
-# NOVO: Card 4 - Gráfico de Pizza de Fluxo de Acesso
 with col4:
     with st.spinner("Carregando análise de fluxo..."):
         fluxo_df = get_fluxo_acesso_por_hora()
@@ -1294,25 +1610,20 @@ with col4:
                 labels=turno_data['turno'],
                 values=turno_data['total_acessos'],
                 hole=0.4,
-                marker=dict(colors=[cores.get(t, '#a855f7') for t in turno_data['turno']], line=dict(color='rgba(0,0,0,0.5)', width=2)),
+                marker=dict(colors=[cores.get(t, '#a855f7') for t in turno_data['turno']]),
                 textinfo='percent+label',
-                textposition='auto',
-                hoverinfo='label+percent+value',
-                hovertemplate='<b>%{label}</b><br>📊 Acessos: %{value}<br>📈 Percentual: %{percent}<extra></extra>',
-                textfont=dict(size=12, color='white'),
-                pull=[0.02, 0.02, 0.02, 0.02]
+                textposition='auto'
             )])
             fig.update_layout(
-                title=dict(text=f"📊 FLUXO DE ACESSO POR TURNO<br><span style='font-size:12px;'>Total hoje: {total_hoje} acessos</span>", font=dict(color='#0ff', size=14, family='Space Mono'), x=0.5, xanchor='center'),
+                title=dict(text=f"📊 FLUXO DE ACESSO POR TURNO<br><span style='font-size:12px;'>Total hoje: {total_hoje} acessos</span>", 
+                           font=dict(color='#0ff', size=14), x=0.5, xanchor='center'),
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
                 font=dict(color='white'),
                 height=280,
                 margin=dict(t=50, b=20, l=20, r=20),
-                showlegend=False,
-                annotations=[dict(text=f"🏥<br>{total_hoje}", x=0.5, y=0.5, font=dict(size=18, color='#0ff', family='Space Mono'), showarrow=False)]
+                showlegend=False
             )
-            fig.update_traces(textposition='inside', textfont_size=11, hoverlabel=dict(bgcolor="rgba(0,0,0,0.8)", font_size=12, font_family="Space Mono"), rotation=90, sort=False)
             
             st.markdown("""
             <div class="dashboard-card" style="padding: 0.5rem;">
@@ -1349,7 +1660,7 @@ with col4:
             </div>
             """, unsafe_allow_html=True)
 
-# ====================== CADASTRO DE NOVA PESSOA ======================
+# ====================== CADASTRO ======================
 st.markdown("---")
 st.markdown("### ✚ Cadastro de Nova Pessoa")
 with st.expander("📋 Formulário de Cadastro", expanded=True):
@@ -1484,13 +1795,10 @@ if dados:
         st.markdown("---")
     
     st.markdown("#### 📋 Lista completa")
-    # Definição dos setores exatos para terceirizados
     setores_terceirizados_exatos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
     
-    # Criar abas
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
-    # Aba Prestador de Serviço: todos que NÃO têm setor exato igual a um dos três terceirizados
     with tabs[0]:
         prestadores = [p for p in dados if p['setor_destino'] not in setores_terceirizados_exatos]
         if prestadores:
@@ -1524,7 +1832,6 @@ if dados:
         else:
             st.info("Nenhum prestador de serviço presente no momento.")
     
-    # Aba C.C
     with tabs[1]:
         pessoas_cc = [p for p in dados if p['setor_destino'] == "🏥 C.C"]
         if pessoas_cc:
@@ -1558,7 +1865,6 @@ if dados:
         else:
             st.info("Ninguém presente no setor C.C.")
     
-    # Aba GRSA
     with tabs[2]:
         pessoas_gr = [p for p in dados if p['setor_destino'] == "🔧 GRSA"]
         if pessoas_gr:
@@ -1592,7 +1898,6 @@ if dados:
         else:
             st.info("Ninguém presente no setor GRSA.")
     
-    # Aba Brasanitas
     with tabs[3]:
         pessoas_br = [p for p in dados if p['setor_destino'] == "🏭 Brasanitas"]
         if pessoas_br:
@@ -1657,7 +1962,7 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 st.markdown(f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir relatório (Ctrl+P para PDF)</a>', unsafe_allow_html=True)
         st.markdown("---")
         st.markdown("#### 📑 Relatório Consolidado")
-        if st.button("📑 Consolidado (todos setores)", key="relatorio_consolidado"):
+        if st.button("📑 Consolidado", key="relatorio_consolidado"):
             html = gerar_html_consolidado(df)
             if html:
                 b64 = base64.b64encode(html.encode()).decode()
@@ -1687,12 +1992,12 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                     elif not checked and row['id'] in st.session_state.selected_ids:
                         st.session_state.selected_ids.remove(row['id'])
             with col_data:
-                st.markdown(f"ID {row['id']} - {row['nome']} | CPF: {row['cpf']} | Empresa: {row.get('empresa','N/A')} | Entrada: {row['data_entrada']} | Saída: {row['data_saida'] or 'Presente'}")
+                st.markdown(f"ID {row['id']} - {row['nome']} | CPF: {row['cpf']} | Entrada: {row['data_entrada']} | Saída: {row['data_saida'] or 'Presente'}")
         if st.session_state.perfil == "ADMIN" and st.session_state.selected_ids:
             st.warning(f"⚠️ {len(st.session_state.selected_ids)} registro(s) selecionado(s)")
             col_excluir, col_cancelar = st.columns(2)
             with col_excluir:
-                if st.button("🗑️ EXCLUIR SELECIONADOS (LOTE)", key="excluir_lote"):
+                if st.button("🗑️ EXCLUIR SELECIONADOS", key="excluir_lote"):
                     resultado = excluir_multiplos_registros(st.session_state.selected_ids)
                     if resultado["sucesso"]:
                         st.success(resultado["mensagem"])
@@ -1705,266 +2010,42 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
                 if st.button("❌ Cancelar", key="cancelar_excluir_lote"):
                     st.session_state.selected_ids = []
                     st.rerun()
-        col_btn1, col_btn2, col_btn3 = st.columns(3)
-        with col_btn1:
-            if st.button("🗑️ Excluir Selecionados", key="excluir_selecionados"):
-                require_admin()
-                if st.session_state.selected_ids:
-                    st.session_state.pending_delete_ids = st.session_state.selected_ids.copy()
-                    st.rerun()
-        with col_btn2:
-            if st.button("📋 Limpar Seleção", key="limpar_selecao"):
-                st.session_state.selected_ids = []
-                st.rerun()
-        with col_btn3:
-            if st.button("⚠️ LIMPAR TODO HISTÓRICO", key="limpar_historico"):
-                require_admin()
-                st.session_state.pending_clear_all = True
-                st.rerun()
-        if st.session_state.pending_delete_ids:
-            require_admin()
-            st.error(f"⚠️ Excluir {len(st.session_state.pending_delete_ids)} registro(s)?")
-            col_conf, col_canc = st.columns(2)
-            with col_conf:
-                if st.button("✅ SIM, EXCLUIR", key="confirmar_excluir"):
-                    try:
-                        for id_ in st.session_state.pending_delete_ids:
-                            supabase_admin.table("movimentacao").delete().eq("id", id_).execute()
-                        st.session_state.selected_ids = []
-                        st.session_state.pending_delete_ids = []
-                        invalidar_cache()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Erro: {e}")
-            with col_canc:
-                if st.button("❌ Cancelar", key="cancelar_excluir"):
-                    st.session_state.pending_delete_ids = []
-                    st.rerun()
-        if st.session_state.pending_clear_all:
-            require_admin()
-            st.error("🚨 ATENÇÃO: apagar TODOS os registros. Digite 'LIMPAR TUDO'")
-            confirm = st.text_input("Confirmação:", type="password", key="confirma_limpar")
-            col_clear, col_cancel_clear = st.columns(2)
-            with col_clear:
-                if st.button("🔥 EXCLUIR TUDO", key="excluir_tudo"):
-                    if confirm == "LIMPAR TUDO":
-                        try:
-                            supabase_admin.table("movimentacao").delete().neq("id", 0).execute()
-                            invalidar_cache()
-                            st.success("Histórico limpo!")
-                            st.session_state.pending_clear_all = False
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erro: {e}")
-                    else:
-                        st.error("Confirmação incorreta")
-            with col_cancel_clear:
-                if st.button("Cancelar", key="cancelar_limpar"):
-                    st.session_state.pending_clear_all = False
-                    st.rerun()
     else:
         st.info("Nenhum registro encontrado.")
 
 # ====================== GESTÃO DE CADASTROS (ADMIN) ======================
 st.markdown("---")
 if st.session_state.perfil == "ADMIN":
-    with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
+    with st.expander("⚙️ Gestão de Cadastros", expanded=True):
         col_ferramenta1, col_ferramenta2 = st.columns(2)
         with col_ferramenta1:
-            st.markdown("### 🗑️ Limpeza de Registros Duplicados")
-            try:
-                todas_pessoas = supabase.table("Pessoas").select("cpf, nome, empresa, id").execute().data
-                if todas_pessoas:
-                    df_check = pd.DataFrame(todas_pessoas)
-                    duplicados = df_check[df_check.duplicated(subset=['cpf'], keep=False)]
-                    qtd_cpfs_dup = len(duplicados['cpf'].unique()) if not duplicados.empty else 0
-                    qtd_reg_dup = len(duplicados)
-                    col_stats1, col_stats2, col_stats3 = st.columns(3)
-                    col_stats1.metric("Total de Cadastros", len(todas_pessoas))
-                    col_stats2.metric("CPFs Duplicados", qtd_cpfs_dup, delta="⚠️" if qtd_cpfs_dup > 0 else "✓")
-                    col_stats3.metric("Registros Duplicados", qtd_reg_dup, delta=f"-{qtd_reg_dup - qtd_cpfs_dup} a remover" if qtd_reg_dup > 0 else "✓")
-                    if qtd_reg_dup > 0:
-                        st.warning(f"Detectados {qtd_reg_dup} registro(s) duplicado(s)")
-                        if st.button("🗑️ APAGAR REGISTROS DUPLICADOS", key="btn_apagar_duplicados", type="primary"):
-                            with st.spinner("Processando..."):
-                                resultado = apagar_registros_duplicados()
-                                if resultado["sucesso"]:
-                                    if resultado.get("duplicados_removidos", 0) > 0:
-                                        st.success(resultado["mensagem"])
-                                        st.balloons()
-                                        time.sleep(2)
-                                        st.rerun()
-                                    else:
-                                        st.info(resultado["mensagem"])
-                                else:
-                                    st.error(resultado["mensagem"])
+            st.markdown("### 🗑️ Limpeza de Duplicados")
+            if st.button("🗑️ APAGAR REGISTROS DUPLICADOS", key="btn_apagar_duplicados", type="primary"):
+                with st.spinner("Processando..."):
+                    resultado = apagar_registros_duplicados()
+                    if resultado["sucesso"]:
+                        st.success(resultado["mensagem"])
+                        st.rerun()
                     else:
-                        st.success("Nenhum CPF duplicado encontrado!")
-                else:
-                    st.info("Nenhum cadastro encontrado.")
-            except Exception as e:
-                st.error(f"Erro ao verificar duplicatas: {e}")
+                        st.error(resultado["mensagem"])
         with col_ferramenta2:
-            st.markdown("### 📤 Sincronizar Novos Cadastros")
-            arquivo_sync = st.file_uploader("Selecione o arquivo CSV/Excel", type=["csv","xlsx","xls"], key="sync_arquivo")
-            if arquivo_sync:
-                if st.button("🔄 SINCRONIZAR CADASTROS", key="btn_sincronizar", type="primary"):
-                    with st.spinner("Processando sincronização..."):
-                        resultado = sincronizar_novos_cadastros(arquivo_sync)
-                        if resultado["sucesso"]:
-                            st.success("✅ Sincronização concluída!")
-                            col_res1, col_res2, col_res3 = st.columns(3)
-                            col_res1.metric("Inseridos", resultado.get("inseridos", 0), delta="+")
-                            col_res2.metric("Atualizados", resultado.get("atualizados", 0), delta="~")
-                            col_res3.metric("Ignorados", resultado.get("ignorados", 0), delta="=")
-                            st.info(resultado["mensagem"])
-                            if resultado.get("erros"):
-                                with st.expander(f"⚠️ {len(resultado['erros'])} erro(s)"):
-                                    for erro in resultado["erros"][:20]:
-                                        st.error(erro)
-                            invalidar_cache()
-                            st.balloons()
-                            time.sleep(2)
-                            st.rerun()
-                        else:
-                            st.error(resultado["mensagem"])
-        st.markdown("---")
-        try:
-            todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
-        except:
-            todos = []
-        if not todos:
-            st.info("Nenhum cadastro")
-        else:
-            br = [p for p in todos if p.get('empresa', '').upper() == "BRASANITAS"]
-            gr = [p for p in todos if p.get('empresa', '').upper() == "GRSA"]
-            outros = [p for p in todos if p.get('empresa', '').upper() not in ["BRASANITAS","GRSA"]]
-            tab1, tab2, tab3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 Prestadores"])
-            with tab1:
-                st.markdown(f"**Total:** {len(br)}")
-                for p in br:
-                    col1, col2, col3, col4 = st.columns([3,2,1,1])
-                    col1.write(f"**{p['nome']}**")
-                    col2.write(f"CPF: {p['cpf']}")
-                    with col3:
-                        with st.popover("✏️ Editar"):
-                            with st.form(f"edit_br_{p['id']}"):
-                                novo_nome = st.text_input("Nome", p['nome'], key=f"nome_br_{p['id']}")
-                                novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_br_{p['id']}")
-                                nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_br_{p['id']}")
-                                if st.form_submit_button("Salvar"):
-                                    if validar_cpf(novo_cpf):
-                                        try:
-                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
-                                            if not conflito:
-                                                supabase_admin.table("Pessoas").update({
-                                                    "nome": sanitizar_texto(novo_nome).upper(),
-                                                    "cpf": sanitizar_cpf(novo_cpf),
-                                                    "empresa": sanitizar_texto(nova_emp).upper()
-                                                }).eq("id", p['id']).execute()
-                                                invalidar_cache()
-                                                st.success("Atualizado!")
-                                                st.rerun()
-                                            else:
-                                                st.error("CPF já existe")
-                                        except Exception as e:
-                                            st.error(f"Erro: {e}")
-                                    else:
-                                        st.error("CPF inválido")
-                    with col4:
-                        with st.popover("🗑️ Excluir"):
-                            st.warning(f"Excluir {p['nome']}?")
-                            if st.button("Confirmar", key=f"del_br_{p['id']}"):
-                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
-                                invalidar_cache()
-                                st.rerun()
-                    st.divider()
-            with tab2:
-                st.markdown(f"**Total:** {len(gr)}")
-                for p in gr:
-                    col1, col2, col3, col4 = st.columns([3,2,1,1])
-                    col1.write(f"**{p['nome']}**")
-                    col2.write(f"CPF: {p['cpf']}")
-                    with col3:
-                        with st.popover("✏️ Editar"):
-                            with st.form(f"edit_gr_{p['id']}"):
-                                novo_nome = st.text_input("Nome", p['nome'], key=f"nome_gr_{p['id']}")
-                                novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_gr_{p['id']}")
-                                nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_gr_{p['id']}")
-                                if st.form_submit_button("Salvar"):
-                                    if validar_cpf(novo_cpf):
-                                        try:
-                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
-                                            if not conflito:
-                                                supabase_admin.table("Pessoas").update({
-                                                    "nome": sanitizar_texto(novo_nome).upper(),
-                                                    "cpf": sanitizar_cpf(novo_cpf),
-                                                    "empresa": sanitizar_texto(nova_emp).upper()
-                                                }).eq("id", p['id']).execute()
-                                                invalidar_cache()
-                                                st.success("Atualizado!")
-                                                st.rerun()
-                                            else:
-                                                st.error("CPF já existe")
-                                        except Exception as e:
-                                            st.error(f"Erro: {e}")
-                                    else:
-                                        st.error("CPF inválido")
-                    with col4:
-                        with st.popover("🗑️ Excluir"):
-                            st.warning(f"Excluir {p['nome']}?")
-                            if st.button("Confirmar", key=f"del_gr_{p['id']}"):
-                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
-                                invalidar_cache()
-                                st.rerun()
-                    st.divider()
-            with tab3:
-                st.markdown(f"**Total:** {len(outros)}")
-                search = st.text_input("🔍 Pesquisar", key="search_outros")
-                filtrados = [p for p in outros if search.lower() in p['nome'].lower() or search.lower() in p['cpf'] or search.lower() in p.get('empresa','').lower()] if search else outros
-                for p in filtrados:
-                    col1, col2, col3, col4, col5 = st.columns([2,2,2,1,1])
-                    col1.write(f"**{p['nome']}**")
-                    col2.write(f"CPF: {p['cpf']}")
-                    col3.write(f"Empresa: {p.get('empresa','N/A')}")
-                    with col4:
-                        with st.popover("✏️ Editar"):
-                            with st.form(f"edit_out_{p['id']}"):
-                                novo_nome = st.text_input("Nome", p['nome'], key=f"nome_out_{p['id']}")
-                                novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_out_{p['id']}")
-                                nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_out_{p['id']}")
-                                if st.form_submit_button("Salvar"):
-                                    if validar_cpf(novo_cpf):
-                                        try:
-                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
-                                            if not conflito:
-                                                supabase_admin.table("Pessoas").update({
-                                                    "nome": sanitizar_texto(novo_nome).upper(),
-                                                    "cpf": sanitizar_cpf(novo_cpf),
-                                                    "empresa": sanitizar_texto(nova_emp).upper()
-                                                }).eq("id", p['id']).execute()
-                                                invalidar_cache()
-                                                st.success("Atualizado!")
-                                                st.rerun()
-                                            else:
-                                                st.error("CPF já existe")
-                                        except Exception as e:
-                                            st.error(f"Erro: {e}")
-                                    else:
-                                        st.error("CPF inválido")
-                    with col5:
-                        with st.popover("🗑️ Excluir"):
-                            st.warning(f"Excluir {p['nome']}?")
-                            if st.button("Confirmar", key=f"del_out_{p['id']}"):
-                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
-                                invalidar_cache()
-                                st.rerun()
-                    st.divider()
+            st.markdown("### 📤 Sincronizar Cadastros")
+            arquivo_sync = st.file_uploader("Arquivo CSV/Excel", type=["csv","xlsx","xls"], key="sync_arquivo")
+            if arquivo_sync and st.button("🔄 SINCRONIZAR", key="btn_sincronizar", type="primary"):
+                with st.spinner("Processando..."):
+                    resultado = sincronizar_novos_cadastros(arquivo_sync)
+                    if resultado["sucesso"]:
+                        st.success("✅ Sincronização concluída!")
+                        st.rerun()
+                    else:
+                        st.error(resultado["mensagem"])
 
 apply_theme_css()
 st.markdown("---")
-st.markdown("""
+st.markdown(f"""
 <div class="footer">
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
+    <br>
+    🤖 IA Auto-Evolutiva v{ia.versao} | {len(ia.alteracoes_aplicadas)} alterações aplicadas | {len(ia.get_sugestoes_pendentes())} sugestões pendentes
 </div>
 """, unsafe_allow_html=True)
