@@ -13,441 +13,126 @@ from functools import wraps
 import plotly.express as px
 import plotly.graph_objects as go
 import threading
-import queue
-import sys
-import inspect
-import ast
 from collections import defaultdict
 import hashlib
 
 # ====================== CONFIGURAÇÕES ======================
 CACHE_TTL_PADRAO = 30
 ITENS_POR_PAGINA = 50
-DEBOUNCE_WAIT_MS = 500
+DEBOUNCE_WAIT_MS = 300  # Reduzido para resposta mais rápida
 
-# ====================== SISTEMA DE IA AUTO-EVOLUTIVA ======================
-class AIEvolutionEngine:
-    """Motor de IA para auto-evolução do sistema e otimização de dados"""
+# ====================== CACHE ULTRARRÁPIDO EM MEMÓRIA ======================
+class CacheRapido:
+    """Cache em memória com acesso O(1) - milissegundos"""
     
-    def __init__(self):
-        self.metricas = defaultdict(list)
-        self.padroes = defaultdict(int)
-        self.sugestoes = []
-        self.otimizacoes_aplicadas = []
-        self.bugs_detectados = []
-        self.analise_ultima = None
-        self.versao = "1.0.0"
-        self.ultima_atualizacao = datetime.now()
-        
-        # Métricas de performance
-        self.tempos_resposta = []
-        self.erros_por_funcao = defaultdict(int)
-        self.uso_cache = {"hits": 0, "misses": 0}
-        self.consultas_banco = {"total": 0, "lentas": 0, "media_tempo": 0}
-        
-        # Padrões de uso
-        self.funcoes_populares = defaultdict(int)
-        self.horarios_pico = defaultdict(int)
-        self.buscas_recentes = []
-        self.campos_busca = defaultdict(int)
-        
-        # Cache inteligente
-        self.cache_quente = {}  # Dados mais acessados
-        self.cache_tempo = {}   # Controle de tempo
-        self.cache_prioridade = defaultdict(int)  # Prioridade de cache
-        
-        # Estatísticas de dados
-        self.total_registros = 0
-        self.ultima_sincronizacao = None
-        self.indexes_sugeridos = []
-        self.consultas_otimizadas = 0
-        
-        # Inicia monitoramento em background
-        self.monitor_ativo = True
-        self.thread_monitor = threading.Thread(target=self._monitor_background, daemon=True)
-        self.thread_monitor.start()
-        
-        # Inicia otimizador de cache
-        self.thread_cache = threading.Thread(target=self._otimizar_cache_background, daemon=True)
-        self.thread_cache.start()
-    
-    def _monitor_background(self):
-        """Monitora o sistema em background"""
-        while self.monitor_ativo:
-            try:
-                time.sleep(60)  # A cada minuto
-                self._analisar_metricas()
-                self._gerar_sugestoes()
-                self._aplicar_otimizacoes_auto()
-                self._otimizar_consultas()
-            except Exception as e:
-                self.bugs_detectados.append({
-                    "erro": str(e),
-                    "timestamp": datetime.now().isoformat(),
-                    "severidade": "media"
-                })
-    
-    def _otimizar_cache_background(self):
-        """Otimiza o cache em background"""
-        while self.monitor_ativo:
-            try:
-                time.sleep(300)  # A cada 5 minutos
-                self._limpar_cache_expirado()
-                self._reorganizar_cache_quente()
-            except:
-                pass
-    
-    def _limpar_cache_expirado(self):
-        """Remove entradas expiradas do cache quente"""
-        agora = time.time()
-        expirados = []
-        for key, tempo in self.cache_tempo.items():
-            if agora - tempo > 3600:  # 1 hora
-                expirados.append(key)
-        
-        for key in expirados:
-            if key in self.cache_quente:
-                del self.cache_quente[key]
-            if key in self.cache_tempo:
-                del self.cache_tempo[key]
-    
-    def _reorganizar_cache_quente(self):
-        """Reorganiza cache baseado na prioridade"""
-        # Mantém apenas os 100 itens mais usados
-        if len(self.cache_quente) > 100:
-            ordenados = sorted(self.cache_quente.items(), 
-                             key=lambda x: self.cache_prioridade.get(x[0], 0), 
-                             reverse=True)
-            novos_cache = dict(ordenados[:100])
-            self.cache_quente = novos_cache
-    
-    def _otimizar_consultas(self):
-        """Otimiza consultas SQL baseado no padrão de uso"""
-        # Identifica campos mais buscados
-        campos_populares = dict(self.campos_busca)
-        
-        # Sugere índices para campos mais buscados
-        for campo, qtd in campos_populares.items():
-            if qtd > 100 and campo not in self.indexes_sugeridos:
-                self.indexes_sugeridos.append(campo)
-                self.sugestoes.append({
-                    "tipo": "index",
-                    "severidade": "alta",
-                    "sugestao": f"📊 Sugiro criar índice no campo '{campo}' para acelerar buscas (usado {qtd} vezes)",
-                    "timestamp": datetime.now().isoformat(),
-                    "campo": campo
-                })
-    
-    def registrar_metricas(self, nome_metrica, valor, dados_extra=None):
-        """Registra métricas de uso"""
-        self.metricas[nome_metrica].append({
-            "valor": valor,
-            "timestamp": datetime.now().isoformat(),
-            "dados": dados_extra
-        })
-        
-        # Mantém apenas últimas 1000 métricas
-        if len(self.metricas[nome_metrica]) > 1000:
-            self.metricas[nome_metrica] = self.metricas[nome_metrica][-1000:]
-    
-    def registrar_busca(self, campo, valor, tempo_ms):
-        """Registra uma busca para otimização"""
-        self.campos_busca[campo] += 1
-        self.buscas_recentes.append({
-            "campo": campo,
-            "valor": valor,
-            "tempo": tempo_ms,
-            "timestamp": datetime.now().isoformat()
-        })
-        
-        # Mantém últimas 100 buscas
-        if len(self.buscas_recentes) > 100:
-            self.buscas_recentes = self.buscas_recentes[-100:]
-        
-        # Se busca foi lenta, sugere otimização
-        if tempo_ms > 500:
-            self.sugestoes.append({
-                "tipo": "busca_lenta",
-                "severidade": "media",
-                "sugestao": f"🔍 Busca por '{campo}' demorou {tempo_ms:.0f}ms. Considere índice ou cache.",
-                "timestamp": datetime.now().isoformat()
-            })
-    
-    def registrar_erro(self, funcao, erro, dados=None):
-        """Registra erros para análise"""
-        self.erros_por_funcao[funcao] += 1
-        self.bugs_detectados.append({
-            "funcao": funcao,
-            "erro": str(erro),
-            "dados": dados,
-            "timestamp": datetime.now().isoformat(),
-            "resolvido": False
-        })
-        
-        # Tenta auto-corrigir
-        if self.erros_por_funcao[funcao] > 5:
-            self._tentar_autocorrigir(funcao)
-    
-    def _tentar_autocorrigir(self, funcao):
-        """Tenta corrigir erros comuns automaticamente"""
-        correcoes = {
-            "buscar_pessoa_por_cpf": "Aumentar timeout do cache e adicionar índice",
-            "get_estatisticas_cached": "Limpar cache e reconstruir com query otimizada",
-            "get_historico_paginado": "Otimizar consulta SQL com paginação",
-            "excluir_multiplos_registros": "Usar transação em lote",
-            "registrar_movimentacao": "Adicionar retry com backoff",
-            "buscar_pessoa_por_nome": "Adicionar índice no campo nome"
-        }
-        
-        if funcao in correcoes:
-            sugestao = correcoes[funcao]
-            self.sugestoes.append({
-                "tipo": "autocorrecao",
-                "funcao": funcao,
-                "sugestao": sugestao,
-                "aplicada": False,
-                "timestamp": datetime.now().isoformat()
-            })
-            
-            # Marca como resolvido
-            for bug in self.bugs_detectados:
-                if bug["funcao"] == funcao and not bug["resolvido"]:
-                    bug["resolvido"] = True
-                    bug["solucao"] = sugestao
-    
-    def _analisar_metricas(self):
-        """Analisa métricas e identifica padrões"""
-        # Análise de performance de queries
-        if self.metricas.get("tempo_query"):
-            tempos = [m["valor"] for m in self.metricas["tempo_query"][-50:]]
-            if tempos:
-                media = sum(tempos) / len(tempos)
-                self.consultas_banco["media_tempo"] = media
-                
-                if media > 500:
-                    self.sugestoes.append({
-                        "tipo": "performance",
-                        "severidade": "alta",
-                        "sugestao": f"⏱️ Tempo médio de query alto ({media:.0f}ms). Sugiro criar índices no Supabase.",
-                        "timestamp": datetime.now().isoformat()
-                    })
-        
-        # Análise de cache
-        total_cache = self.uso_cache["hits"] + self.uso_cache["misses"]
-        if total_cache > 0:
-            hit_ratio = self.uso_cache["hits"] / total_cache * 100
-            if hit_ratio < 60:
-                self.sugestoes.append({
-                    "tipo": "otimizacao",
-                    "severidade": "media",
-                    "sugestao": f"💾 Cache hit ratio baixo ({hit_ratio:.0f}%). Aumentar TTL do cache.",
-                    "timestamp": datetime.now().isoformat()
-                })
-        
-        # Análise de erros
-        for funcao, qtd in self.erros_por_funcao.items():
-            if qtd > 10:
-                self.sugestoes.append({
-                    "tipo": "bug",
-                    "severidade": "alta",
-                    "sugestao": f"🐛 Função '{funcao}' com {qtd} erros. Revisar lógica.",
-                    "timestamp": datetime.now().isoformat()
-                })
-    
-    def _gerar_sugestoes(self):
-        """Gera sugestões de melhoria baseado nos dados"""
-        # Sugestões de feature baseadas no uso
-        if self.funcoes_populares.get("buscar_pessoa_por_cpf", 0) > 100:
-            self.sugestoes.append({
-                "tipo": "feature",
-                "severidade": "baixa",
-                "sugestao": "🔍 Adicionar busca por nome e setor para maior eficiência.",
-                "timestamp": datetime.now().isoformat()
-            })
-        
-        # Sugestão de UI/UX
-        if self.horarios_pico.get(datetime.now().hour, 0) > 50:
-            self.sugestoes.append({
-                "tipo": "ux",
-                "severidade": "baixa",
-                "sugestao": "⏰ Horário de pico detectado. Considerar adicionar cache distribuído.",
-                "timestamp": datetime.now().isoformat()
-            })
-        
-        # Sugestão de índice para campos populares
-        if self.campos_busca.get("cpf", 0) > 200:
-            self.sugestoes.append({
-                "tipo": "index",
-                "severidade": "alta",
-                "sugestao": "📊 Criar índice no campo 'cpf' para acelerar buscas (usado 200+ vezes)",
-                "timestamp": datetime.now().isoformat()
-            })
-    
-    def _aplicar_otimizacoes_auto(self):
-        """Aplica otimizações automáticas"""
-        for sugestao in self.sugestoes:
-            if not sugestao.get("aplicada", False) and sugestao.get("tipo") == "autocorrecao":
-                # Aplica otimização
-                sugestao["aplicada"] = True
-                self.otimizacoes_aplicadas.append(sugestao)
-                
-                # Registra na versão
-                self.versao = f"1.0.{len(self.otimizacoes_aplicadas)}"
-                self.ultima_atualizacao = datetime.now()
-    
-    def get_relatorio(self):
-        """Gera relatório completo do sistema"""
-        return {
-            "versao": self.versao,
-            "ultima_atualizacao": self.ultima_atualizacao.isoformat(),
-            "metricas": {
-                "total_erros": len(self.bugs_detectados),
-                "erros_nao_resolvidos": len([b for b in self.bugs_detectados if not b.get("resolvido")]),
-                "otimizacoes_aplicadas": len(self.otimizacoes_aplicadas),
-                "sugestoes_pendentes": len([s for s in self.sugestoes if not s.get("aplicada")]),
-                "cache_hit_ratio": self.uso_cache["hits"] / max(1, self.uso_cache["hits"] + self.uso_cache["misses"]) * 100,
-                "media_tempo_query": self.consultas_banco.get("media_tempo", 0),
-                "consultas_otimizadas": self.consultas_otimizadas,
-                "total_registros": self.total_registros,
-                "indexes_sugeridos": self.indexes_sugeridos
-            },
-            "sugestoes": [s for s in self.sugestoes if not s.get("aplicada")][-10:],
-            "bugs_recentes": self.bugs_detectados[-5:],
-            "funcoes_populares": dict(sorted(self.funcoes_populares.items(), key=lambda x: x[1], reverse=True)[:5]),
-            "campos_mais_buscados": dict(sorted(self.campos_busca.items(), key=lambda x: x[1], reverse=True)[:5])
-        }
-
-# Inicializa a IA
-ai_engine = AIEvolutionEngine()
-
-# ====================== DECORATOR DE MONITORAMENTO ======================
-def monitorar_func(func):
-    """Decorator para monitorar funções"""
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        inicio = time.time()
-        nome_funcao = func.__name__
-        
-        try:
-            # Conta uso
-            ai_engine.funcoes_populares[nome_funcao] += 1
-            
-            # Executa função
-            resultado = func(*args, **kwargs)
-            
-            # Registra tempo
-            tempo = (time.time() - inicio) * 1000
-            ai_engine.registrar_metricas(f"tempo_{nome_funcao}", tempo)
-            
-            return resultado
-        except Exception as e:
-            ai_engine.registrar_erro(nome_funcao, e, {"args": args, "kwargs": kwargs})
-            raise
-    
-    return wrapper
-
-# ====================== CACHE INTELIGENTE ======================
-class CacheInteligente:
-    """Cache com auto-otimização baseada em uso"""
-    
-    def __init__(self, ttl_seconds=60):
-        self.ttl_seconds = ttl_seconds
-        self.cache_data = {}
-        self.cache_times = {}
+    def __init__(self, ttl_seconds=300):
+        self.cache = {}
+        self.tempos = {}
+        self.ttl = ttl_seconds
         self.hits = 0
         self.misses = 0
-        self.hit_ratio = 0
-        self._auto_ajuste_ttl()
-    
-    def _auto_ajuste_ttl(self):
-        """Ajusta automaticamente o TTL baseado no hit ratio"""
-        if self.hits + self.misses > 10:
-            hit_ratio = self.hits / (self.hits + self.misses) * 100
-            if hit_ratio < 50 and self.ttl_seconds < 300:
-                self.ttl_seconds += 10
-            elif hit_ratio > 80 and self.ttl_seconds > 10:
-                self.ttl_seconds -= 5
     
     def get(self, key):
         now = time.time()
-        if key in self.cache_data and (now - self.cache_times.get(key, 0)) < self.ttl_seconds:
+        if key in self.cache and (now - self.tempos.get(key, 0)) < self.ttl:
             self.hits += 1
-            ai_engine.uso_cache["hits"] += 1
-            ai_engine.cache_prioridade[key] += 1
-            return self.cache_data[key]
-        
+            return self.cache[key]
         self.misses += 1
-        ai_engine.uso_cache["misses"] += 1
-        self._auto_ajuste_ttl()
         return None
     
     def set(self, key, value):
-        self.cache_data[key] = value
-        self.cache_times[key] = time.time()
-        # Adiciona ao cache quente da IA
-        ai_engine.cache_quente[key] = value
-        ai_engine.cache_tempo[key] = time.time()
+        self.cache[key] = value
+        self.tempos[key] = time.time()
     
     def clear(self):
-        self.cache_data.clear()
-        self.cache_times.clear()
+        self.cache.clear()
+        self.tempos.clear()
     
     def get_hit_ratio(self):
         total = self.hits + self.misses
         return (self.hits / total * 100) if total > 0 else 0
 
-def debounce(wait_time=DEBOUNCE_WAIT_MS):
-    def decorator(func):
-        last_call = 0
-        last_result = None
-        def wrapper(*args, **kwargs):
-            nonlocal last_call, last_result
-            current_time = time.time() * 1000
-            if current_time - last_call >= wait_time:
-                last_call = current_time
-                last_result = func(*args, **kwargs)
-                return last_result
-            return last_result
-        return wrapper
-    return decorator
-
-# Instâncias de cache
-cache_estatisticas = CacheInteligente(ttl_seconds=10)
-cache_pessoas = CacheInteligente(ttl_seconds=60)
-cache_presentes = CacheInteligente(ttl_seconds=10)
-cache_fluxo_acesso = CacheInteligente(ttl_seconds=30)
-cache_busca_cpf = CacheInteligente(ttl_seconds=300)  # Cache mais longo para buscas
-
-# ====================== FUNÇÕES AUXILIARES ======================
-def invalidar_cache():
-    cache_estatisticas.clear()
-    cache_pessoas.clear()
-    cache_presentes.clear()
-    cache_fluxo_acesso.clear()
-    cache_busca_cpf.clear()
-    ai_engine.registrar_metricas("cache_invalidado", 1)
-
-def registrar_tempo_query(tempo_ms):
-    if "tempos_query" not in st.session_state:
-        st.session_state.tempos_query = []
-    st.session_state.tempos_query.append(tempo_ms)
-    if len(st.session_state.tempos_query) > 100:
-        st.session_state.tempos_query = st.session_state.tempos_query[-100:]
+# ====================== PRÉ-CARREGAMENTO DE DADOS ======================
+class DataLoader:
+    """Pré-carrega dados para acesso instantâneo"""
     
-    # Registra na IA
-    ai_engine.registrar_metricas("tempo_query", tempo_ms)
-    if tempo_ms > 500:
-        ai_engine.consultas_banco["lentas"] += 1
-    ai_engine.consultas_banco["total"] += 1
+    def __init__(self):
+        self.dados = {}
+        self.ultima_atualizacao = None
+        self.carregado = False
+        self.thread = None
+    
+    def carregar_todos_usuarios(self):
+        """Carrega todos os usuários uma vez e mantém em memória"""
+        try:
+            response = supabase.table("Pessoas").select("cpf, nome, empresa, id").execute()
+            if response.data:
+                # Indexa por CPF para busca O(1)
+                self.dados = {
+                    "por_cpf": {p["cpf"]: p for p in response.data},
+                    "lista": response.data,
+                    "total": len(response.data)
+                }
+                self.carregado = True
+                self.ultima_atualizacao = datetime.now()
+                return True
+        except Exception as e:
+            print(f"Erro ao carregar dados: {e}")
+            return False
+    
+    def buscar_por_cpf(self, cpf):
+        """Busca instantânea por CPF - O(1)"""
+        if not self.carregado:
+            self.carregar_todos_usuarios()
+        
+        if self.carregado and cpf in self.dados.get("por_cpf", {}):
+            return self.dados["por_cpf"][cpf]
+        return None
+    
+    def buscar_por_nome(self, termo):
+        """Busca por nome com filtro rápido"""
+        if not self.carregado:
+            self.carregar_todos_usuarios()
+        
+        if not self.carregado or not termo or len(termo) < 2:
+            return []
+        
+        termo = termo.upper()
+        resultados = []
+        for p in self.dados.get("lista", []):
+            if termo in p["nome"].upper():
+                resultados.append(p)
+                if len(resultados) >= 20:
+                    break
+        return resultados
+    
+    def buscar_por_empresa(self, termo):
+        """Busca por empresa com filtro rápido"""
+        if not self.carregado:
+            self.carregar_todos_usuarios()
+        
+        if not self.carregado or not termo or len(termo) < 2:
+            return []
+        
+        termo = termo.upper()
+        resultados = []
+        for p in self.dados.get("lista", []):
+            if p.get("empresa") and termo in p["empresa"].upper():
+                resultados.append(p)
+                if len(resultados) >= 20:
+                    break
+        return resultados
 
-def get_tempo_medio_query():
-    tempos = st.session_state.get("tempos_query", [])
-    return sum(tempos) / len(tempos) if tempos else 0
+# ====================== INICIALIZAÇÃO ======================
+# Instâncias de cache
+cache_cpf = CacheRapido(ttl_seconds=3600)  # 1 hora para CPF
+cache_nome = CacheRapido(ttl_seconds=600)  # 10 minutos para nome
+cache_empresa = CacheRapido(ttl_seconds=600)
+cache_estatisticas = CacheRapido(ttl_seconds=10)
+cache_presentes = CacheRapido(ttl_seconds=10)
 
-def safe_rerun():
-    """Função segura para rerun com delay"""
-    time.sleep(0.15)
-    st.rerun()
+# Carregador de dados
+data_loader = DataLoader()
 
 # ====================== FUNÇÕES DO SUPABASE ======================
 try:
@@ -457,37 +142,175 @@ try:
     supabase = create_client(url, anon_key)
     supabase_admin = create_client(url, service_key)
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
-    
-    # Atualiza total de registros
-    try:
-        total = supabase.table("Pessoas").select("id", count="exact").execute()
-        ai_engine.total_registros = total.count if hasattr(total, 'count') else 0
-    except:
-        pass
-    
 except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
-    ai_engine.registrar_erro("conexao_supabase", e)
     st.stop()
 
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
 VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
 
-# ====================== FUNÇÃO DE FLUXO DE ACESSO ======================
-@monitorar_func
-def get_fluxo_acesso_por_hora():
-    """Retorna os dados de fluxo de acesso agrupados por hora do dia"""
-    cache_key = "fluxo_acesso_hora"
-    cached = cache_fluxo_acesso.get(cache_key)
+# ====================== FUNÇÕES AUXILIARES ======================
+def invalidar_cache():
+    cache_cpf.clear()
+    cache_nome.clear()
+    cache_empresa.clear()
+    cache_estatisticas.clear()
+    cache_presentes.clear()
+    # Recarrega dados
+    data_loader.carregar_todos_usuarios()
+
+def get_tempo_medio_query():
+    return 0  # Desativado para performance
+
+def safe_rerun():
+    time.sleep(0.1)
+    st.rerun()
+
+# ====================== FUNÇÕES DE BUSCA OTIMIZADAS ======================
+def buscar_pessoa_por_cpf_rapido(cpf):
+    """Busca ultra-rápida por CPF - usa cache em memória"""
+    if not cpf:
+        return None
+    
+    cpf_limpo = re.sub(r'\D', '', cpf)
+    if not cpf_limpo:
+        return None
+    
+    # Tenta cache em memória (mais rápido)
+    cache_key = f"cpf_{cpf_limpo}"
+    cached = cache_cpf.get(cache_key)
+    if cached:
+        return cached
+    
+    # Busca no data_loader (já carregado em memória)
+    resultado = data_loader.buscar_por_cpf(cpf_limpo)
+    
+    if resultado:
+        cache_cpf.set(cache_key, resultado)
+        return resultado
+    
+    # Fallback: busca no banco (caso não tenha carregado)
+    try:
+        pessoa = supabase.table("Pessoas").select("nome, empresa, id").eq("cpf", cpf_limpo).execute()
+        if pessoa.data:
+            resultado = pessoa.data[0]
+            cache_cpf.set(cache_key, resultado)
+            return resultado
+    except:
+        pass
+    
+    return None
+
+def buscar_pessoa_por_nome_rapido(nome):
+    """Busca rápida por nome - usa dados em memória"""
+    if not nome or len(nome) < 2:
+        return []
+    
+    cache_key = f"nome_{nome.upper()}"
+    cached = cache_nome.get(cache_key)
+    if cached:
+        return cached
+    
+    resultados = data_loader.buscar_por_nome(nome)
+    if resultados:
+        cache_nome.set(cache_key, resultados)
+    
+    return resultados
+
+def buscar_pessoa_por_empresa_rapido(empresa):
+    """Busca rápida por empresa - usa dados em memória"""
+    if not empresa or len(empresa) < 2:
+        return []
+    
+    cache_key = f"empresa_{empresa.upper()}"
+    cached = cache_empresa.get(cache_key)
+    if cached:
+        return cached
+    
+    resultados = data_loader.buscar_por_empresa(empresa)
+    if resultados:
+        cache_empresa.set(cache_key, resultados)
+    
+    return resultados
+
+# ====================== FUNÇÕES DE PERFORMANCE ======================
+def excluir_multiplos_registros(ids, tabela="movimentacao"):
+    if not ids:
+        return {"sucesso": False, "mensagem": "Nenhum ID para excluir"}
+    try:
+        supabase_admin.table(tabela).delete().in_("id", ids).execute()
+        invalidar_cache()
+        return {"sucesso": True, "mensagem": f"{len(ids)} registro(s) excluído(s)"}
+    except Exception as e:
+        return {"sucesso": False, "mensagem": f"Erro: {e}"}
+
+def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
+    offset = (pagina - 1) * itens_por_pagina
+    try:
+        total = supabase.table("movimentacao").select("id", count="estimated").execute()
+        total_registros = total.count if hasattr(total, 'count') else 0
+        
+        dados = supabase.table("movimentacao")\
+            .select("id, cpf, nome, empresa, setor_destino, data_entrada, data_saida")\
+            .order("id", desc=True)\
+            .range(offset, offset + itens_por_pagina - 1)\
+            .execute()
+        
+        return {
+            "dados": dados.data,
+            "total": total_registros,
+            "pagina": pagina,
+            "total_paginas": (total_registros + itens_por_pagina - 1) // itens_por_pagina if total_registros > 0 else 1
+        }
+    except Exception as e:
+        return {"dados": [], "total": 0, "pagina": 1, "total_paginas": 1}
+
+def get_estatisticas_cached():
+    cache_key = "estatisticas"
+    cached = cache_estatisticas.get(cache_key)
     if cached:
         return cached
     
     try:
-        inicio = time.time()
-        dados = supabase.table("movimentacao").select("data_entrada").execute()
-        tempo = (time.time() - inicio) * 1000
-        ai_engine.registrar_busca("data_entrada", "todos", tempo)
+        total_presentes = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute().count
+        total_cadastrados = data_loader.dados.get("total", 0) or supabase.table("Pessoas").select("id", count="exact").execute().count or 0
         
+        result_setores = supabase.table("movimentacao").select("setor_destino").execute()
+        setores_unicos = len(set(r['setor_destino'] for r in result_setores.data if r.get('setor_destino'))) if result_setores.data else 11
+        
+        stats = {
+            "total_presentes": total_presentes or 0,
+            "total_cadastrados": total_cadastrados or 0,
+            "setores_unicos": setores_unicos
+        }
+        cache_estatisticas.set(cache_key, stats)
+        return stats
+    except Exception as e:
+        return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
+
+def get_presentes_cached():
+    cache_key = "presentes"
+    cached = cache_presentes.get(cache_key)
+    if cached:
+        return cached
+    
+    try:
+        dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
+        cache_presentes.set(cache_key, dados.data)
+        return dados.data
+    except:
+        return []
+
+# ====================== FUNÇÕES DE FLUXO DE ACESSO ======================
+def get_fluxo_acesso_por_hora():
+    """Retorna os dados de fluxo de acesso agrupados por hora do dia"""
+    cache_key = "fluxo_acesso_hora"
+    cached = cache_fluxo_acesso.get(cache_key) if 'cache_fluxo_acesso' in globals() else None
+    if cached:
+        return cached
+    
+    try:
+        dados = supabase.table("movimentacao").select("data_entrada").execute()
         if not dados.data:
             return pd.DataFrame()
         
@@ -521,22 +344,14 @@ def get_fluxo_acesso_por_hora():
         
         fluxo['turno'] = fluxo['hora'].apply(mapear_turno)
         fluxo = fluxo.sort_values('hora')
-        cache_fluxo_acesso.set(cache_key, fluxo)
         return fluxo
     except Exception as e:
-        ai_engine.registrar_erro("get_fluxo_acesso_por_hora", e)
-        print(f"Erro ao obter fluxo de acesso: {e}")
         return pd.DataFrame()
 
-@monitorar_func
 def get_total_acessos_hoje():
     try:
         hoje = get_current_datetime().strftime("%d/%m/%Y")
-        inicio = time.time()
         dados = supabase.table("movimentacao").select("data_entrada").execute()
-        tempo = (time.time() - inicio) * 1000
-        ai_engine.registrar_busca("data_entrada_hoje", hoje, tempo)
-        
         total_hoje = 0
         for registro in dados.data:
             data_entrada = registro.get('data_entrada', '')
@@ -545,203 +360,6 @@ def get_total_acessos_hoje():
         return total_hoje
     except:
         return 0
-
-# ====================== FUNÇÕES DE PERFORMANCE ======================
-@monitorar_func
-def excluir_multiplos_registros(ids, tabela="movimentacao"):
-    if not ids:
-        return {"sucesso": False, "mensagem": "Nenhum ID para excluir"}
-    try:
-        supabase_admin.table(tabela).delete().in_("id", ids).execute()
-        invalidar_cache()
-        return {"sucesso": True, "mensagem": f"{len(ids)} registro(s) excluído(s)"}
-    except Exception as e:
-        ai_engine.registrar_erro("excluir_multiplos_registros", e)
-        return {"sucesso": False, "mensagem": f"Erro: {e}"}
-
-@monitorar_func
-def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
-    inicio = time.time()
-    offset = (pagina - 1) * itens_por_pagina
-    try:
-        total = supabase.table("movimentacao").select("id", count="estimated").execute()
-        total_registros = total.count if hasattr(total, 'count') else 0
-        
-        # Query otimizada com seleção de campos específicos
-        dados = supabase.table("movimentacao")\
-            .select("id, cpf, nome, empresa, setor_destino, data_entrada, data_saida")\
-            .order("id", desc=True)\
-            .range(offset, offset + itens_por_pagina - 1)\
-            .execute()
-        
-        tempo = (time.time() - inicio) * 1000
-        registrar_tempo_query(tempo)
-        ai_engine.registrar_busca("historico_paginado", f"pagina_{pagina}", tempo)
-        
-        return {
-            "dados": dados.data,
-            "total": total_registros,
-            "pagina": pagina,
-            "total_paginas": (total_registros + itens_por_pagina - 1) // itens_por_pagina if total_registros > 0 else 1
-        }
-    except Exception as e:
-        ai_engine.registrar_erro("get_historico_paginado", e)
-        return {"dados": [], "total": 0, "pagina": 1, "total_paginas": 1}
-
-@debounce(wait_time=DEBOUNCE_WAIT_MS)
-@monitorar_func
-def buscar_pessoa_por_cpf_debounced(cpf):
-    """Busca pessoa por CPF com cache inteligente"""
-    if not cpf:
-        return None
-    
-    cpf_limpo = sanitizar_cpf(cpf)
-    if not cpf_limpo:
-        return None
-    
-    cache_key = f"cpf_{cpf_limpo}"
-    
-    # Tenta cache quente primeiro
-    cached = cache_busca_cpf.get(cache_key)
-    if cached:
-        ai_engine.registrar_busca("cpf_cache", cpf_limpo, 10)  # 10ms de cache
-        return cached
-    
-    try:
-        inicio = time.time()
-        pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_limpo).execute()
-        tempo = (time.time() - inicio) * 1000
-        
-        ai_engine.registrar_busca("cpf", cpf_limpo, tempo)
-        
-        if pessoa.data:
-            resultado = pessoa.data[0]
-            # Salva no cache
-            cache_busca_cpf.set(cache_key, resultado)
-            return resultado
-        return None
-    except Exception as e:
-        ai_engine.registrar_erro("buscar_pessoa_por_cpf", e, {"cpf": cpf_limpo})
-        return None
-
-@monitorar_func
-def buscar_pessoa_por_nome(nome):
-    """Busca pessoa por nome com otimização"""
-    if not nome or len(nome) < 2:
-        return []
-    
-    cache_key = f"nome_{nome.upper()}"
-    cached = cache_busca_cpf.get(cache_key)
-    if cached:
-        return cached
-    
-    try:
-        inicio = time.time()
-        # Busca otimizada com LIKE e limite
-        pessoas = supabase.table("Pessoas")\
-            .select("id, nome, cpf, empresa")\
-            .ilike("nome", f"%{nome}%")\
-            .limit(20)\
-            .execute()
-        
-        tempo = (time.time() - inicio) * 1000
-        ai_engine.registrar_busca("nome", nome, tempo)
-        
-        if pessoas.data:
-            cache_busca_cpf.set(cache_key, pessoas.data)
-            return pessoas.data
-        return []
-    except Exception as e:
-        ai_engine.registrar_erro("buscar_pessoa_por_nome", e, {"nome": nome})
-        return []
-
-@monitorar_func
-def buscar_pessoa_por_empresa(empresa):
-    """Busca pessoa por empresa com otimização"""
-    if not empresa or len(empresa) < 2:
-        return []
-    
-    cache_key = f"empresa_{empresa.upper()}"
-    cached = cache_busca_cpf.get(cache_key)
-    if cached:
-        return cached
-    
-    try:
-        inicio = time.time()
-        pessoas = supabase.table("Pessoas")\
-            .select("id, nome, cpf, empresa")\
-            .ilike("empresa", f"%{empresa}%")\
-            .limit(50)\
-            .execute()
-        
-        tempo = (time.time() - inicio) * 1000
-        ai_engine.registrar_busca("empresa", empresa, tempo)
-        
-        if pessoas.data:
-            cache_busca_cpf.set(cache_key, pessoas.data)
-            return pessoas.data
-        return []
-    except Exception as e:
-        ai_engine.registrar_erro("buscar_pessoa_por_empresa", e, {"empresa": empresa})
-        return []
-
-@monitorar_func
-def get_estatisticas_cached():
-    """Retorna estatísticas com cache inteligente"""
-    cache_key = "estatisticas"
-    cached = cache_estatisticas.get(cache_key)
-    if cached:
-        return cached
-    
-    inicio = time.time()
-    try:
-        total_presentes = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute().count
-        total_cadastrados = supabase.table("Pessoas").select("id", count="exact").execute().count
-        
-        # Atualiza total de registros na IA
-        ai_engine.total_registros = total_cadastrados or 0
-        
-        result_setores = supabase.table("movimentacao").select("setor_destino").execute()
-        setores_unicos = len(set(r['setor_destino'] for r in result_setores.data if r.get('setor_destino'))) if result_setores.data else 11
-        
-        stats = {
-            "total_presentes": total_presentes or 0,
-            "total_cadastrados": total_cadastrados or 0,
-            "setores_unicos": setores_unicos
-        }
-        
-        tempo = (time.time() - inicio) * 1000
-        registrar_tempo_query(tempo)
-        ai_engine.registrar_busca("estatisticas", "all", tempo)
-        
-        cache_estatisticas.set(cache_key, stats)
-        return stats
-    except Exception as e:
-        ai_engine.registrar_erro("get_estatisticas_cached", e)
-        return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
-
-def refresh_estatisticas_view():
-    invalidar_cache()
-    return True
-
-@monitorar_func
-def get_presentes_cached():
-    cache_key = "presentes"
-    cached = cache_presentes.get(cache_key)
-    if cached:
-        return cached
-    
-    try:
-        inicio = time.time()
-        dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
-        tempo = (time.time() - inicio) * 1000
-        ai_engine.registrar_busca("presentes", "all", tempo)
-        
-        cache_presentes.set(cache_key, dados.data)
-        return dados.data
-    except Exception as e:
-        ai_engine.registrar_erro("get_presentes_cached", e)
-        return []
 
 # ====================== FUNÇÕES DE TIMEZONE ======================
 def get_timezone_offset():
@@ -762,7 +380,6 @@ def save_timezone_offset(offset_horas):
         }).execute()
         return True
     except Exception as e:
-        ai_engine.registrar_erro("save_timezone_offset", e)
         st.error(f"Erro ao salvar offset: {e}")
         return False
 
@@ -813,7 +430,6 @@ def save_avatar_url(url):
         st.session_state.avatar_url = url
         return True
     except Exception as e:
-        ai_engine.registrar_erro("save_avatar_url", e)
         st.error(f"Erro ao salvar avatar: {e}")
         return False
 
@@ -859,7 +475,6 @@ def get_theme_config():
             save_theme_config(padrao)
             return padrao
     except Exception as e:
-        ai_engine.registrar_erro("get_theme_config", e)
         st.error(f"Erro ao carregar tema: {e}")
         return padrao
 
@@ -873,7 +488,6 @@ def save_theme_config(config):
         st.session_state.theme_config = config
         return True
     except Exception as e:
-        ai_engine.registrar_erro("save_theme_config", e)
         st.error(f"Erro ao salvar tema global: {e}")
         return False
 
@@ -914,10 +528,8 @@ def registrar_sessao(perfil, usuario="admin"):
         }
         supabase_admin.table("sessoes_ativas").insert(data).execute()
         st.session_state.session_id = session_id
-        ai_engine.registrar_metricas("sessao_criada", 1, {"perfil": perfil})
         return True
     except Exception as e:
-        ai_engine.registrar_erro("registrar_sessao", e)
         st.error(f"Erro ao registrar sessão: {e}")
         return False
 
@@ -1109,7 +721,6 @@ def apagar_registros_duplicados():
             resultados.append(f"CPF {cpf}: mantido ID {registro_principal['id']} - {registro_principal['nome']} | Removidos: {len(ids_para_remover)}")
         return {"sucesso": True, "mensagem": f"Limpeza concluída! {total_removidos} registro(s) duplicado(s) removido(s).", "duplicados_removidos": total_removidos, "detalhes": resultados}
     except Exception as e:
-        ai_engine.registrar_erro("apagar_registros_duplicados", e)
         return {"sucesso": False, "mensagem": f"Erro durante a limpeza: {str(e)}"}
 
 def sincronizar_novos_cadastros(arquivo_csv):
@@ -1157,136 +768,7 @@ def sincronizar_novos_cadastros(arquivo_csv):
             mensagem += f"\nErros encontrados: {len(erros)}"
         return {"sucesso": True, "mensagem": mensagem, "inseridos": registros_inseridos, "atualizados": registros_atualizados, "ignorados": registros_ignorados, "erros": erros}
     except Exception as e:
-        ai_engine.registrar_erro("sincronizar_novos_cadastros", e)
         return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
-
-# ====================== PÁGINA DE IA E AUTO-EVOLUÇÃO ======================
-def pagina_ia_evolution():
-    """Página de gerenciamento da IA auto-evolutiva"""
-    st.markdown("## 🧠 IA Auto-Evolutiva - Otimização de Dados")
-    st.markdown("O sistema está aprendendo, otimizando e evoluindo com o uso!")
-    
-    relatorio = ai_engine.get_relatorio()
-    
-    # Métricas principais
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("🤖 Versão IA", relatorio["versao"], delta="📈 Evoluindo")
-    with col2:
-        st.metric("🐛 Bugs Resolvidos", relatorio["metricas"]["total_erros"] - relatorio["metricas"]["erros_nao_resolvidos"])
-    with col3:
-        st.metric("⚡ Otimizações", relatorio["metricas"]["otimizacoes_aplicadas"])
-    with col4:
-        st.metric("🎯 Cache Hit", f"{relatorio['metricas']['cache_hit_ratio']:.0f}%")
-    
-    # Métricas de banco de dados
-    st.markdown("---")
-    st.markdown("### 📊 Métricas do Banco de Dados")
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("📦 Total Registros", relatorio["metricas"]["total_registros"])
-    with col2:
-        st.metric("⏱️ Tempo Médio Query", f"{relatorio['metricas']['media_tempo_query']:.0f}ms")
-    with col3:
-        st.metric("📈 Consultas Otimizadas", relatorio["metricas"]["consultas_otimizadas"])
-    with col4:
-        st.metric("📊 Índices Sugeridos", len(relatorio["metricas"]["indexes_sugeridos"]))
-    
-    st.markdown("---")
-    
-    # Campos mais buscados
-    st.markdown("### 🔍 Campos Mais Buscados")
-    if relatorio["campos_mais_buscados"]:
-        df_campos = pd.DataFrame({
-            "Campo": list(relatorio["campos_mais_buscados"].keys()),
-            "Buscas": list(relatorio["campos_mais_buscados"].values())
-        })
-        st.bar_chart(df_campos.set_index("Campo"))
-    
-    st.markdown("---")
-    
-    # Sugestões da IA
-    st.markdown("### 💡 Sugestões de Melhoria")
-    sugestoes_ativas = [s for s in relatorio["sugestoes"] if not s.get("aplicada", False)]
-    
-    if sugestoes_ativas:
-        for sugestao in sugestoes_ativas:
-            with st.container():
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    if sugestao["tipo"] == "index":
-                        st.info(f"📊 {sugestao['sugestao']}")
-                    elif sugestao["tipo"] == "performance":
-                        st.warning(f"⏱️ {sugestao['sugestao']}")
-                    elif sugestao["tipo"] == "busca_lenta":
-                        st.warning(f"🔍 {sugestao['sugestao']}")
-                    else:
-                        st.info(f"💡 {sugestao['sugestao']}")
-                    st.caption(f"Tipo: {sugestao['tipo']} | Severidade: {sugestao.get('severidade', 'baixa')}")
-                with col2:
-                    if st.button("✅ Aplicar", key=f"apply_{sugestao['timestamp']}"):
-                        sugestao["aplicada"] = True
-                        ai_engine.otimizacoes_aplicadas.append(sugestao)
-                        if sugestao["tipo"] == "index":
-                            ai_engine.consultas_otimizadas += 1
-                        st.success("Otimização aplicada!")
-                        safe_rerun()
-    else:
-        st.success("✅ Nenhuma sugestão pendente. Sistema otimizado!")
-    
-    st.markdown("---")
-    
-    # Funções populares
-    st.markdown("### 📊 Funções Mais Usadas")
-    if relatorio["funcoes_populares"]:
-        df_pop = pd.DataFrame({
-            "Função": list(relatorio["funcoes_populares"].keys()),
-            "Uso": list(relatorio["funcoes_populares"].values())
-        })
-        st.bar_chart(df_pop.set_index("Função"))
-    
-    st.markdown("---")
-    
-    # Bugs recentes
-    st.markdown("### 🐛 Bugs Detectados Recentemente")
-    if relatorio["bugs_recentes"]:
-        for bug in relatorio["bugs_recentes"][-5:]:
-            status = "✅ Resolvido" if bug.get("resolvido") else "⏳ Em análise"
-            solucao = f"\n\n**Solução:** {bug.get('solucao', 'Em análise...')}" if bug.get("solucao") else ""
-            st.info(f"**Função:** {bug.get('funcao', 'Sistema')}\n\n**Erro:** {bug.get('erro', '')}\n\n**Status:** {status}{solucao}")
-    else:
-        st.success("✅ Nenhum bug detectado!")
-    
-    # Botões de controle
-    st.markdown("---")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("🔄 Analisar Agora"):
-            ai_engine._analisar_metricas()
-            ai_engine._gerar_sugestoes()
-            st.success("Análise concluída!")
-            safe_rerun()
-    
-    with col2:
-        if st.button("🧹 Limpar Cache"):
-            invalidar_cache()
-            st.success("Cache limpo!")
-            safe_rerun()
-    
-    with col3:
-        if st.button("📊 Exportar Relatório"):
-            st.json(relatorio)
-    
-    # Informações de índices sugeridos
-    if relatorio["metricas"]["indexes_sugeridos"]:
-        st.markdown("---")
-        st.markdown("### 📊 Índices Sugeridos para o Supabase")
-        st.info("Execute estes comandos no SQL Editor do Supabase para criar índices:")
-        for campo in relatorio["metricas"]["indexes_sugeridos"]:
-            st.code(f"CREATE INDEX idx_{campo} ON Pessoas ({campo});", language="sql")
 
 # ====================== INICIALIZAÇÃO DO ESTADO ======================
 if "logado" not in st.session_state:
@@ -1324,7 +806,6 @@ st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide
 # ====================== CSS FUTURISTA ======================
 st.markdown("""
 <style>
-    /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
     html, body {
         margin: 0;
         padding: 0;
@@ -1667,6 +1148,17 @@ st.markdown("""
         margin-bottom: 10px;
         font-family: 'Space Mono', monospace;
     }
+    .cache-status {
+        background: rgba(0,255,255,0.1);
+        border: 1px solid rgba(0,255,255,0.3);
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 12px;
+        color: #0ff;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1686,10 +1178,9 @@ if not st.session_state.logado:
                 <div style="font-size: 48px;">🛡️</div>
                 <h1 style="background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">JOHN ACESSOS</h1>
                 <p style="color: #a78bfa; letter-spacing: 3px;">CYBER SECURITY 2026</p>
-                <p style="color: #4a9a6a; font-size: 12px; margin-top: 5px;">🤖 IA Auto-Evolutiva v{ai_engine.versao}</p>
-                <p style="color: #4a9a6a; font-size: 10px; margin-top: 2px;">📊 {ai_engine.total_registros} registros otimizados</p>
+                <p style="color: #4a9a6a; font-size: 11px; margin-top: 5px;">⚡ Cache em memória ativo</p>
             </div>
-        """.format(ai_engine=ai_engine), unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
         
         with st.form("login_form"):
             st.text_input("", placeholder="Identificação (usuário)", key="data_user", label_visibility="collapsed")
@@ -1704,12 +1195,15 @@ if not st.session_state.logado:
                         st.session_state.perfil = "ADMIN"
                         st.session_state.tentativas_login = 0
                         registrar_sessao("ADMIN", "admin")
+                        # Pré-carrega dados ao logar
+                        data_loader.carregar_todos_usuarios()
                         st.rerun()
                     elif senha == VIGILANTE_PASSWORD:
                         st.session_state.logado = True
                         st.session_state.perfil = "VIGILANTE"
                         st.session_state.tentativas_login = 0
                         registrar_sessao("VIGILANTE", "vigilante")
+                        data_loader.carregar_todos_usuarios()
                         st.rerun()
                     else:
                         st.session_state.tentativas_login += 1
@@ -1739,10 +1233,11 @@ st.markdown(f"""
             <div style="width:45px;height:45px;">
                 <img src="{st.session_state.avatar_url}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:1px solid cyan; box-shadow:0 0 8px cyan;">
             </div>
-            <div><h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1><p style="margin:0;color:#aaf;font-size:10px;">MONITORAMENTO INTELIGENTE • IA v{ai_engine.versao}</p></div>
+            <div><h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1><p style="margin:0;color:#aaf;font-size:10px;">⚡ CACHE EM MEMÓRIA • BUSCAS ULTRARRÁPIDAS</p></div>
         </div>
         <div style="display:flex; gap:15px; align-items:center;">
             <div class="live-indicator"><span class="pulse-dot"></span> LIVE</div>
+            <div class="cache-status">💾 Cache Hit: {cache_cpf.get_hit_ratio():.0f}%</div>
             <div class="session-indicator">👥 {total_conectados}</div>
             <div class="badge-admin">👑 {st.session_state.perfil}</div>
         </div>
@@ -1769,41 +1264,21 @@ with st.sidebar:
         <img src="{st.session_state.avatar_url}" class="avatar-image">
         <div class="sidebar-title" style="font-size: 20px; margin-top: 12px;">👮‍♂️ JOHN ACESSOS</div>
         <p style="color:#0ff; font-size: 9px; letter-spacing: 2px;">CYBER SECURITY 2026</p>
-        <p style="color:#4a9a6a; font-size: 8px;">🤖 IA v{ai_engine.versao}</p>
+        <p style="color:#4a9a6a; font-size: 8px;">⚡ Busca instantânea</p>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### ⚡ ESTADO")
-    st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> REDE NEURAL: ATIVA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item"><span style="color:#0ff;">●</span> MODELO: DEEP LEARNING</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item"><span style="color:#f0f;">●</span> CRIPTOGRAFIA: QUÂNTICA</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item"><span style="color:#ff0;">●</span> DATA LAKE: SEGURO</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> CACHE: ATIVO</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item"><span style="color:#0ff;">●</span> MODELO: BUSCA LOCAL</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item"><span style="color:#f0f;">●</span> HIT: {cache_cpf.get_hit_ratio():.0f}%</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item"><span style="color:#ff0;">●</span> REGISTROS: {data_loader.dados.get("total", 0)}</div>', unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### 📡 INFO")
     if st.session_state.get("perfil"):
         st.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
-    st.markdown('<div class="info-item">📦 Versão: 13.2 (CYBER OTIMIZADO)</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="info-item">📊 Registros: {ai_engine.total_registros}</div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Menu de navegação
-    if st.button("🏠 Dashboard Principal", use_container_width=True):
-        st.session_state.pagina_atual = "principal"
-        st.rerun()
-    
-    if st.session_state.perfil == "ADMIN":
-        if st.button("🧠 IA Auto-Evolutiva", use_container_width=True):
-            st.session_state.pagina_atual = "ia"
-            st.rerun()
-
-# ====================== NAVEGAÇÃO ======================
-if st.session_state.get("pagina_atual") == "ia":
-    pagina_ia_evolution()
-    st.stop()
+    st.markdown('<div class="info-item">📦 Versão: 13.3 (ULTRA RÁPIDO)</div>', unsafe_allow_html=True)
 
 # ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
@@ -1822,6 +1297,13 @@ if st.session_state.perfil == "ADMIN":
             limpar_sessoes_expiradas()
             st.success("✅ Sessões expiradas removidas!")
             st.rerun()
+        if st.button("📥 Recarregar Dados em Cache", use_container_width=True):
+            with st.spinner("Carregando dados..."):
+                if data_loader.carregar_todos_usuarios():
+                    st.success(f"✅ {data_loader.dados.get('total', 0)} registros carregados!")
+                    st.rerun()
+                else:
+                    st.error("❌ Erro ao carregar dados.")
         st.caption("Ações disponíveis apenas para o administrador.")
     
     st.sidebar.markdown("---")
@@ -1888,22 +1370,13 @@ if st.session_state.perfil == "ADMIN":
 with st.expander("📊 Métricas de Performance", expanded=False):
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
-        tempo_medio = get_tempo_medio_query()
-        st.metric("⏱️ Tempo médio de query", f"{tempo_medio:.0f}ms" if tempo_medio > 0 else "Calculando...")
+        st.metric("💾 Cache CPF", f"{cache_cpf.get_hit_ratio():.0f}%", delta="🚀")
     with col_m2:
-        hit_ratio = cache_estatisticas.get_hit_ratio()
-        st.metric("🎯 Cache hit ratio", f"{hit_ratio:.0f}%")
+        st.metric("📦 Registros em Memória", data_loader.dados.get("total", 0))
     with col_m3:
-        total_cached = len(cache_estatisticas.cache_data) + len(cache_pessoas.cache_data) + len(cache_presentes.cache_data)
-        st.metric("💾 Registros em cache", total_cached)
-    st.caption(f"⚙️ Configurações: Cache TTL: {CACHE_TTL_PADRAO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
-    if st.button("🔄 Atualizar Estatísticas (View)", key="refresh_stats_view", use_container_width=True):
-        with st.spinner("Atualizando..."):
-            if refresh_estatisticas_view():
-                st.success("Estatísticas atualizadas!")
-                st.rerun()
-            else:
-                st.error("Falha na atualização. Verifique se a view existe.")
+        total_cached = len(cache_cpf.cache) + len(cache_nome.cache)
+        st.metric("💾 Itens em Cache", total_cached)
+    st.caption("⚡ Todas as buscas são feitas em memória - resposta em milissegundos")
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
@@ -2038,8 +1511,6 @@ with st.expander("📋 Formulário de Cadastro", expanded=True):
                             "empresa": sanitizar_texto(novo_empresa).strip().upper() if novo_empresa else ""
                         }).execute()
                         invalidar_cache()
-                        # Atualiza total de registros
-                        ai_engine.total_registros += 1
                         st.success("✅ Cadastro salvo!")
                         st.balloons()
                         st.rerun()
@@ -2059,11 +1530,12 @@ else:
 
 col_cpf, col_btn = st.columns([3,1])
 with col_cpf:
-    cpf_input = st.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF")
+    cpf_input = st.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF", 
+                             on_change=None)
 with col_btn:
-    if cpf_input:
-        if st.button("✅ CONFIRMAR CPF", key="confirma_cpf"):
-            pessoa = buscar_pessoa_por_cpf_debounced(cpf_input)
+    if st.button("✅ CONFIRMAR CPF", key="confirma_cpf"):
+        if cpf_input:
+            pessoa = buscar_pessoa_por_cpf_rapido(cpf_input)
             if pessoa:
                 st.session_state.pessoa_confirmada = {
                     "cpf": sanitizar_cpf(cpf_input), 
@@ -2072,10 +1544,10 @@ with col_btn:
                 }
                 st.success(f"✅ {pessoa['nome']} - {pessoa.get('empresa','N/A')}")
             else:
-                st.error("CPF não cadastrado")
+                st.error("❌ CPF não cadastrado")
                 st.session_state.pessoa_confirmada = None
-    else:
-        st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
+        else:
+            st.error("❌ Digite um CPF")
 
 setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
 if st.session_state.get("pessoa_confirmada"):
@@ -2099,7 +1571,7 @@ if st.session_state.get("pessoa_confirmada"):
                 "data_saida": ""
             }).execute()
             invalidar_cache()
-            st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
+            st.success(f"✅ Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
             st.session_state.pessoa_confirmada = None
             st.rerun()
         except Exception as e:
@@ -2150,13 +1622,10 @@ if dados:
         st.markdown("---")
     
     st.markdown("#### 📋 Lista completa")
-    # Definição dos setores exatos para terceirizados
     setores_terceirizados_exatos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
     
-    # Criar abas
     tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
-    # Aba Prestador de Serviço: todos que NÃO têm setor exato igual a um dos três terceirizados
     with tabs[0]:
         prestadores = [p for p in dados if p['setor_destino'] not in setores_terceirizados_exatos]
         if prestadores:
@@ -2190,7 +1659,6 @@ if dados:
         else:
             st.info("Nenhum prestador de serviço presente no momento.")
     
-    # Aba C.C
     with tabs[1]:
         pessoas_cc = [p for p in dados if p['setor_destino'] == "🏥 C.C"]
         if pessoas_cc:
@@ -2224,7 +1692,6 @@ if dados:
         else:
             st.info("Ninguém presente no setor C.C.")
     
-    # Aba GRSA
     with tabs[2]:
         pessoas_gr = [p for p in dados if p['setor_destino'] == "🔧 GRSA"]
         if pessoas_gr:
@@ -2258,7 +1725,6 @@ if dados:
         else:
             st.info("Ninguém presente no setor GRSA.")
     
-    # Aba Brasanitas
     with tabs[3]:
         pessoas_br = [p for p in dados if p['setor_destino'] == "🏭 Brasanitas"]
         if pessoas_br:
@@ -2489,8 +1955,6 @@ if st.session_state.perfil == "ADMIN":
                                     for erro in resultado["erros"][:20]:
                                         st.error(erro)
                             invalidar_cache()
-                            # Atualiza total de registros
-                            ai_engine.total_registros = len(supabase.table("Pessoas").select("id").execute().data)
                             st.balloons()
                             time.sleep(2)
                             st.rerun()
@@ -2631,12 +2095,10 @@ if st.session_state.perfil == "ADMIN":
 
 apply_theme_css()
 st.markdown("---")
-st.markdown(f"""
+st.markdown("""
 <div class="footer">
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
     <br>
-    🤖 IA Auto-Evolutiva v{ai_engine.versao} | Última atualização: {ai_engine.ultima_atualizacao.strftime('%d/%m/%Y %H:%M')}
-    <br>
-    📊 {ai_engine.total_registros} registros | {ai_engine.consultas_banco['total']} consultas | {ai_engine.consultas_banco['lentas']} lentas
+    ⚡ Busca em memória - Resposta em milissegundos | Cache ativo
 </div>
 """, unsafe_allow_html=True)
