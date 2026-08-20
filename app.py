@@ -1769,7 +1769,7 @@ else:
 
 # ====================== HISTÓRICO ======================
 st.markdown("---")
-with st.expander("🕒 Histórico Completo de Movimentações", expanded=False):
+with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
     col_prev, col_page, col_next = st.columns([1,2,1])
     with col_prev:
         if st.button("◀ ANTERIOR", key="pag_anterior"):
@@ -1786,10 +1786,12 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=False):
                 st.rerun()
     
     historico = get_historico_paginado(st.session_state.pagina_historico)
+    
     if historico["dados"]:
         df = pd.DataFrame(historico["dados"])
         st.markdown(f"**Total de registros:** {historico['total']} | **Página {historico['pagina']} de {historico['total_paginas']}**")
         
+        st.markdown("### 📄 Gerar Relatório")
         col_r1, col_r2 = st.columns(2)
         with col_r1:
             if st.button("📑 Relatório completo", key="relatorio_completo"):
@@ -1806,9 +1808,91 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=False):
         
         st.markdown("---")
         
+        # ====================== BOTÕES DE EXCLUSÃO ======================
+        st.markdown("### 🗑️ Gerenciar Registros")
+        
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
+        
+        with col_btn1:
+            if st.button("✅ Selecionar Todos da Página", key="selecionar_todos_pagina", use_container_width=True):
+                ids_pagina = [row['id'] for row in historico["dados"]]
+                for id_ in ids_pagina:
+                    if id_ not in st.session_state.selected_ids:
+                        st.session_state.selected_ids.append(id_)
+                st.rerun()
+        
+        with col_btn2:
+            if st.button("📋 Limpar Seleção", key="limpar_selecao_todos", use_container_width=True):
+                st.session_state.selected_ids = []
+                st.rerun()
+        
+        with col_btn3:
+            if st.button("⚠️ EXCLUIR TUDO", key="excluir_tudo_historico", use_container_width=True):
+                st.session_state.pending_clear_all = True
+                st.rerun()
+        
+        # Exibir quantidade selecionada
+        if st.session_state.selected_ids:
+            st.warning(f"⚠️ {len(st.session_state.selected_ids)} registro(s) selecionado(s)")
+            
+            col_excluir, col_cancelar = st.columns(2)
+            with col_excluir:
+                if st.button("🗑️ EXCLUIR SELECIONADOS", key="excluir_selecionados_lote", type="primary", use_container_width=True):
+                    resultado = excluir_multiplos_registros(st.session_state.selected_ids)
+                    if resultado["sucesso"]:
+                        st.success(resultado["mensagem"])
+                        st.session_state.selected_ids = []
+                        invalidar_cache()
+                        st.rerun()
+                    else:
+                        st.error(resultado["mensagem"])
+            with col_cancelar:
+                if st.button("❌ Cancelar Seleção", key="cancelar_selecao_lote", use_container_width=True):
+                    st.session_state.selected_ids = []
+                    st.rerun()
+        
+        st.markdown("---")
+        
+        # ====================== LISTA DE REGISTROS ======================
         for row in historico["dados"]:
-            st.markdown(f"ID {row['id']} - **{row['nome']}** | CPF: {row['cpf']} | Entrada: {row['data_entrada']} | Saída: {row['data_saida'] or 'Presente'}")
-            st.markdown("<hr style='margin:3px 0; opacity:0.1;'>", unsafe_allow_html=True)
+            col_check, col_data = st.columns([0.5, 9.5])
+            with col_check:
+                checked = st.checkbox("", key=f"chk_{row['id']}", value=row['id'] in st.session_state.selected_ids)
+                if checked and row['id'] not in st.session_state.selected_ids:
+                    st.session_state.selected_ids.append(row['id'])
+                elif not checked and row['id'] in st.session_state.selected_ids:
+                    st.session_state.selected_ids.remove(row['id'])
+            with col_data:
+                st.markdown(f"ID {row['id']} - **{row['nome']}** | CPF: {row['cpf']} | Empresa: {row.get('empresa','N/A')} | Entrada: {row['data_entrada']} | Saída: {row['data_saida'] or 'Presente'}")
+                st.markdown("<hr style='margin:3px 0; opacity:0.1;'>", unsafe_allow_html=True)
+        
+        # ====================== CONFIRMAÇÃO EXCLUIR TUDO ======================
+        if st.session_state.pending_clear_all:
+            require_admin()
+            st.error("🚨 ATENÇÃO: Isso irá apagar TODOS os registros do histórico!")
+            st.warning("Digite 'LIMPAR TUDO' para confirmar a exclusão permanente.")
+            confirm = st.text_input("Confirmação:", type="password", key="confirma_limpar_tudo")
+            
+            col_clear, col_cancel_clear = st.columns(2)
+            with col_clear:
+                if st.button("🔥 EXCLUIR TUDO (IRREVERSÍVEL)", key="excluir_tudo_confirm", type="primary", use_container_width=True):
+                    if confirm == "LIMPAR TUDO":
+                        try:
+                            supabase_admin.table("movimentacao").delete().neq("id", 0).execute()
+                            invalidar_cache()
+                            st.success("✅ Histórico limpo com sucesso!")
+                            st.session_state.pending_clear_all = False
+                            st.session_state.selected_ids = []
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro ao excluir: {e}")
+                    else:
+                        st.error("❌ Confirmação incorreta. Digite 'LIMPAR TUDO'")
+            with col_cancel_clear:
+                if st.button("❌ Cancelar", key="cancelar_limpar_tudo", use_container_width=True):
+                    st.session_state.pending_clear_all = False
+                    st.rerun()
+    
     else:
         st.info("Nenhum registro encontrado.")
 
