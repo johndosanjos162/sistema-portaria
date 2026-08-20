@@ -1567,94 +1567,96 @@ with st.expander("📋 Formulário de Cadastro", expanded=False):
         else:
             st.error("CPF e Nome obrigatórios.")
 
-# ====================== REGISTRO DE ENTRADA (MODIFICADO COM FORM) ======================
+# ====================== REGISTRO DE ENTRADA ======================
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
-
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados / Instrumentadores"], horizontal=True, key="tipo_pessoa")
-
 if tipo == "🏢 Prestador de serviços":
     destinos = ["🏥 C.C PRESTADOR DE SERVIÇOS", "🥼 HEPIDEMIOLOGIA", "👨🏻‍💻 T.I", "🧺LAVANDERIA", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "👨‍🔬 Laboratório", "💊 Farmacia", "🏥 P.A", "👶 PEDIATRIA P.A", "⚙️ ENG.CLINICA", "🧹 HORTELARIA", "📦 OPME 6°AND", "📦 OPME 9°AND", "🔒 SSGA", "🏥 CDU", "⚕️ ONCOLOGIA", "🛠️ PREST_BRASANITAS ", "🛠️ PREST_GRSA"]
 else:
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
-with st.form("form_entrada"):
-    col_cpf, col_btn = st.columns([3,1])
-    with col_cpf:
-        cpf_input = st.text_input("📄 CPF:", placeholder="Digite o CPF", key="cpf_entrada")
-    with col_btn:
-        confirmar = st.form_submit_button("✅ CONFIRMAR CPF")
-    
-    setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
-    
-    if confirmar and cpf_input:
-        cpf_limpo = sanitizar_cpf(cpf_input)
-        if not validar_cpf(cpf_limpo):
-            st.error("CPF inválido")
-        else:
-            pessoa = buscar_pessoa_por_cpf_debounced(cpf_limpo)
-            if pessoa:
-                st.session_state.pessoa_confirmada = {"cpf": cpf_limpo, "nome": pessoa['nome'], "empresa": pessoa.get('empresa', '')}
-                st.success(f"✅ {pessoa['nome']} - {pessoa.get('empresa','N/A')}")
+col_cpf, col_btn = st.columns([3,1])
+with col_cpf:
+    cpf_input = st.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF")
+with col_btn:
+    if cpf_input:
+        if st.button("✅ CONFIRMAR CPF", key="confirma_cpf"):
+            cpf_limpo = sanitizar_cpf(cpf_input)
+            if not validar_cpf(cpf_limpo):
+                st.error("CPF inválido")
             else:
-                st.error("CPF não cadastrado")
-                st.session_state.pessoa_confirmada = None
-    
-    if st.session_state.get("pessoa_confirmada"):
-        with st.expander("⏱️ Opções de horário", expanded=False):
-            editar_horario = st.checkbox("✏️ Editar horário da entrada", key="editar_horario_entrada")
-            if editar_horario:
-                dt_padrao = get_current_datetime()
-                data_entrada = st.date_input("Data de entrada", value=dt_padrao.date(), key="data_entrada_edit")
-                hora_entrada = st.time_input("Horário de entrada", value=dt_padrao.time(), key="hora_entrada_edit")
-                dt_entrada = datetime.combine(data_entrada, hora_entrada)
-                data_entrada_str = format_datetime_str(dt_entrada)
-            else:
-                data_entrada_str = format_datetime_str(get_current_datetime())
-        
-        if st.form_submit_button("✅ Registrar Entrada", type="primary"):
-            p = st.session_state.pessoa_confirmada
-            try:
-                supabase.table("movimentacao").insert({
-                    "cpf": p['cpf'], "nome": p['nome'], "empresa": p['empresa'],
-                    "setor_destino": setor_escolhido,
-                    "data_entrada": data_entrada_str,
-                    "data_saida": ""
-                }).execute()
-                invalidar_cache()
-                st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
-                st.session_state.pessoa_confirmada = None
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro: {e}")
+                pessoa = buscar_pessoa_por_cpf_debounced(cpf_limpo)
+                if pessoa:
+                    st.session_state.pessoa_confirmada = {"cpf": cpf_limpo, "nome": pessoa['nome'], "empresa": pessoa.get('empresa', '')}
+                    st.success(f"✅ {pessoa['nome']} - {pessoa.get('empresa','N/A')}")
+                else:
+                    st.error("CPF não cadastrado")
+                    st.session_state.pessoa_confirmada = None
+    else:
+        st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
 
-# ====================== PESSOAS PRESENTES (MODIFICADO COM FORM E SELECTBOX) ======================
+setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
+if st.session_state.get("pessoa_confirmada"):
+    with st.expander("⏱️ Opções de horário", expanded=False):
+        editar_horario = st.checkbox("✏️ Editar horário da entrada", key="editar_horario_entrada")
+        if editar_horario:
+            dt_padrao = get_current_datetime()
+            data_entrada = st.date_input("Data de entrada", value=dt_padrao.date(), key="data_entrada_edit")
+            hora_entrada = st.time_input("Horário de entrada", value=dt_padrao.time(), key="hora_entrada_edit")
+            dt_entrada = datetime.combine(data_entrada, hora_entrada)
+            data_entrada_str = format_datetime_str(dt_entrada)
+        else:
+            data_entrada_str = format_datetime_str(get_current_datetime())
+    if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
+        p = st.session_state.pessoa_confirmada
+        try:
+            supabase.table("movimentacao").insert({
+                "cpf": p['cpf'], "nome": p['nome'], "empresa": p['empresa'],
+                "setor_destino": setor_escolhido,
+                "data_entrada": data_entrada_str,
+                "data_saida": ""
+            }).execute()
+            invalidar_cache()
+            st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
+            st.session_state.pessoa_confirmada = None
+            st.rerun()
+        except Exception as e:
+            st.error(f"Erro: {e}")
+
+# ====================== PESSOAS PRESENTES ======================
 st.markdown("---")
 st.markdown("### 📍 Pessoas Presentes")
 dados = get_presentes_cached()
 
 if dados:
     st.markdown("#### 🔍 Pesquisar CPF para saída")
-    with st.form("form_busca_saida"):
-        col_pesq, col_btn_sair = st.columns([3,1])
-        with col_pesq:
-            cpf_saida = st.text_input("CPF:", placeholder="Digite o CPF", key="cpf_saida")
-        with col_btn_sair:
-            buscar = st.form_submit_button("🔎 Buscar")
-        
-        if buscar and cpf_saida:
-            encontrado = next((p for p in dados if p['cpf'] == sanitizar_cpf(cpf_saida)), None)
-            if encontrado:
-                st.session_state.pessoa_saida = encontrado
-                st.success(f"Pessoa encontrada: {encontrado['nome']}")
-            else:
-                st.error("Não encontrado")
-                st.session_state.pessoa_saida = None
-    
+    col_pesq, col_btn_sair = st.columns([3,1])
+    with col_pesq:
+        cpf_saida = st.text_input("CPF:", key="cpf_saida", placeholder="Digite o CPF")
+    with col_btn_sair:
+        if st.button("🔎 Buscar", key="buscar_saida"):
+            if cpf_saida:
+                encontrado = next((p for p in dados if p['cpf'] == sanitizar_cpf(cpf_saida)), None)
+                if encontrado:
+                    st.session_state.pessoa_saida = encontrado
+                    st.success(f"Pessoa encontrada: {encontrado['nome']}")
+                else:
+                    st.error("Não encontrado")
+                    st.session_state.pessoa_saida = None
     if st.session_state.get("pessoa_saida"):
         p = st.session_state.pessoa_saida
         st.markdown(f"**{p['nome']}** - CPF: {p['cpf']} - Setor: {p['setor_destino']}")
-        saida_str = format_datetime_str(get_current_datetime())
+        with st.expander("⏱️ Editar horário de saída", expanded=False):
+            editar_saida = st.checkbox("✏️ Personalizar horário", key="editar_saida_cpf")
+            if editar_saida:
+                dt_padrao_saida = get_current_datetime()
+                data_saida = st.date_input("Data de saída", value=dt_padrao_saida.date(), key="data_saida_cpf")
+                hora_saida = st.time_input("Horário de saída", value=dt_padrao_saida.time(), key="hora_saida_cpf")
+                dt_saida = datetime.combine(data_saida, hora_saida)
+                saida_str = format_datetime_str(dt_saida)
+            else:
+                saida_str = format_datetime_str(get_current_datetime())
         if st.button("🚪 Registrar Saída", key="sair_pesquisado"):
             try:
                 supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
@@ -1667,60 +1669,149 @@ if dados:
         st.markdown("---")
     
     st.markdown("#### 📋 Lista completa")
+    # Definição dos setores exatos para terceirizados
     setores_terceirizados_exatos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
     
-    # Usando selectbox em vez de tabs para evitar rerun
-    opcoes_abas = ["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
-    aba_selecionada = st.selectbox(
-        "Filtrar por setor:",
-        opcoes_abas,
-        key="select_aba_presentes"
-    )
-    idx_aba = opcoes_abas.index(aba_selecionada)
+    # Criar abas
+    tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
-    if idx_aba == 0:
-        filtrados = [p for p in dados if p['setor_destino'] not in setores_terceirizados_exatos]
-    elif idx_aba == 1:
-        filtrados = [p for p in dados if p['setor_destino'] == "🏥 C.C"]
-    elif idx_aba == 2:
-        filtrados = [p for p in dados if p['setor_destino'] == "🔧 GRSA"]
-    else:
-        filtrados = [p for p in dados if p['setor_destino'] == "🏭 Brasanitas"]
-    
-    if filtrados:
-        for p in filtrados:
-            col1, col2, col3, col4 = st.columns([4,3,2,2])
-            col1.write(f"**{p['nome']}**")
-            col2.write(f"📍 {p['setor_destino']}")
-            col3.write(f"🏢 {p.get('empresa','N/A')}")
-            with col4:
-                if st.button("🚪 Saída", key=f"sair_{p['id']}"):
-                    st.session_state.saida_id = p['id']
-                    st.session_state.saida_nome = p['nome']
-                    st.rerun()
-            
-            if st.session_state.get("saida_id") == p['id']:
-                with st.container():
-                    st.info(f"Registrar saída de **{p['nome']}**")
-                    saida_str = format_datetime_str(get_current_datetime())
-                    if st.button("✅ Confirmar Saída", key=f"confirm_sair_{p['id']}"):
-                        try:
-                            supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
-                            invalidar_cache()
-                            st.success(f"Saída registrada para {p['nome']} às {saida_str}")
-                            st.session_state.saida_id = None
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erro: {e}")
-                    if st.button("❌ Cancelar", key=f"cancel_sair_{p['id']}"):
-                        st.session_state.saida_id = None
-                        st.rerun()
+    # Aba Prestador de Serviço: todos que NÃO têm setor exato igual a um dos três terceirizados
+    with tabs[0]:
+        prestadores = [p for p in dados if p['setor_destino'] not in setores_terceirizados_exatos]
+        if prestadores:
+            for p in prestadores:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"📍 {p['setor_destino']}")
+                col3.write(f"🏢 {p.get('empresa','N/A')}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_prest_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_prest_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_prest_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_prest_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
                 st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
-    else:
-        st.info("Nenhuma pessoa neste setor.")
+        else:
+            st.info("Nenhum prestador de serviço presente no momento.")
+    
+    # Aba C.C
+    with tabs[1]:
+        pessoas_cc = [p for p in dados if p['setor_destino'] == "🏥 C.C"]
+        if pessoas_cc:
+            for p in pessoas_cc:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"🏢 {p.get('empresa','N/A')}")
+                col3.write(f"🕒 {p['data_entrada']}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_cc_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_cc_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_cc_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_cc_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Ninguém presente no setor C.C.")
+    
+    # Aba GRSA
+    with tabs[2]:
+        pessoas_gr = [p for p in dados if p['setor_destino'] == "🔧 GRSA"]
+        if pessoas_gr:
+            for p in pessoas_gr:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"🏢 {p.get('empresa','N/A')}")
+                col3.write(f"🕒 {p['data_entrada']}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_gr_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_gr_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_gr_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_gr_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Ninguém presente no setor GRSA.")
+    
+    # Aba Brasanitas
+    with tabs[3]:
+        pessoas_br = [p for p in dados if p['setor_destino'] == "🏭 Brasanitas"]
+        if pessoas_br:
+            for p in pessoas_br:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"🏢 {p.get('empresa','N/A')}")
+                col3.write(f"🕒 {p['data_entrada']}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_br_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_br_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_br_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_br_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Ninguém presente no setor Brasanitas.")
 else:
     st.info("Nenhuma pessoa presente no momento")
-
 # ====================== HISTÓRICO ======================
 st.markdown("---")
 with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
