@@ -25,95 +25,50 @@ CACHE_TTL_PADRAO = 30
 ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
 
-# ====================== IA ENGINE - NÚCLEO AUTÔNOMO ======================
+# ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO STREAMLIT) ======================
 class IAEngine:
     """
-    IA Engine - Motor autônomo do sistema com:
-    - Memória de longo prazo
-    - Múltiplos agentes especializados
-    - Auto-codificação (self-coding)
-    - Observabilidade inteligente
-    - Criação dinâmica de ferramentas
+    IA Engine - Motor autônomo integrado ao Streamlit (sem thread)
     """
-    
     def __init__(self):
-        self.versao = "3.0.0"
-        self.inicio = datetime.now()
-        
-        # ===== AGENTES ESPECIALIZADOS =====
-        self.agentes = {
-            "observability": ObservabilityAgent(self),
-            "memory": MemoryAgent(self),
-            "code": CodeAgent(self),
-            "data": DataAgent(self),
-            "tool": ToolAgent(self)
-        }
-        
-        # ===== ESTADO GLOBAL =====
-        self.estado = {
-            "versao": self.versao,
-            "inicio": self.inicio.isoformat(),
-            "ultima_atualizacao": datetime.now().isoformat(),
-            "ciclos": 0,
-            "metricas": {
-                "tempo_query": [],
-                "cache_hits": 0,
-                "cache_misses": 0,
-                "erros": [],
-                "buscas": 0,
-                "registros_entrada": 0,
-                "registros_saida": 0,
-                "sessoes": 0,
-                "agentes_ativos": 0
-            },
-            "memorias": [],  # Memórias de longo prazo
-            "ferramentas": [],  # Ferramentas criadas dinamicamente
-            "patches": []  # Auto-patches aplicados
-        }
-        
-        # Inicia monitoramento inteligente
-        self.monitor_ativo = True
-        self.thread_monitor = threading.Thread(target=self._loop_principal, daemon=True)
-        self.thread_monitor.start()
+        # Inicializa o estado no session_state se não existir
+        if "ia_engine" not in st.session_state:
+            st.session_state.ia_engine = {
+                "versao": "3.0.0",
+                "inicio": datetime.now().isoformat(),
+                "ultima_atualizacao": datetime.now().isoformat(),
+                "ciclos": 0,
+                "metricas": {
+                    "tempo_query": [],
+                    "cache_hits": 0,
+                    "cache_misses": 0,
+                    "erros": [],
+                    "buscas": 0,
+                    "registros_entrada": 0,
+                    "registros_saida": 0,
+                    "sessoes": 0,
+                },
+                "memorias": [],
+                "ferramentas": [],
+                "patches": [],
+                "agentes": {
+                    "observability": {"ultima_coleta": datetime.now().isoformat()},
+                    "memory": {},
+                    "code": {},
+                    "data": {},
+                    "tool": {}
+                }
+            }
+        self.estado = st.session_state.ia_engine
+        self.versao = self.estado["versao"]
+        self.inicio = datetime.fromisoformat(self.estado["inicio"])
     
-    # ===== LOOP PRINCIPAL DA IA =====
-    def _loop_principal(self):
-        """Loop principal que orquestra todos os agentes"""
-        while self.monitor_ativo:
-            try:
-                time.sleep(30)  # Ciclo a cada 30s
-                self.estado["ciclos"] += 1
-                
-                # 1. Observabilidade: coleta métricas
-                self.agentes["observability"].coletar_metricas()
-                
-                # 2. Memória: armazena padrões
-                self.agentes["memory"].armazenar_padroes()
-                
-                # 3. Data: analisa dados
-                self.agentes["data"].analisar_dados()
-                
-                # 4. Código: avalia e sugere melhorias
-                self.agentes["code"].avaliar_codigo()
-                
-                # 5. Ferramentas: cria novas ferramentas se necessário
-                self.agentes["tool"].criar_ferramentas()
-                
-                # 6. Auto-codificação: aplica patches se aprovado
-                if random.random() < 0.3:  # 30% de chance de auto-patch
-                    self._aplicar_auto_patch()
-                
-                self.estado["ultima_atualizacao"] = datetime.now().isoformat()
-                
-            except Exception as e:
-                self.registrar_erro("loop_principal", e)
-    
-    # ===== MÉTODOS PÚBLICOS =====
     def registrar_metrica(self, nome, valor):
         if nome in self.estado["metricas"]:
             self.estado["metricas"][nome].append(valor)
             if len(self.estado["metricas"][nome]) > 500:
                 self.estado["metricas"][nome] = self.estado["metricas"][nome][-500:]
+            self.estado["ultima_atualizacao"] = datetime.now().isoformat()
     
     def registrar_erro(self, funcao, erro):
         self.estado["metricas"]["erros"].append({
@@ -121,38 +76,82 @@ class IAEngine:
             "erro": str(erro),
             "timestamp": datetime.now().isoformat()
         })
+        self.estado["ultima_atualizacao"] = datetime.now().isoformat()
     
     def registrar_memoria(self, tipo, conteudo, relevancia=0.5):
-        """Armazena uma memória de longo prazo"""
         self.estado["memorias"].append({
             "tipo": tipo,
             "conteudo": conteudo,
             "relevancia": relevancia,
             "timestamp": datetime.now().isoformat()
         })
-        # Mantém apenas as 100 memórias mais relevantes
+        # Mantém apenas 100 mais relevantes
         self.estado["memorias"] = sorted(
             self.estado["memorias"],
             key=lambda x: x["relevancia"],
             reverse=True
         )[:100]
+        self.estado["ultima_atualizacao"] = datetime.now().isoformat()
     
-    def _aplicar_auto_patch(self):
-        """Aplica um auto-patch (self-coding) - simulado"""
-        patch = {
-            "id": str(uuid.uuid4())[:8],
-            "descricao": "Otimização automática detectada",
-            "codigo": "# TODO: aplicar otimização",
-            "timestamp": datetime.now().isoformat(),
-            "aplicado": True
-        }
-        self.estado["patches"].append(patch)
-        self.versao = f"3.0.{len(self.estado['patches'])}"
+    def analisar_agora(self):
+        """Executa uma análise completa (chamada pelo botão)"""
+        self.estado["ciclos"] += 1
+        
+        # 1. Coleta dados de cache
+        total_cache = cache_estatisticas.hits + cache_estatisticas.misses
+        if total_cache > 0:
+            self.estado["metricas"]["cache_hits"] = cache_estatisticas.hits
+            self.estado["metricas"]["cache_misses"] = cache_estatisticas.misses
+        
+        # 2. Verifica se há queries lentas
+        tempos = self.estado["metricas"]["tempo_query"]
+        if tempos:
+            ultimos = tempos[-10:]
+            media = sum(ultimos) / len(ultimos)
+            if media > 500:
+                self.registrar_memoria(
+                    "performance",
+                    f"Query lenta detectada: {media:.0f}ms. Sugiro criar índices.",
+                    relevancia=0.8
+                )
+        
+        # 3. Verifica erros
+        if len(self.estado["metricas"]["erros"]) > 0:
+            self.registrar_memoria(
+                "erro",
+                f"{len(self.estado['metricas']['erros'])} erros registrados. Verifique logs.",
+                relevancia=0.6
+            )
+        
+        # 4. Atualiza agentes
+        self.estado["agentes"]["observability"]["ultima_coleta"] = datetime.now().isoformat()
+        
+        # 5. Auto-patch (simulação)
+        if self.estado["ciclos"] % 3 == 0:  # a cada 3 análises
+            patch = {
+                "id": str(uuid.uuid4())[:8],
+                "descricao": f"Otimização automática #{self.estado['ciclos']}",
+                "codigo": "# Otimização aplicada automaticamente",
+                "timestamp": datetime.now().isoformat(),
+                "aplicado": True
+            }
+            self.estado["patches"].append(patch)
+            self.estado["versao"] = f"3.0.{len(self.estado['patches'])}"
+        
+        # 6. Cria ferramenta se não houver
+        if len(self.estado["ferramentas"]) == 0:
+            self.estado["ferramentas"].append({
+                "nome": "Analisador de Fluxo",
+                "descricao": "Analisa picos de acesso",
+                "codigo": "def analisar_fluxo(dados): return dados.groupby('hora').size()",
+                "criado_em": datetime.now().isoformat()
+            })
+        
+        self.estado["ultima_atualizacao"] = datetime.now().isoformat()
     
     def get_relatorio(self):
-        """Gera relatório completo do sistema"""
         return {
-            "versao": self.versao,
+            "versao": self.estado["versao"],
             "tempo_ativo": str(datetime.now() - self.inicio).split(".")[0],
             "ciclos": self.estado["ciclos"],
             "metricas": {
@@ -169,156 +168,7 @@ class IAEngine:
             "patches": self.estado["patches"][-3:]
         }
 
-
-# ====================== AGENTE DE OBSERVABILIDADE ======================
-class ObservabilityAgent:
-    def __init__(self, engine):
-        self.engine = engine
-        self.nome = "ObservabilityAgent"
-        self.ultima_coleta = datetime.now()
-    
-    def coletar_metricas(self):
-        """Coleta métricas do sistema"""
-        try:
-            # Coleta tempo de resposta do Supabase
-            inicio = time.time()
-            supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
-            tempo = (time.time() - inicio) * 1000
-            self.engine.registrar_metrica("tempo_query", tempo)
-            
-            # Coleta uso de cache
-            total_cache = cache_estatisticas.hits + cache_estatisticas.misses
-            if total_cache > 0:
-                self.engine.estado["metricas"]["cache_hits"] = cache_estatisticas.hits
-                self.engine.estado["metricas"]["cache_misses"] = cache_estatisticas.misses
-            
-            # Registra memória sobre performance
-            if tempo > 500:
-                self.engine.registrar_memoria(
-                    "performance",
-                    f"Query lenta detectada: {tempo:.0f}ms. Sugiro criar índices.",
-                    relevancia=0.8
-                )
-            
-            self.ultima_coleta = datetime.now()
-            
-        except Exception as e:
-            self.engine.registrar_erro("observability.coletar", e)
-
-
-# ====================== AGENTE DE MEMÓRIA ======================
-class MemoryAgent:
-    def __init__(self, engine):
-        self.engine = engine
-        self.nome = "MemoryAgent"
-    
-    def armazenar_padroes(self):
-        """Armazena padrões identificados"""
-        # Identifica padrões de uso
-        if self.engine.estado["metricas"]["buscas"] > 10:
-            self.engine.registrar_memoria(
-                "padrao",
-                "Muitas buscas por CPF. Considere cache local.",
-                relevancia=0.6
-            )
-        
-        # Identifica erros recorrentes
-        erros = self.engine.estado["metricas"]["erros"]
-        if erros:
-            ultimos = erros[-5:]
-            funcoes = [e["funcao"] for e in ultimos]
-            if len(set(funcoes)) < 3:  # mesma função erra muito
-                self.engine.registrar_memoria(
-                    "erro_recorrente",
-                    f"Erro recorrente em {funcoes[0]}. Revisar lógica.",
-                    relevancia=0.9
-                )
-
-
-# ====================== AGENTE DE CÓDIGO ======================
-class CodeAgent:
-    def __init__(self, engine):
-        self.engine = engine
-        self.nome = "CodeAgent"
-    
-    def avaliar_codigo(self):
-        """Avalia o código e sugere melhorias"""
-        # Sugere otimização de cache
-        hit_ratio = self.engine.estado["metricas"]["cache_hits"] / max(1, self.engine.estado["metricas"]["cache_hits"] + self.engine.estado["metricas"]["cache_misses"]) * 100
-        if hit_ratio < 60:
-            self.engine.registrar_memoria(
-                "otimizacao",
-                f"Cache hit ratio baixo ({hit_ratio:.0f}%). Aumentar CACHE_TTL_PADRAO.",
-                relevancia=0.7
-            )
-            # Auto-aplica
-            self._aplicar_otimizacao_cache()
-    
-    def _aplicar_otimizacao_cache(self):
-        """Aplica otimização de cache (auto-código)"""
-        global CACHE_TTL_PADRAO
-        novo_ttl = min(CACHE_TTL_PADRAO + 10, 120)
-        if novo_ttl != CACHE_TTL_PADRAO:
-            CACHE_TTL_PADRAO = novo_ttl
-            for cache in [cache_estatisticas, cache_pessoas, cache_presentes, cache_fluxo_acesso]:
-                cache.ttl_seconds = novo_ttl
-            self.engine.registrar_memoria(
-                "otimizacao_aplicada",
-                f"TTL do cache aumentado para {novo_ttl}s.",
-                relevancia=0.9
-            )
-
-
-# ====================== AGENTE DE DADOS ======================
-class DataAgent:
-    def __init__(self, engine):
-        self.engine = engine
-        self.nome = "DataAgent"
-    
-    def analisar_dados(self):
-        """Analisa dados do sistema"""
-        try:
-            # Analisa registros de entrada/saída
-            hoje = datetime.now().strftime("%d/%m/%Y")
-            dados = supabase.table("movimentacao").select("data_entrada, data_saida").execute()
-            
-            entradas_hoje = sum(1 for r in dados.data if r.get("data_entrada", "").startswith(hoje))
-            saidas_hoje = sum(1 for r in dados.data if r.get("data_saida", "").startswith(hoje))
-            
-            if entradas_hoje > 50:
-                self.engine.registrar_memoria(
-                    "fluxo",
-                    f"Alto fluxo de entrada hoje: {entradas_hoje} registros.",
-                    relevancia=0.5
-                )
-            
-            self.engine.estado["metricas"]["registros_entrada"] += entradas_hoje
-            self.engine.estado["metricas"]["registros_saida"] += saidas_hoje
-            
-        except Exception as e:
-            self.engine.registrar_erro("data.analisar", e)
-
-
-# ====================== AGENTE DE FERRAMENTAS ======================
-class ToolAgent:
-    def __init__(self, engine):
-        self.engine = engine
-        self.nome = "ToolAgent"
-    
-    def criar_ferramentas(self):
-        """Cria ferramentas dinamicamente"""
-        # Exemplo: cria uma ferramenta para análise de fluxo se necessário
-        if len(self.engine.estado["ferramentas"]) == 0:
-            nova_ferramenta = {
-                "nome": "Analisador de Fluxo",
-                "descricao": "Analisa picos de acesso",
-                "codigo": "def analisar_fluxo(dados): return dados.groupby('hora').size()",
-                "criado_em": datetime.now().isoformat()
-            }
-            self.engine.estado["ferramentas"].append(nova_ferramenta)
-
-
-# ====================== INICIALIZAÇÃO DA IA ENGINE ======================
+# ====================== INICIALIZAÇÃO DA IA ======================
 engine = IAEngine()
 
 # ====================== CLASSES DE CACHE ======================
@@ -1019,7 +869,7 @@ def pagina_ia_engine():
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown("**👁️ Observability**\nMonitora métricas em tempo real")
-        st.caption(f"Última coleta: {engine.agentes['observability'].ultima_coleta.strftime('%H:%M:%S')}")
+        st.caption(f"Última coleta: {engine.estado['agentes']['observability']['ultima_coleta'][11:16]}")
     with col2:
         st.markdown("**🧠 Memory**\nArmazena padrões e experiências")
         st.caption(f"{len(engine.estado['memorias'])} memórias ativas")
@@ -1065,9 +915,9 @@ def pagina_ia_engine():
     # Botões de controle
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("🔄 Ciclo Forçado", use_container_width=True):
-            engine._loop_principal()
-            st.success("Ciclo concluído!")
+        if st.button("🔄 Analisar Agora", use_container_width=True):
+            engine.analisar_agora()
+            st.success("Análise concluída! Métricas atualizadas.")
             safe_rerun()
     with col2:
         if st.button("🧹 Limpar Cache", use_container_width=True):
@@ -1398,7 +1248,7 @@ with st.sidebar:
     st.markdown("### ⚡ ESTADO")
     st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> IA: ATIVA</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="info-item"><span style="color:#0ff;">●</span> CACHE: {cache_estatisticas.get_hit_ratio():.0f}%</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="info-item"><span style="color:#f0f;">●</span> AGENTES: {len(engine.agentes)}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item"><span style="color:#f0f;">●</span> AGENTES: 5</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="info-item"><span style="color:#ff0;">●</span> MEMÓRIAS: {len(engine.estado["memorias"])}</div>', unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### 📡 INFO")
@@ -1917,7 +1767,6 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
         
         st.markdown("---")
         
-        # BOTÕES DE EXCLUSÃO
         st.markdown("### 🗑️ Gerenciar Registros")
         
         col_btn1, col_btn2, col_btn3 = st.columns(3)
@@ -2204,6 +2053,6 @@ st.markdown(f"""
 <div class="footer">
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
     <br>
-    🧠 IA Engine v{engine.versao} | {len(engine.estado['patches'])} patches | {len(engine.estado['memorias'])} memórias | {len(engine.agentes)} agentes
+    🧠 IA Engine v{engine.versao} | {len(engine.estado['patches'])} patches | {len(engine.estado['memorias'])} memórias | 5 agentes
 </div>
 """, unsafe_allow_html=True)
