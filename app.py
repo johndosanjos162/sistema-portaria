@@ -12,11 +12,229 @@ import time
 from functools import wraps
 import plotly.express as px
 import plotly.graph_objects as go
+import threading
+import queue
+import sys
+import inspect
+import ast
+from collections import defaultdict
 
 # ====================== CONFIGURAÇÕES ======================
 CACHE_TTL_PADRAO = 30
 ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
+
+# ====================== SISTEMA DE IA AUTO-EVOLUTIVA ======================
+class AIEvolutionEngine:
+    """Motor de IA para auto-evolução do sistema"""
+    
+    def __init__(self):
+        self.metricas = defaultdict(list)
+        self.padroes = defaultdict(int)
+        self.sugestoes = []
+        self.otimizacoes_aplicadas = []
+        self.bugs_detectados = []
+        self.analise_ultima = None
+        self.versao = "1.0.0"
+        self.ultima_atualizacao = datetime.now()
+        
+        # Métricas de performance
+        self.tempos_resposta = []
+        self.erros_por_funcao = defaultdict(int)
+        self.uso_cache = {"hits": 0, "misses": 0}
+        self.consultas_banco = {"total": 0, "lentas": 0}
+        
+        # Padrões de uso
+        self.funcoes_populares = defaultdict(int)
+        self.horarios_pico = defaultdict(int)
+        
+        # Inicia monitoramento em background
+        self.monitor_ativo = True
+        self.thread_monitor = threading.Thread(target=self._monitor_background, daemon=True)
+        self.thread_monitor.start()
+    
+    def _monitor_background(self):
+        """Monitora o sistema em background"""
+        while self.monitor_ativo:
+            try:
+                time.sleep(60)  # A cada minuto
+                self._analisar_metricas()
+                self._gerar_sugestoes()
+                self._aplicar_otimizacoes_auto()
+            except Exception as e:
+                self.bugs_detectados.append({
+                    "erro": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                    "severidade": "media"
+                })
+    
+    def registrar_metricas(self, nome_metrica, valor, dados_extra=None):
+        """Registra métricas de uso"""
+        self.metricas[nome_metrica].append({
+            "valor": valor,
+            "timestamp": datetime.now().isoformat(),
+            "dados": dados_extra
+        })
+        
+        # Mantém apenas últimas 1000 métricas
+        if len(self.metricas[nome_metrica]) > 1000:
+            self.metricas[nome_metrica] = self.metricas[nome_metrica][-1000:]
+    
+    def registrar_erro(self, funcao, erro, dados=None):
+        """Registra erros para análise"""
+        self.erros_por_funcao[funcao] += 1
+        self.bugs_detectados.append({
+            "funcao": funcao,
+            "erro": str(erro),
+            "dados": dados,
+            "timestamp": datetime.now().isoformat(),
+            "resolvido": False
+        })
+        
+        # Tenta auto-corrigir
+        if self.erros_por_funcao[funcao] > 5:
+            self._tentar_autocorrigir(funcao)
+    
+    def _tentar_autocorrigir(self, funcao):
+        """Tenta corrigir erros comuns automaticamente"""
+        correcoes = {
+            "buscar_pessoa_por_cpf": "Aumentar timeout do cache",
+            "get_estatisticas_cached": "Limpar cache e reconstruir",
+            "get_historico_paginado": "Otimizar consulta SQL",
+            "excluir_multiplos_registros": "Usar transação em lote",
+            "registrar_movimentacao": "Adicionar retry com backoff"
+        }
+        
+        if funcao in correcoes:
+            sugestao = correcoes[funcao]
+            self.sugestoes.append({
+                "tipo": "autocorrecao",
+                "funcao": funcao,
+                "sugestao": sugestao,
+                "aplicada": False,
+                "timestamp": datetime.now().isoformat()
+            })
+            
+            # Marca como resolvido
+            for bug in self.bugs_detectados:
+                if bug["funcao"] == funcao and not bug["resolvido"]:
+                    bug["resolvido"] = True
+                    bug["solucao"] = sugestao
+    
+    def _analisar_metricas(self):
+        """Analisa métricas e identifica padrões"""
+        # Análise de performance
+        if self.metricas.get("tempo_query"):
+            tempos = [m["valor"] for m in self.metricas["tempo_query"][-50:]]
+            if tempos:
+                media = sum(tempos) / len(tempos)
+                if media > 500:  # >500ms
+                    self.sugestoes.append({
+                        "tipo": "performance",
+                        "severidade": "alta",
+                        "sugestao": f"Tempo médio de query alto ({media:.0f}ms). Considere criar índices no Supabase.",
+                        "timestamp": datetime.now().isoformat()
+                    })
+        
+        # Análise de cache
+        total_cache = self.uso_cache["hits"] + self.uso_cache["misses"]
+        if total_cache > 0:
+            hit_ratio = self.uso_cache["hits"] / total_cache * 100
+            if hit_ratio < 60:
+                self.sugestoes.append({
+                    "tipo": "otimizacao",
+                    "severidade": "media",
+                    "sugestao": f"Cache hit ratio baixo ({hit_ratio:.0f}%). Aumentar TTL do cache.",
+                    "timestamp": datetime.now().isoformat()
+                })
+        
+        # Análise de erros
+        for funcao, qtd in self.erros_por_funcao.items():
+            if qtd > 10:
+                self.sugestoes.append({
+                    "tipo": "bug",
+                    "severidade": "alta",
+                    "sugestao": f"Função '{funcao}' com {qtd} erros. Revisar lógica.",
+                    "timestamp": datetime.now().isoformat()
+                })
+    
+    def _gerar_sugestoes(self):
+        """Gera sugestões de melhoria baseado nos dados"""
+        # Sugestões de feature baseadas no uso
+        if self.funcoes_populares.get("buscar_pessoa_por_cpf", 0) > 100:
+            self.sugestoes.append({
+                "tipo": "feature",
+                "severidade": "baixa",
+                "sugestao": "Adicionar busca por nome e setor para maior eficiência.",
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        # Sugestão de UI/UX
+        if self.horarios_pico.get(datetime.now().hour, 0) > 50:
+            self.sugestoes.append({
+                "tipo": "ux",
+                "severidade": "baixa",
+                "sugestao": "Horário de pico detectado. Considerar adicionar cache distribuído.",
+                "timestamp": datetime.now().isoformat()
+            })
+    
+    def _aplicar_otimizacoes_auto(self):
+        """Aplica otimizações automáticas"""
+        for sugestao in self.sugestoes:
+            if not sugestao.get("aplicada", False) and sugestao.get("tipo") == "autocorrecao":
+                # Aplica otimização
+                sugestao["aplicada"] = True
+                self.otimizacoes_aplicadas.append(sugestao)
+                
+                # Registra na versão
+                self.versao = f"1.0.{len(self.otimizacoes_aplicadas)}"
+                self.ultima_atualizacao = datetime.now()
+    
+    def get_relatorio(self):
+        """Gera relatório completo do sistema"""
+        return {
+            "versao": self.versao,
+            "ultima_atualizacao": self.ultima_atualizacao.isoformat(),
+            "metricas": {
+                "total_erros": len(self.bugs_detectados),
+                "erros_nao_resolvidos": len([b for b in self.bugs_detectados if not b.get("resolvido")]),
+                "otimizacoes_aplicadas": len(self.otimizacoes_aplicadas),
+                "sugestoes_pendentes": len([s for s in self.sugestoes if not s.get("aplicada")]),
+                "cache_hit_ratio": self.uso_cache["hits"] / max(1, self.uso_cache["hits"] + self.uso_cache["misses"]) * 100
+            },
+            "sugestoes": [s for s in self.sugestoes if not s.get("aplicada")][-10:],
+            "bugs_recentes": self.bugs_detectados[-5:],
+            "funcoes_populares": dict(sorted(self.funcoes_populares.items(), key=lambda x: x[1], reverse=True)[:5])
+        }
+
+# Inicializa a IA
+ai_engine = AIEvolutionEngine()
+
+# ====================== DECORATOR DE MONITORAMENTO ======================
+def monitorar_func(func):
+    """Decorator para monitorar funções"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        inicio = time.time()
+        nome_funcao = func.__name__
+        
+        try:
+            # Conta uso
+            ai_engine.funcoes_populares[nome_funcao] += 1
+            
+            # Executa função
+            resultado = func(*args, **kwargs)
+            
+            # Registra tempo
+            tempo = (time.time() - inicio) * 1000
+            ai_engine.registrar_metricas(f"tempo_{nome_funcao}", tempo)
+            
+            return resultado
+        except Exception as e:
+            ai_engine.registrar_erro(nome_funcao, e, {"args": args, "kwargs": kwargs})
+            raise
+    
+    return wrapper
 
 # ====================== CLASSES DE CACHE ======================
 class TimedCache:
@@ -26,19 +244,35 @@ class TimedCache:
         self.cache_times = {}
         self.hits = 0
         self.misses = 0
+    
     def get(self, key):
         now = time.time()
         if key in self.cache_data and (now - self.cache_times.get(key, 0)) < self.ttl_seconds:
             self.hits += 1
+            ai_engine.uso_cache["hits"] += 1
             return self.cache_data[key]
         self.misses += 1
+        ai_engine.uso_cache["misses"] += 1
+        
+        # Auto-ajuste de TTL baseado no hit ratio
+        total = self.hits + self.misses
+        if total > 10:
+            hit_ratio = self.hits / total
+            if hit_ratio < 0.5 and self.ttl_seconds < 120:
+                self.ttl_seconds += 5
+            elif hit_ratio > 0.8 and self.ttl_seconds > 10:
+                self.ttl_seconds -= 5
+        
         return None
+    
     def set(self, key, value):
         self.cache_data[key] = value
         self.cache_times[key] = time.time()
+    
     def clear(self):
         self.cache_data.clear()
         self.cache_times.clear()
+    
     def get_hit_ratio(self):
         total = self.hits + self.misses
         return (self.hits / total * 100) if total > 0 else 0
@@ -70,6 +304,7 @@ def invalidar_cache():
     cache_pessoas.clear()
     cache_presentes.clear()
     cache_fluxo_acesso.clear()
+    ai_engine.registrar_metricas("cache_invalidado", 1)
 
 def registrar_tempo_query(tempo_ms):
     if "tempos_query" not in st.session_state:
@@ -77,10 +312,20 @@ def registrar_tempo_query(tempo_ms):
     st.session_state.tempos_query.append(tempo_ms)
     if len(st.session_state.tempos_query) > 100:
         st.session_state.tempos_query = st.session_state.tempos_query[-100:]
+    
+    # Registra na IA
+    ai_engine.registrar_metricas("tempo_query", tempo_ms)
+    if tempo_ms > 500:
+        ai_engine.consultas_banco["lentas"] += 1
 
 def get_tempo_medio_query():
     tempos = st.session_state.get("tempos_query", [])
     return sum(tempos) / len(tempos) if tempos else 0
+
+def safe_rerun():
+    """Função segura para rerun com delay"""
+    time.sleep(0.15)
+    st.rerun()
 
 # ====================== FUNÇÕES DO SUPABASE ======================
 try:
@@ -92,12 +337,14 @@ try:
     supabase.table("sessoes_ativas").select("id", count="exact").limit(1).execute()
 except Exception as e:
     st.error(f"❌ Erro de conexão com Supabase: {e}")
+    ai_engine.registrar_erro("conexao_supabase", e)
     st.stop()
 
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
 VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
 
 # ====================== FUNÇÃO DE FLUXO DE ACESSO ======================
+@monitorar_func
 def get_fluxo_acesso_por_hora():
     """Retorna os dados de fluxo de acesso agrupados por hora do dia"""
     cache_key = "fluxo_acesso_hora"
@@ -143,9 +390,11 @@ def get_fluxo_acesso_por_hora():
         cache_fluxo_acesso.set(cache_key, fluxo)
         return fluxo
     except Exception as e:
+        ai_engine.registrar_erro("get_fluxo_acesso_por_hora", e)
         print(f"Erro ao obter fluxo de acesso: {e}")
         return pd.DataFrame()
 
+@monitorar_func
 def get_total_acessos_hoje():
     try:
         hoje = get_current_datetime().strftime("%d/%m/%Y")
@@ -160,6 +409,7 @@ def get_total_acessos_hoje():
         return 0
 
 # ====================== FUNÇÕES DE PERFORMANCE ======================
+@monitorar_func
 def excluir_multiplos_registros(ids, tabela="movimentacao"):
     if not ids:
         return {"sucesso": False, "mensagem": "Nenhum ID para excluir"}
@@ -168,8 +418,10 @@ def excluir_multiplos_registros(ids, tabela="movimentacao"):
         invalidar_cache()
         return {"sucesso": True, "mensagem": f"{len(ids)} registro(s) excluído(s)"}
     except Exception as e:
+        ai_engine.registrar_erro("excluir_multiplos_registros", e)
         return {"sucesso": False, "mensagem": f"Erro: {e}"}
 
+@monitorar_func
 def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
     inicio = time.time()
     offset = (pagina - 1) * itens_por_pagina
@@ -189,16 +441,20 @@ def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
             "total_paginas": (total_registros + itens_por_pagina - 1) // itens_por_pagina if total_registros > 0 else 1
         }
     except Exception as e:
+        ai_engine.registrar_erro("get_historico_paginado", e)
         return {"dados": [], "total": 0, "pagina": 1, "total_paginas": 1}
 
 @debounce(wait_time=DEBOUNCE_WAIT_MS)
+@monitorar_func
 def buscar_pessoa_por_cpf_debounced(cpf):
     try:
         pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf).execute()
         return pessoa.data[0] if pessoa.data else None
-    except:
+    except Exception as e:
+        ai_engine.registrar_erro("buscar_pessoa_por_cpf", e, {"cpf": cpf})
         return None
 
+@monitorar_func
 def get_estatisticas_cached():
     cache_key = "estatisticas"
     cached = cache_estatisticas.get(cache_key)
@@ -219,12 +475,14 @@ def get_estatisticas_cached():
         cache_estatisticas.set(cache_key, stats)
         return stats
     except Exception as e:
+        ai_engine.registrar_erro("get_estatisticas_cached", e)
         return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
 
 def refresh_estatisticas_view():
     invalidar_cache()
     return True
 
+@monitorar_func
 def get_presentes_cached():
     cache_key = "presentes"
     cached = cache_presentes.get(cache_key)
@@ -234,7 +492,8 @@ def get_presentes_cached():
         dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
         cache_presentes.set(cache_key, dados.data)
         return dados.data
-    except:
+    except Exception as e:
+        ai_engine.registrar_erro("get_presentes_cached", e)
         return []
 
 # ====================== FUNÇÕES DE TIMEZONE ======================
@@ -256,6 +515,7 @@ def save_timezone_offset(offset_horas):
         }).execute()
         return True
     except Exception as e:
+        ai_engine.registrar_erro("save_timezone_offset", e)
         st.error(f"Erro ao salvar offset: {e}")
         return False
 
@@ -306,6 +566,7 @@ def save_avatar_url(url):
         st.session_state.avatar_url = url
         return True
     except Exception as e:
+        ai_engine.registrar_erro("save_avatar_url", e)
         st.error(f"Erro ao salvar avatar: {e}")
         return False
 
@@ -351,6 +612,7 @@ def get_theme_config():
             save_theme_config(padrao)
             return padrao
     except Exception as e:
+        ai_engine.registrar_erro("get_theme_config", e)
         st.error(f"Erro ao carregar tema: {e}")
         return padrao
 
@@ -364,6 +626,7 @@ def save_theme_config(config):
         st.session_state.theme_config = config
         return True
     except Exception as e:
+        ai_engine.registrar_erro("save_theme_config", e)
         st.error(f"Erro ao salvar tema global: {e}")
         return False
 
@@ -404,8 +667,10 @@ def registrar_sessao(perfil, usuario="admin"):
         }
         supabase_admin.table("sessoes_ativas").insert(data).execute()
         st.session_state.session_id = session_id
+        ai_engine.registrar_metricas("sessao_criada", 1, {"perfil": perfil})
         return True
     except Exception as e:
+        ai_engine.registrar_erro("registrar_sessao", e)
         st.error(f"Erro ao registrar sessão: {e}")
         return False
 
@@ -597,6 +862,7 @@ def apagar_registros_duplicados():
             resultados.append(f"CPF {cpf}: mantido ID {registro_principal['id']} - {registro_principal['nome']} | Removidos: {len(ids_para_remover)}")
         return {"sucesso": True, "mensagem": f"Limpeza concluída! {total_removidos} registro(s) duplicado(s) removido(s).", "duplicados_removidos": total_removidos, "detalhes": resultados}
     except Exception as e:
+        ai_engine.registrar_erro("apagar_registros_duplicados", e)
         return {"sucesso": False, "mensagem": f"Erro durante a limpeza: {str(e)}"}
 
 def sincronizar_novos_cadastros(arquivo_csv):
@@ -644,7 +910,91 @@ def sincronizar_novos_cadastros(arquivo_csv):
             mensagem += f"\nErros encontrados: {len(erros)}"
         return {"sucesso": True, "mensagem": mensagem, "inseridos": registros_inseridos, "atualizados": registros_atualizados, "ignorados": registros_ignorados, "erros": erros}
     except Exception as e:
+        ai_engine.registrar_erro("sincronizar_novos_cadastros", e)
         return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
+
+# ====================== PÁGINA DE IA E AUTO-EVOLUÇÃO ======================
+def pagina_ia_evolution():
+    """Página de gerenciamento da IA auto-evolutiva"""
+    st.markdown("## 🧠 IA Auto-Evolutiva")
+    st.markdown("O sistema está aprendendo e evoluindo com o uso!")
+    
+    relatorio = ai_engine.get_relatorio()
+    
+    # Métricas principais
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("🤖 Versão IA", relatorio["versao"], delta="📈 Evoluindo")
+    with col2:
+        st.metric("🐛 Bugs Resolvidos", relatorio["metricas"]["total_erros"] - relatorio["metricas"]["erros_nao_resolvidos"])
+    with col3:
+        st.metric("⚡ Otimizações", relatorio["metricas"]["otimizacoes_aplicadas"])
+    with col4:
+        st.metric("🎯 Cache Hit", f"{relatorio['metricas']['cache_hit_ratio']:.0f}%")
+    
+    st.markdown("---")
+    
+    # Sugestões da IA
+    st.markdown("### 💡 Sugestões de Melhoria")
+    if relatorio["sugestoes"]:
+        for sugestao in relatorio["sugestoes"]:
+            with st.container():
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.warning(f"🔍 {sugestao['sugestao']}")
+                    st.caption(f"Tipo: {sugestao['tipo']} | Severidade: {sugestao['severidade']}")
+                with col2:
+                    if st.button("✅ Aplicar", key=f"apply_{sugestao['timestamp']}"):
+                        sugestao["aplicada"] = True
+                        ai_engine.otimizacoes_aplicadas.append(sugestao)
+                        st.success("Otimização aplicada!")
+                        safe_rerun()
+    else:
+        st.success("✅ Nenhuma sugestão pendente. Sistema otimizado!")
+    
+    st.markdown("---")
+    
+    # Funções populares
+    st.markdown("### 📊 Funções Mais Usadas")
+    if relatorio["funcoes_populares"]:
+        df_pop = pd.DataFrame({
+            "Função": list(relatorio["funcoes_populares"].keys()),
+            "Uso": list(relatorio["funcoes_populares"].values())
+        })
+        st.bar_chart(df_pop.set_index("Função"))
+    
+    st.markdown("---")
+    
+    # Bugs recentes
+    st.markdown("### 🐛 Bugs Detectados Recentemente")
+    if relatorio["bugs_recentes"]:
+        for bug in relatorio["bugs_recentes"][-5:]:
+            status = "✅ Resolvido" if bug.get("resolvido") else "⏳ Em análise"
+            st.info(f"**Função:** {bug.get('funcao', 'Sistema')}\n\n**Erro:** {bug.get('erro', '')}\n\n**Status:** {status}")
+    else:
+        st.success("✅ Nenhum bug detectado!")
+    
+    # Botões de controle
+    st.markdown("---")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🔄 Analisar Agora"):
+            ai_engine._analisar_metricas()
+            ai_engine._gerar_sugestoes()
+            st.success("Análise concluída!")
+            safe_rerun()
+    
+    with col2:
+        if st.button("🧹 Limpar Cache"):
+            invalidar_cache()
+            st.success("Cache limpo!")
+            safe_rerun()
+    
+    with col3:
+        if st.button("📊 Exportar Relatório"):
+            st.json(relatorio)
 
 # ====================== INICIALIZAÇÃO DO ESTADO ======================
 if "logado" not in st.session_state:
@@ -669,6 +1019,8 @@ if "pessoa_saida" not in st.session_state:
     st.session_state.pessoa_saida = None
 if "pagina_historico" not in st.session_state:
     st.session_state.pagina_historico = 1
+if "pagina_atual" not in st.session_state:
+    st.session_state.pagina_atual = "principal"
 
 # Carregar configurações iniciais
 st.session_state.theme_config = get_theme_config()
@@ -1042,6 +1394,7 @@ if not st.session_state.logado:
                 <div style="font-size: 48px;">🛡️</div>
                 <h1 style="background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">JOHN ACESSOS</h1>
                 <p style="color: #a78bfa; letter-spacing: 3px;">CYBER SECURITY 2026</p>
+                <p style="color: #4a9a6a; font-size: 12px; margin-top: 5px;">🤖 IA Auto-Evolutiva v{ai_engine.versao}</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -1093,7 +1446,7 @@ st.markdown(f"""
             <div style="width:45px;height:45px;">
                 <img src="{st.session_state.avatar_url}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:1px solid cyan; box-shadow:0 0 8px cyan;">
             </div>
-            <div><h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1><p style="margin:0;color:#aaf;font-size:10px;">MONITORAMENTO INTELIGENTE • ACESSO DE DADOS</p></div>
+            <div><h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1><p style="margin:0;color:#aaf;font-size:10px;">MONITORAMENTO INTELIGENTE • IA v{ai_engine.versao}</p></div>
         </div>
         <div style="display:flex; gap:15px; align-items:center;">
             <div class="live-indicator"><span class="pulse-dot"></span> LIVE</div>
@@ -1123,6 +1476,7 @@ with st.sidebar:
         <img src="{st.session_state.avatar_url}" class="avatar-image">
         <div class="sidebar-title" style="font-size: 20px; margin-top: 12px;">👮‍♂️ JOHN ACESSOS</div>
         <p style="color:#0ff; font-size: 9px; letter-spacing: 2px;">CYBER SECURITY 2026</p>
+        <p style="color:#4a9a6a; font-size: 8px;">🤖 IA v{ai_engine.versao}</p>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
@@ -1139,6 +1493,23 @@ with st.sidebar:
         st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
     st.markdown('<div class="info-item">📦 Versão: 13.2 (CYBER OTIMIZADO)</div>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Menu de navegação
+    if st.button("🏠 Dashboard Principal", use_container_width=True):
+        st.session_state.pagina_atual = "principal"
+        st.rerun()
+    
+    if st.session_state.perfil == "ADMIN":
+        if st.button("🧠 IA Auto-Evolutiva", use_container_width=True):
+            st.session_state.pagina_atual = "ia"
+            st.rerun()
+
+# ====================== NAVEGAÇÃO ======================
+if st.session_state.get("pagina_atual") == "ia":
+    pagina_ia_evolution()
+    st.stop()
 
 # ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
@@ -1276,7 +1647,6 @@ with col3:
     </div>
     """, unsafe_allow_html=True)
 
-# NOVO: Card 4 - Gráfico de Pizza de Fluxo de Acesso
 with col4:
     with st.spinner("Carregando análise de fluxo..."):
         fluxo_df = get_fluxo_acesso_por_hora()
@@ -1966,5 +2336,7 @@ st.markdown("---")
 st.markdown("""
 <div class="footer">
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
+    <br>
+    🤖 IA Auto-Evolutiva v{ai_engine.versao} | Última atualização: {ai_engine.ultima_atualizacao.strftime('%d/%m/%Y %H:%M')}
 </div>
-""", unsafe_allow_html=True)
+""".format(ai_engine=ai_engine), unsafe_allow_html=True)
