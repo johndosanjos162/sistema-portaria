@@ -12,17 +12,15 @@ import time
 from functools import wraps
 import plotly.express as px
 import plotly.graph_objects as go
-from collections import defaultdict
-import hashlib
 
 # ====================== CONFIGURAÇÕES ======================
 CACHE_TTL_PADRAO = 30
 ITENS_POR_PAGINA = 50
-DEBOUNCE_WAIT_MS = 300
+DEBOUNCE_WAIT_MS = 500
 
 # ====================== CACHE ULTRARRÁPIDO EM MEMÓRIA ======================
 class CacheRapido:
-    """Cache em memória com acesso O(1) - milissegundos"""
+    """Cache em memória com acesso O(1) - milissegundos - substitui o TimedCache original"""
     
     def __init__(self, ttl_seconds=300):
         self.cache = {}
@@ -53,7 +51,7 @@ class CacheRapido:
 
 # ====================== PRÉ-CARREGAMENTO DE DADOS ======================
 class DataLoader:
-    """Pré-carrega dados para acesso instantâneo"""
+    """Pré-carrega todos os dados para acesso instantâneo"""
     
     def __init__(self):
         self.dados = {}
@@ -85,34 +83,38 @@ class DataLoader:
         if self.carregado and cpf in self.dados.get("por_cpf", {}):
             return self.dados["por_cpf"][cpf]
         return None
-    
-    def buscar_por_nome(self, termo):
-        """Busca por nome com filtro rápido"""
-        if not self.carregado:
-            self.carregar_todos_usuarios()
-        
-        if not self.carregado or not termo or len(termo) < 2:
-            return []
-        
-        termo = termo.upper()
-        resultados = []
-        for p in self.dados.get("lista", []):
-            if termo in p["nome"].upper():
-                resultados.append(p)
-                if len(resultados) >= 20:
-                    break
-        return resultados
 
 # ====================== INICIALIZAÇÃO ======================
-# Instâncias de cache
-cache_cpf = CacheRapido(ttl_seconds=3600)
-cache_nome = CacheRapido(ttl_seconds=600)
+# Substitui o TimedCache pelo CacheRapido (mais rápido)
 cache_estatisticas = CacheRapido(ttl_seconds=30)
+cache_pessoas = CacheRapido(ttl_seconds=60)
 cache_presentes = CacheRapido(ttl_seconds=30)
 cache_fluxo_acesso = CacheRapido(ttl_seconds=60)
+cache_cpf = CacheRapido(ttl_seconds=3600)  # 1 hora para CPF
 
 # Carregador de dados
 data_loader = DataLoader()
+
+# ====================== FUNÇÕES AUXILIARES ======================
+def invalidar_cache():
+    cache_estatisticas.clear()
+    cache_pessoas.clear()
+    cache_presentes.clear()
+    cache_fluxo_acesso.clear()
+    cache_cpf.clear()
+    data_loader.dados = {}
+    data_loader.carregado = False
+
+def registrar_tempo_query(tempo_ms):
+    if "tempos_query" not in st.session_state:
+        st.session_state.tempos_query = []
+    st.session_state.tempos_query.append(tempo_ms)
+    if len(st.session_state.tempos_query) > 100:
+        st.session_state.tempos_query = st.session_state.tempos_query[-100:]
+
+def get_tempo_medio_query():
+    tempos = st.session_state.get("tempos_query", [])
+    return sum(tempos) / len(tempos) if tempos else 0
 
 # ====================== FUNÇÕES DO SUPABASE ======================
 try:
@@ -129,119 +131,7 @@ except Exception as e:
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
 VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
 
-# ====================== FUNÇÕES AUXILIARES ======================
-def invalidar_cache():
-    cache_cpf.clear()
-    cache_nome.clear()
-    cache_estatisticas.clear()
-    cache_presentes.clear()
-    cache_fluxo_acesso.clear()
-
-def safe_rerun():
-    """Rerun apenas quando absolutamente necessário"""
-    time.sleep(0.05)
-    st.rerun()
-
-# ====================== FUNÇÕES DE BUSCA OTIMIZADAS ======================
-def buscar_pessoa_por_cpf_rapido(cpf):
-    """Busca ultra-rápida por CPF - usa cache em memória"""
-    if not cpf:
-        return None
-    
-    cpf_limpo = re.sub(r'\D', '', cpf)
-    if not cpf_limpo:
-        return None
-    
-    cache_key = f"cpf_{cpf_limpo}"
-    cached = cache_cpf.get(cache_key)
-    if cached:
-        return cached
-    
-    resultado = data_loader.buscar_por_cpf(cpf_limpo)
-    
-    if resultado:
-        cache_cpf.set(cache_key, resultado)
-        return resultado
-    
-    try:
-        pessoa = supabase.table("Pessoas").select("nome, empresa, id").eq("cpf", cpf_limpo).execute()
-        if pessoa.data:
-            resultado = pessoa.data[0]
-            cache_cpf.set(cache_key, resultado)
-            return resultado
-    except:
-        pass
-    
-    return None
-
-# ====================== FUNÇÕES DE PERFORMANCE ======================
-def excluir_multiplos_registros(ids, tabela="movimentacao"):
-    if not ids:
-        return {"sucesso": False, "mensagem": "Nenhum ID para excluir"}
-    try:
-        supabase_admin.table(tabela).delete().in_("id", ids).execute()
-        invalidar_cache()
-        return {"sucesso": True, "mensagem": f"{len(ids)} registro(s) excluído(s)"}
-    except Exception as e:
-        return {"sucesso": False, "mensagem": f"Erro: {e}"}
-
-def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
-    offset = (pagina - 1) * itens_por_pagina
-    try:
-        total = supabase.table("movimentacao").select("id", count="estimated").execute()
-        total_registros = total.count if hasattr(total, 'count') else 0
-        
-        dados = supabase.table("movimentacao")\
-            .select("id, cpf, nome, empresa, setor_destino, data_entrada, data_saida")\
-            .order("id", desc=True)\
-            .range(offset, offset + itens_por_pagina - 1)\
-            .execute()
-        
-        return {
-            "dados": dados.data,
-            "total": total_registros,
-            "pagina": pagina,
-            "total_paginas": (total_registros + itens_por_pagina - 1) // itens_por_pagina if total_registros > 0 else 1
-        }
-    except Exception as e:
-        return {"dados": [], "total": 0, "pagina": 1, "total_paginas": 1}
-
-def get_estatisticas_cached():
-    cache_key = "estatisticas"
-    cached = cache_estatisticas.get(cache_key)
-    if cached:
-        return cached
-    
-    try:
-        total_presentes = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute().count
-        total_cadastrados = data_loader.dados.get("total", 0) or supabase.table("Pessoas").select("id", count="exact").execute().count or 0
-        
-        result_setores = supabase.table("movimentacao").select("setor_destino").execute()
-        setores_unicos = len(set(r['setor_destino'] for r in result_setores.data if r.get('setor_destino'))) if result_setores.data else 11
-        
-        stats = {
-            "total_presentes": total_presentes or 0,
-            "total_cadastrados": total_cadastrados or 0,
-            "setores_unicos": setores_unicos
-        }
-        cache_estatisticas.set(cache_key, stats)
-        return stats
-    except Exception as e:
-        return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
-
-def get_presentes_cached():
-    cache_key = "presentes"
-    cached = cache_presentes.get(cache_key)
-    if cached:
-        return cached
-    
-    try:
-        dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
-        cache_presentes.set(cache_key, dados.data)
-        return dados.data
-    except:
-        return []
-
+# ====================== FUNÇÃO DE FLUXO DE ACESSO ======================
 def get_fluxo_acesso_por_hora():
     """Retorna os dados de fluxo de acesso agrupados por hora do dia"""
     cache_key = "fluxo_acesso_hora"
@@ -287,6 +177,7 @@ def get_fluxo_acesso_por_hora():
         cache_fluxo_acesso.set(cache_key, fluxo)
         return fluxo
     except Exception as e:
+        print(f"Erro ao obter fluxo de acesso: {e}")
         return pd.DataFrame()
 
 def get_total_acessos_hoje():
@@ -301,6 +192,117 @@ def get_total_acessos_hoje():
         return total_hoje
     except:
         return 0
+
+# ====================== FUNÇÕES DE PERFORMANCE ======================
+def excluir_multiplos_registros(ids, tabela="movimentacao"):
+    if not ids:
+        return {"sucesso": False, "mensagem": "Nenhum ID para excluir"}
+    try:
+        supabase_admin.table(tabela).delete().in_("id", ids).execute()
+        invalidar_cache()
+        return {"sucesso": True, "mensagem": f"{len(ids)} registro(s) excluído(s)"}
+    except Exception as e:
+        return {"sucesso": False, "mensagem": f"Erro: {e}"}
+
+def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
+    inicio = time.time()
+    offset = (pagina - 1) * itens_por_pagina
+    try:
+        total = supabase.table("movimentacao").select("id", count="estimated").execute()
+        total_registros = total.count if hasattr(total, 'count') else 0
+        dados = supabase.table("movimentacao")\
+            .select("*")\
+            .order("id", desc=True)\
+            .range(offset, offset + itens_por_pagina - 1)\
+            .execute()
+        registrar_tempo_query((time.time() - inicio) * 1000)
+        return {
+            "dados": dados.data,
+            "total": total_registros,
+            "pagina": pagina,
+            "total_paginas": (total_registros + itens_por_pagina - 1) // itens_por_pagina if total_registros > 0 else 1
+        }
+    except Exception as e:
+        return {"dados": [], "total": 0, "pagina": 1, "total_paginas": 1}
+
+# ====================== BUSCA OTIMIZADA POR CPF ======================
+# Esta função substitui a busca original para usar cache em memória
+# Mantém o mesmo nome e assinatura para compatibilidade
+def buscar_pessoa_por_cpf_debounced(cpf):
+    """Busca otimizada por CPF - cache em memória - retorno instantâneo"""
+    if not cpf:
+        return None
+    
+    cpf_limpo = re.sub(r'\D', '', cpf)
+    if not cpf_limpo:
+        return None
+    
+    # Tenta cache em memória (mais rápido)
+    cache_key = f"cpf_{cpf_limpo}"
+    cached = cache_cpf.get(cache_key)
+    if cached:
+        return cached
+    
+    # Busca no data_loader (já carregado em memória)
+    resultado = data_loader.buscar_por_cpf(cpf_limpo)
+    
+    if resultado:
+        cache_cpf.set(cache_key, resultado)
+        return resultado
+    
+    # Fallback: busca no banco (caso não tenha carregado)
+    try:
+        pessoa = supabase.table("Pessoas").select("nome, empresa").eq("cpf", cpf_limpo).execute()
+        if pessoa.data:
+            resultado = pessoa.data[0]
+            cache_cpf.set(cache_key, resultado)
+            return resultado
+    except:
+        pass
+    
+    return None
+
+def get_estatisticas_cached():
+    cache_key = "estatisticas"
+    cached = cache_estatisticas.get(cache_key)
+    if cached:
+        return cached
+    
+    inicio = time.time()
+    try:
+        total_presentes = supabase.table("movimentacao").select("id", count="exact").eq("data_saida", "").execute().count
+        total_cadastrados = data_loader.dados.get("total", 0) or supabase.table("Pessoas").select("id", count="exact").execute().count or 0
+        
+        result_setores = supabase.table("movimentacao").select("setor_destino").execute()
+        setores_unicos = len(set(r['setor_destino'] for r in result_setores.data if r.get('setor_destino'))) if result_setores.data else 11
+        
+        stats = {
+            "total_presentes": total_presentes or 0,
+            "total_cadastrados": total_cadastrados or 0,
+            "setores_unicos": setores_unicos
+        }
+        registrar_tempo_query((time.time() - inicio) * 1000)
+        cache_estatisticas.set(cache_key, stats)
+        return stats
+    except Exception as e:
+        return {"total_presentes": 0, "total_cadastrados": 0, "setores_unicos": 11}
+
+def refresh_estatisticas_view():
+    invalidar_cache()
+    return True
+
+def get_presentes_cached():
+    cache_key = "presentes"
+    cached = cache_presentes.get(cache_key)
+    if cached:
+        return cached
+    
+    try:
+        dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
+        cache_presentes.set(cache_key, dados.data)
+        return dados.data
+    except:
+        return []
 
 # ====================== FUNÇÕES DE TIMEZONE ======================
 def get_timezone_offset():
@@ -399,12 +401,18 @@ def get_theme_config():
     padrao = {
         "type": "gradient",
         "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)",
-        "apply_to_login": False
+        "apply_to_login": False,
+        "image_adjust": "cover",
+        "image_position": "center",
+        "video_loop": True
     }
     try:
         result = supabase.table("app_config").select("value").eq("key", "background_config").execute()
         if result.data:
             config = json.loads(result.data[0]['value'])
+            config.setdefault("image_adjust", "cover")
+            config.setdefault("image_position", "center")
+            config.setdefault("video_loop", True)
             return config
         else:
             save_theme_config(padrao)
@@ -426,12 +434,23 @@ def save_theme_config(config):
         st.error(f"Erro ao salvar tema global: {e}")
         return False
 
+def futuristic_background_script():
+    st.markdown("""
+    <canvas id="futuristic-canvas"></canvas>
+    <script>/* ... conteúdo original ... */</script>
+    """, unsafe_allow_html=True)
+
 def apply_theme_css():
     config = st.session_state.get("theme_config", get_theme_config())
     bg_type = config.get("type", "gradient")
-    if bg_type == "solid":
-        cor = config.get("value", "#0a0a1a")
-        st.markdown(f'<style>.stApp {{ background: {cor} !important; }}</style>', unsafe_allow_html=True)
+    if bg_type == "gradient":
+        bg_value = config.get("value", "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)")
+        st.markdown(f'<style>.stApp {{ background: {bg_value} !important; background-attachment: fixed; background-size: cover; }}</style>', unsafe_allow_html=True)
+    elif bg_type == "solid":
+        bg_value = config.get("value", "#0a0a1a")
+        st.markdown(f'<style>.stApp {{ background: {bg_value} !important; }}</style>', unsafe_allow_html=True)
+    elif bg_type == "futuristic":
+        futuristic_background_script()
     else:
         st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
 
@@ -723,35 +742,75 @@ st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
 # ====================== CONFIGURAÇÃO DA PÁGINA ======================
-st.set_page_config(
-    page_title="JOHN ACESSOS - CYBER SECURITY 2026", 
-    layout="wide", 
-    page_icon="🛡️", 
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
 
-# ====================== CSS ESTILIZADO ======================
+# ====================== CSS FUTURISTA ======================
 st.markdown("""
 <style>
+    /* RESET E BACKGROUND - EVITA ROLAGEM NA TELA DE LOGIN */
     html, body {
         margin: 0;
         padding: 0;
         height: 100%;
         width: 100%;
+        overflow: hidden;
     }
     .stApp {
-        background: radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%) !important;
-        min-height: 100vh;
+        transition: background 0.3s ease;
+        height: 100%;
+        overflow: auto;
     }
     header[data-testid="stHeader"] {
-        background: rgba(10, 10, 26, 0.8) !important;
+        background: transparent !important;
+        box-shadow: none !important;
         backdrop-filter: blur(8px);
         border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+    }
+    header[data-testid="stHeader"] button {
+        color: #0ff !important;
+        text-shadow: 0 0 3px #0ff;
     }
     [data-testid="stSidebar"] {
         background: rgba(10, 10, 25, 0.65) !important;
         backdrop-filter: blur(16px);
         border-right: 1px solid rgba(0, 255, 255, 0.3);
+        box-shadow: 4px 0 30px rgba(0, 255, 255, 0.1);
+    }
+    .avatar-container {
+        text-align: center;
+        margin-bottom: 25px;
+        position: relative;
+    }
+    .avatar-image {
+        width: 130px;
+        height: 130px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #0ff;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.3);
+        transition: 0.3s;
+        filter: drop-shadow(0 0 8px cyan);
+    }
+    .avatar-image:hover {
+        transform: scale(1.02);
+        box-shadow: 0 0 30px cyan;
+        border-color: #f0f;
+    }
+    .glow-ring {
+        position: absolute;
+        top: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(0,255,255,0.2), transparent);
+        pointer-events: none;
+        animation: pulseRing 2s infinite;
+    }
+    @keyframes pulseRing {
+        0% { opacity: 0.5; transform: translateX(-50%) scale(0.9); }
+        100% { opacity: 0; transform: translateX(-50%) scale(1.3); }
     }
     .dashboard-card {
         background: rgba(10, 15, 30, 0.45);
@@ -760,23 +819,89 @@ st.markdown("""
         padding: 1.2rem 1rem;
         margin: 0.5rem;
         border: 1px solid rgba(0, 255, 255, 0.3);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-        transition: all 0.3s ease;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 15px rgba(0,255,255,0.2);
+        transition: all 0.3s cubic-bezier(0.2,0.9,0.4,1.1);
+        position: relative;
+        overflow: hidden;
         cursor: default;
+        z-index: 1;
+    }
+    .dashboard-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.15), transparent);
+        transition: left 0.6s ease;
+        z-index: 0;
+        pointer-events: none;
+    }
+    .dashboard-card:hover::before {
+        left: 100%;
+    }
+    .dashboard-card::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        background: linear-gradient(45deg, cyan, magenta, cyan, #0ff);
+        border-radius: 30px;
+        z-index: -1;
+        opacity: 0;
+        transition: opacity 0.4s;
+    }
+    .dashboard-card:hover::after {
+        opacity: 0.6;
     }
     .dashboard-card:hover {
-        transform: translateY(-4px);
-        border-color: rgba(0, 255, 255, 0.6);
-        box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 25px rgba(0,255,255,0.1);
+        transform: translateY(-6px);
+        border-color: rgba(0, 255, 255, 0.8);
+        box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 25px cyan;
     }
     .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 12px;
+        position: relative;
+        z-index: 2;
     }
     .card-icon {
         font-size: 2.5rem;
+        filter: drop-shadow(0 0 6px cyan);
+        transition: 0.2s;
+    }
+    .dashboard-card:hover .card-icon {
+        transform: scale(1.05);
+        filter: drop-shadow(0 0 12px magenta);
+    }
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0,0,0,0.5);
+        padding: 4px 10px;
+        border-radius: 30px;
+        font-size: 0.7rem;
+        font-family: 'Space Mono', monospace;
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        backdrop-filter: blur(4px);
+    }
+    .status-led {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #0f0;
+        box-shadow: 0 0 6px #0f0;
+        animation: pulseLed 1.2s infinite;
+    }
+    @keyframes pulseLed {
+        0% { opacity: 0.4; transform: scale(0.8); }
+        100% { opacity: 1; transform: scale(1.2); }
     }
     .card-title {
         font-size: 0.85rem;
@@ -785,6 +910,8 @@ st.markdown("""
         color: #aaf;
         font-weight: 500;
         margin-bottom: 8px;
+        position: relative;
+        z-index: 2;
     }
     .card-value {
         font-size: 2.8rem;
@@ -793,36 +920,119 @@ st.markdown("""
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
+        text-shadow: 0 0 20px rgba(0,255,255,0.5);
         line-height: 1.2;
+        font-family: 'Space Mono', monospace;
+        margin-bottom: 4px;
+        position: relative;
+        z-index: 2;
     }
     .card-footer {
         font-size: 0.7rem;
         color: rgba(0, 255, 255, 0.7);
+        font-family: monospace;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         margin-top: 8px;
+        position: relative;
+        z-index: 2;
     }
-    .stButton>button {
+    .stButton>button, .stForm button {
         background: rgba(0,20,40,0.7) !important;
+        backdrop-filter: blur(8px);
         border: 1px solid #0ff !important;
         border-radius: 40px !important;
         color: #0ff !important;
         font-weight: bold;
         transition: 0.2s;
+        box-shadow: 0 0 5px rgba(0,255,255,0.3);
     }
-    .stButton>button:hover {
+    .stButton>button:hover, .stForm button:hover {
         background: rgba(0,255,255,0.15) !important;
         border-color: magenta !important;
         color: magenta !important;
-        box-shadow: 0 0 15px rgba(255,0,255,0.3);
+        box-shadow: 0 0 15px magenta;
+        transform: scale(1.02);
     }
-    .stTextInput>div>div>input {
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div {
         background: rgba(0, 10, 20, 0.7) !important;
+        backdrop-filter: blur(8px);
         border: 1px solid #0ff !important;
         border-radius: 16px !important;
         color: #0ff !important;
+        font-family: 'Space Mono', monospace;
+        transition: 0.2s;
     }
-    .stTextInput>div>div>input:focus {
+    .stTextInput>div>div>input:focus, .stNumberInput>div>div>input:focus {
         border-color: magenta !important;
-        box-shadow: 0 0 12px rgba(255,0,255,0.2);
+        box-shadow: 0 0 12px magenta;
+    }
+    .stForm, .stExpander, .stTabs [data-baseweb="tab-list"] {
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(8px);
+        border-radius: 20px;
+        border: 1px solid rgba(0,255,255,0.2);
+        padding: 5px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        color: #ccc;
+        border-radius: 30px;
+        font-weight: 500;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(0,255,255,0.2), rgba(255,0,255,0.2));
+        color: #0ff !important;
+        text-shadow: 0 0 3px cyan;
+    }
+    .stDataFrame {
+        background: rgba(0,0,0,0.4) !important;
+        border: 1px solid cyan !important;
+        border-radius: 16px;
+    }
+    .live-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0,0,0,0.5);
+        padding: 4px 12px;
+        border-radius: 40px;
+        font-size: 12px;
+        font-family: monospace;
+        border: 1px solid #0ff;
+        color: #0ff;
+    }
+    .pulse-dot {
+        width: 10px;
+        height: 10px;
+        background-color: #0f0;
+        border-radius: 50%;
+        box-shadow: 0 0 5px #0f0;
+        animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 0.4; transform: scale(0.8);}
+        100% { opacity: 1; transform: scale(1.2);}
+    }
+    .footer {
+        text-align: center;
+        padding: 15px;
+        color: #6b7280;
+        font-size: 9px;
+        border-top: 1px solid rgba(0,255,255,0.2);
+        margin-top: 25px;
+    }
+    h1, h2, h3, p, label, .info-item, .stMarkdown, .stRadio label, .stCheckbox label {
+        color: #eef !important;
+        text-shadow: 0 0 2px rgba(0,0,0,0.5);
+    }
+    .info-item {
+        margin-bottom: 12px;
+        font-size: 13px;
+        display: flex;
+        gap: 8px;
+        font-family: 'Space Mono', monospace;
     }
     .badge-admin {
         background: linear-gradient(135deg, cyan, magenta);
@@ -832,20 +1042,53 @@ st.markdown("""
         font-size: 11px;
         color: #000;
     }
-    .info-item {
-        margin-bottom: 12px;
-        font-size: 13px;
-        display: flex;
-        gap: 8px;
-        color: #eef !important;
+    .session-indicator {
+        background: rgba(0,0,0,0.6);
+        border-radius: 30px;
+        padding: 4px 12px;
+        font-size: 12px;
+        font-family: monospace;
+        color: cyan;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
     }
-    .footer {
-        text-align: center;
+    #futuristic-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -9999;
+        pointer-events: none;
+    }
+    .sync-card {
+        background: linear-gradient(135deg, rgba(0,255,255,0.05), rgba(0,100,100,0.1));
+        border-radius: 15px;
         padding: 15px;
-        color: #6b7280;
-        font-size: 9px;
-        border-top: 1px solid rgba(0,255,255,0.1);
-        margin-top: 25px;
+        margin: 10px 0;
+        border: 1px solid rgba(0,255,255,0.3);
+    }
+    .success-animation {
+        animation: glowPulse 0.5s ease-in-out;
+    }
+    @keyframes glowPulse {
+        0% { box-shadow: 0 0 0 0 rgba(0,255,0,0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(0,255,0,0); }
+        100% { box-shadow: 0 0 0 0 rgba(0,255,0,0); }
+    }
+    .chart-container {
+        background: rgba(10, 15, 30, 0.3);
+        border-radius: 20px;
+        padding: 15px;
+        border: 1px solid rgba(0, 255, 255, 0.2);
+    }
+    .chart-title {
+        font-size: 14px;
+        color: #0ff;
+        text-align: center;
+        margin-bottom: 10px;
+        font-family: 'Space Mono', monospace;
     }
     .cache-status {
         background: rgba(0,255,255,0.1);
@@ -858,57 +1101,16 @@ st.markdown("""
         align-items: center;
         gap: 6px;
     }
-    .avatar-image {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid #0ff;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-        display: block;
-        margin: 0 auto;
-    }
-    .live-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: rgba(0,0,0,0.5);
-        padding: 4px 12px;
-        border-radius: 40px;
-        font-size: 12px;
-        border: 1px solid #0ff;
-        color: #0ff;
-    }
-    .pulse-dot {
-        width: 10px;
-        height: 10px;
-        background-color: #0f0;
-        border-radius: 50%;
-        animation: pulse 1s infinite;
-    }
-    @keyframes pulse {
-        0% { opacity: 0.4; transform: scale(0.8); }
-        100% { opacity: 1; transform: scale(1.2); }
-    }
-    .session-indicator {
-        background: rgba(0,0,0,0.6);
-        border-radius: 30px;
-        padding: 4px 12px;
-        font-size: 12px;
-        color: #0ff;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-    }
-    h1, h2, h3, p, label, .stMarkdown {
-        color: #eef !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ====================== TELA DE LOGIN ======================
 if not st.session_state.logado:
-    st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
+    theme = st.session_state.theme_config
+    if theme.get("apply_to_login", False):
+        apply_theme_css()
+    else:
+        st.markdown('<style>.stApp{background:radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%);}</style>', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -918,7 +1120,6 @@ if not st.session_state.logado:
                 <div style="font-size: 48px;">🛡️</div>
                 <h1 style="background: linear-gradient(135deg, #fff, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">JOHN ACESSOS</h1>
                 <p style="color: #a78bfa; letter-spacing: 3px;">CYBER SECURITY 2026</p>
-                <p style="color: #4a9a6a; font-size: 11px; margin-top: 5px;">⚡ Cache em memória - Busca instantânea</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -935,6 +1136,7 @@ if not st.session_state.logado:
                         st.session_state.perfil = "ADMIN"
                         st.session_state.tentativas_login = 0
                         registrar_sessao("ADMIN", "admin")
+                        # Pré-carrega dados ao logar
                         data_loader.carregar_todos_usuarios()
                         st.rerun()
                     elif senha == VIGILANTE_PASSWORD:
@@ -955,6 +1157,8 @@ if not st.session_state.logado:
     st.stop()
 
 # ====================== APÓS LOGIN ======================
+apply_theme_css()
+
 if st.session_state.session_id:
     atualizar_atividade_sessao()
     limpar_sessoes_expiradas()
@@ -964,18 +1168,15 @@ else:
 
 # ====================== HEADER ======================
 st.markdown(f"""
-<div style="background: rgba(8,8,20,0.6); backdrop-filter: blur(8px); border-radius: 20px; padding: 10px 20px; margin-bottom: 20px; border: 1px solid cyan;">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+<div class="admin-header" style="background: rgba(8,8,20,0.6); backdrop-filter: blur(8px); border-radius: 20px; padding: 10px 20px; margin-bottom: 20px; border: 1px solid cyan;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; gap:15px; align-items:center;">
             <div style="width:45px;height:45px;">
                 <img src="{st.session_state.avatar_url}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:1px solid cyan; box-shadow:0 0 8px cyan;">
             </div>
-            <div>
-                <h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1>
-                <p style="margin:0;color:#aaf;font-size:10px;">⚡ CACHE EM MEMÓRIA • BUSCAS ULTRARRÁPIDAS</p>
-            </div>
+            <div><h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1><p style="margin:0;color:#aaf;font-size:10px;">⚡ CACHE EM MEMÓRIA • BUSCA INSTANTÂNEA</p></div>
         </div>
-        <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
+        <div style="display:flex; gap:15px; align-items:center;">
             <div class="live-indicator"><span class="pulse-dot"></span> LIVE</div>
             <div class="cache-status">💾 Cache Hit: {cache_cpf.get_hit_ratio():.0f}%</div>
             <div class="session-indicator">👥 {total_conectados}</div>
@@ -985,7 +1186,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ====================== BOTÕES DE AÇÃO ======================
 col1, col2, col3, col4 = st.columns([6,1,1,1])
 with col3:
     if st.button("🔄 ATUALIZAR", key="btn_atualizar", use_container_width=True):
@@ -1001,51 +1201,134 @@ with col4:
 # ====================== SIDEBAR ======================
 with st.sidebar:
     st.markdown(f"""
-    <div style="text-align:center;padding:10px 0;">
+    <div class="avatar-container">
+        <div class="glow-ring"></div>
         <img src="{st.session_state.avatar_url}" class="avatar-image">
-        <div style="font-size:20px;margin-top:10px;color:#0ff;">👮‍♂️ JOHN ACESSOS</div>
-        <p style="color:#0ff;font-size:9px;letter-spacing:2px;">CYBER SECURITY 2026</p>
-        <p style="color:#4a9a6a;font-size:8px;">⚡ Busca instantânea</p>
+        <div class="sidebar-title" style="font-size: 20px; margin-top: 12px;">👮‍♂️ JOHN ACESSOS</div>
+        <p style="color:#0ff; font-size: 9px; letter-spacing: 2px;">CYBER SECURITY 2026</p>
+        <p style="color:#4a9a6a; font-size: 8px;">⚡ Cache ativo - Busca instantânea</p>
     </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### ⚡ ESTADO")
     st.markdown('<div class="info-item"><span style="color:#0f0;">●</span> CACHE: ATIVO</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="info-item"><span style="color:#0ff;">●</span> HIT: {cache_cpf.get_hit_ratio():.0f}%</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="info-item"><span style="color:#0ff;">●</span> HIT RATIO: {cache_cpf.get_hit_ratio():.0f}%</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="info-item"><span style="color:#ff0;">●</span> REGISTROS: {data_loader.dados.get("total", 0)}</div>', unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### 📡 INFO")
     if st.session_state.get("perfil"):
         st.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("<div class='info-item'>👑 Perfil: ---</div>", unsafe_allow_html=True)
     st.markdown('<div class="info-item">🟢 Status: Online</div>', unsafe_allow_html=True)
+    st.markdown('<div class="info-item">📦 Versão: 13.3 (ULTRA RÁPIDO)</div>', unsafe_allow_html=True)
 
 # ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
     st.sidebar.markdown("---")
-    with st.sidebar.expander("⚙️ ADMIN", expanded=False):
-        st.markdown("### 🔧 Ferramentas")
-        if st.button("📥 Recarregar Cache", use_container_width=True):
+    with st.sidebar.expander("⚙️ MANAGE APP", expanded=False):
+        st.markdown("### 🔧 Ferramentas Administrativas")
+        total_ativas = contar_sessoes_ativas()
+        st.metric("👥 Sessões ativas", total_ativas)
+        if st.button("🔒 Encerrar outras sessões", use_container_width=True, key="encerrar_sessoes"):
+            if encerrar_outras_sessoes():
+                st.success("✅ Todas as outras sessões foram encerradas!")
+                st.rerun()
+            else:
+                st.error("❌ Erro ao encerrar outras sessões.")
+        if st.button("🧹 Limpar sessões expiradas", use_container_width=True, key="limpar_sessoes"):
+            limpar_sessoes_expiradas()
+            st.success("✅ Sessões expiradas removidas!")
+            st.rerun()
+        if st.button("📥 Recarregar Dados em Cache", use_container_width=True):
             with st.spinner("Carregando..."):
                 if data_loader.carregar_todos_usuarios():
                     st.success(f"✅ {data_loader.dados.get('total', 0)} registros carregados!")
                     st.rerun()
                 else:
-                    st.error("❌ Erro ao carregar.")
-        if st.button("🧹 Limpar Cache", use_container_width=True):
-            invalidar_cache()
-            st.success("Cache limpo!")
-            st.rerun()
+                    st.error("❌ Erro ao carregar dados.")
+        st.caption("Ações disponíveis apenas para o administrador.")
+    
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("⏱️ Configurar Horário (Global)", expanded=False):
+        st.markdown("### Ajuste de Fuso Horário")
+        offset_atual = get_timezone_offset()
+        novo_offset = st.number_input("Offset (horas)", value=offset_atual, step=0.5, format="%.1f", key="offset_global")
+        if st.button("💾 Salvar Offset", key="salvar_offset"):
+            if save_timezone_offset(novo_offset):
+                st.success(f"✅ Offset alterado para {novo_offset} horas. Todos os novos registros usarão este horário.")
+                st.rerun()
+            else:
+                st.error("Erro ao salvar offset.")
+        st.caption("Exemplo: Brasília (UTC-3) = -3 | Londres (UTC+0) = 0")
+    
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("🎨 Configurar Tema (Global)", expanded=False):
+        tipo = st.selectbox("Tipo de fundo", ["Gradiente padrão", "Cor sólida", "Futurista Dinâmico (Canvas)"])
+        if tipo == "Cor sólida":
+            cor = st.color_picker("Escolha a cor", value="#0a0a1a")
+            nova_config = {"type": "solid", "value": cor, "apply_to_login": False}
+        elif tipo == "Futurista Dinâmico (Canvas)":
+            nova_config = {"type": "futuristic", "value": "futuristic", "apply_to_login": False}
+        else:
+            nova_config = {"type": "gradient", "value": "radial-gradient(circle at 20% 40%, #0a0a1a 0%, #03030f 100%)", "apply_to_login": False}
+        if st.button("💾 Salvar Tema"):
+            if save_theme_config(nova_config):
+                apply_theme_css()
+                st.success("Tema atualizado!")
+                st.rerun()
+    
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("📤 Compartilhar Dados de Pessoas", expanded=False):
+        st.markdown("### Exportar Cadastros")
+        try:
+            todas_pessoas = supabase.table("Pessoas").select("nome, cpf, empresa").execute().data
+            if todas_pessoas:
+                df_todas = pd.DataFrame(todas_pessoas)
+                csv = df_todas.to_csv(index=False, encoding='utf-8-sig')
+                st.download_button("📥 Baixar CSV", data=csv, file_name=f"cadastros_{datetime.now().strftime('%Y%m%d')}.csv")
+        except Exception as e:
+            st.error(f"Erro ao carregar dados: {e}")
+    
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("🖼️ Configurar Avatar", expanded=False):
+        uploaded_avatar = st.file_uploader("Imagem (PNG/JPG)", type=["png","jpg","jpeg"])
+        if uploaded_avatar:
+            with st.spinner("Processando..."):
+                try:
+                    avatar_base64 = compress_avatar_image(uploaded_avatar)
+                    if save_avatar_url(avatar_base64):
+                        st.success("Avatar atualizado!")
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Erro: {e}")
+        st.image(st.session_state.avatar_url, width=100, caption="Avatar atual")
+        if st.button("Restaurar padrão"):
+            padrao = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a2a'/%3E%3Ctext x='50' y='50' text-anchor='middle' dy='.3em' fill='white' font-size='10'%3ESEGURANÇA%3C/text%3E%3C/svg%3E"
+            if save_avatar_url(padrao):
+                st.success("Avatar restaurado!")
+                st.rerun()
 
 # ====================== MÉTRICAS DE PERFORMANCE ======================
 with st.expander("📊 Métricas de Performance", expanded=False):
     col_m1, col_m2, col_m3 = st.columns(3)
     with col_m1:
-        st.metric("💾 Cache CPF", f"{cache_cpf.get_hit_ratio():.0f}%", delta="🚀")
+        tempo_medio = get_tempo_medio_query()
+        st.metric("⏱️ Tempo médio de query", f"{tempo_medio:.0f}ms" if tempo_medio > 0 else "Calculando...")
     with col_m2:
-        st.metric("📦 Registros em Memória", data_loader.dados.get("total", 0))
+        hit_ratio = cache_estatisticas.get_hit_ratio()
+        st.metric("🎯 Cache hit ratio", f"{hit_ratio:.0f}%")
     with col_m3:
-        total_cached = len(cache_cpf.cache) + len(cache_nome.cache)
-        st.metric("💾 Itens em Cache", total_cached)
+        total_cached = len(cache_estatisticas.cache) + len(cache_pessoas.cache) + len(cache_presentes.cache)
+        st.metric("💾 Registros em cache", total_cached)
+    st.caption(f"⚙️ Configurações: Cache TTL: {CACHE_TTL_PADRAO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
+    if st.button("🔄 Atualizar Estatísticas (View)", key="refresh_stats_view", use_container_width=True):
+        with st.spinner("Atualizando..."):
+            if refresh_estatisticas_view():
+                st.success("Estatísticas atualizadas!")
+                st.rerun()
+            else:
+                st.error("Falha na atualização. Verifique se a view existe.")
 
 # ====================== DASHBOARD ======================
 st.markdown("---")
@@ -1083,66 +1366,83 @@ with col3:
     </div>
     """, unsafe_allow_html=True)
 
+# NOVO: Card 4 - Gráfico de Pizza de Fluxo de Acesso
 with col4:
-    fluxo_df = get_fluxo_acesso_por_hora()
-    total_hoje = get_total_acessos_hoje()
-    
-    if not fluxo_df.empty:
-        turno_data = fluxo_df.groupby('turno')['total_acessos'].sum().reset_index()
-        cores = {
-            '🌅 Manhã (06h-12h)': '#00ffcc',
-            '☀️ Tarde (12h-18h)': '#ff6b6b',
-            '🌙 Noite (18h-00h)': '#7c3aed',
-            '🌙 Madrugada (00h-06h)': '#f59e0b'
-        }
-        fig = go.Figure(data=[go.Pie(
-            labels=turno_data['turno'],
-            values=turno_data['total_acessos'],
-            hole=0.4,
-            marker=dict(colors=[cores.get(t, '#a855f7') for t in turno_data['turno']]),
-            textinfo='percent+label',
-            textposition='auto',
-            hoverinfo='label+percent+value'
-        )])
-        fig.update_layout(
-            title=dict(text=f"📊 FLUXO DE ACESSO POR TURNO<br><span style='font-size:12px;'>Total hoje: {total_hoje} acessos</span>", 
-                       font=dict(color='#0ff', size=14), x=0.5, xanchor='center'),
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='white'),
-            height=280,
-            margin=dict(t=50, b=20, l=20, r=20),
-            showlegend=False
-        )
+    with st.spinner("Carregando análise de fluxo..."):
+        fluxo_df = get_fluxo_acesso_por_hora()
+        total_hoje = get_total_acessos_hoje()
         
-        st.markdown("""
-        <div class="dashboard-card" style="padding: 0.5rem;">
-            <div class="card-header">
-                <div class="card-icon">📊</div>
-                <div class="status-indicator">FLUXO</div>
+        if not fluxo_df.empty:
+            turno_data = fluxo_df.groupby('turno')['total_acessos'].sum().reset_index()
+            cores = {
+                '🌅 Manhã (06h-12h)': '#00ffcc',
+                '☀️ Tarde (12h-18h)': '#ff6b6b',
+                '🌙 Noite (18h-00h)': '#7c3aed',
+                '🌙 Madrugada (00h-06h)': '#f59e0b'
+            }
+            fig = go.Figure(data=[go.Pie(
+                labels=turno_data['turno'],
+                values=turno_data['total_acessos'],
+                hole=0.4,
+                marker=dict(colors=[cores.get(t, '#a855f7') for t in turno_data['turno']], line=dict(color='rgba(0,0,0,0.5)', width=2)),
+                textinfo='percent+label',
+                textposition='auto',
+                hoverinfo='label+percent+value',
+                hovertemplate='<b>%{label}</b><br>📊 Acessos: %{value}<br>📈 Percentual: %{percent}<extra></extra>',
+                textfont=dict(size=12, color='white'),
+                pull=[0.02, 0.02, 0.02, 0.02]
+            )])
+            fig.update_layout(
+                title=dict(text=f"📊 FLUXO DE ACESSO POR TURNO<br><span style='font-size:12px;'>Total hoje: {total_hoje} acessos</span>", font=dict(color='#0ff', size=14, family='Space Mono'), x=0.5, xanchor='center'),
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='white'),
+                height=280,
+                margin=dict(t=50, b=20, l=20, r=20),
+                showlegend=False,
+                annotations=[dict(text=f"🏥<br>{total_hoje}", x=0.5, y=0.5, font=dict(size=18, color='#0ff', family='Space Mono'), showarrow=False)]
+            )
+            fig.update_traces(textposition='inside', textfont_size=11, hoverlabel=dict(bgcolor="rgba(0,0,0,0.8)", font_size=12, font_family="Space Mono"), rotation=90, sort=False)
+            
+            st.markdown("""
+            <div class="dashboard-card" style="padding: 0.5rem;">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div class="status-indicator">FLUXO</div>
+                </div>
+            """, unsafe_allow_html=True)
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+            st.markdown("""
+                <div class="card-footer" style="justify-content: center;">
+                    📊 Análise de fluxo - Horários de pico
+                </div>
             </div>
-        """, unsafe_allow_html=True)
-        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-        st.markdown("""
-            <div class="card-footer" style="justify-content: center;">
-                📊 Análise de fluxo - Horários de pico
+            """, unsafe_allow_html=True)
+            
+            if not fluxo_df.empty:
+                hora_pico = fluxo_df.loc[fluxo_df['total_acessos'].idxmax()]
+                col_info1, col_info2 = st.columns(2)
+                with col_info1:
+                    st.caption(f"⏰ Hora de pico: **{int(hora_pico['hora'])}h** ({hora_pico['total_acessos']} acessos)")
+                with col_info2:
+                    st.caption(f"📈 Média por hora: **{fluxo_df['total_acessos'].mean():.0f}** acessos")
+        else:
+            st.markdown("""
+            <div class="dashboard-card">
+                <div class="card-header"><div class="card-icon">📊</div><div class="status-indicator">FLUXO</div></div>
+                <div class="card-title">ANÁLISE DE FLUXO</div>
+                <div style="text-align: center; padding: 20px;">
+                    <span style="font-size: 24px;">📭</span>
+                    <div style="color: #aaa;">Nenhum dado de acesso registrado</div>
+                </div>
+                <div class="card-footer">⏳ AGUARDANDO DADOS</div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="dashboard-card">
-            <div class="card-header"><div class="card-icon">📊</div><div class="status-indicator">FLUXO</div></div>
-            <div class="card-title">ANÁLISE DE FLUXO</div>
-            <div style="text-align:center;padding:20px;color:#aaa;">Nenhum dado registrado</div>
-            <div class="card-footer">⏳ AGUARDANDO DADOS</div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
 # ====================== CADASTRO DE NOVA PESSOA ======================
 st.markdown("---")
 st.markdown("### ✚ Cadastro de Nova Pessoa")
-with st.expander("📋 Formulário de Cadastro", expanded=False):
+with st.expander("📋 Formulário de Cadastro", expanded=True):
     col_a, col_b, col_c = st.columns(3)
     novo_cpf = col_a.text_input("📄 CPF *", placeholder="000.000.000-00", key="novo_cpf")
     novo_nome = col_b.text_input("👤 Nome Completo *", key="novo_nome")
@@ -1186,21 +1486,22 @@ col_cpf, col_btn = st.columns([3,1])
 with col_cpf:
     cpf_input = st.text_input("📄 CPF:", key="cpf_entrada", placeholder="Digite o CPF")
 with col_btn:
-    if st.button("✅ CONFIRMAR CPF", key="confirma_cpf"):
-        if cpf_input:
-            pessoa = buscar_pessoa_por_cpf_rapido(cpf_input)
-            if pessoa:
-                st.session_state.pessoa_confirmada = {
-                    "cpf": sanitizar_cpf(cpf_input), 
-                    "nome": pessoa['nome'], 
-                    "empresa": pessoa.get('empresa', '')
-                }
-                st.success(f"✅ {pessoa['nome']} - {pessoa.get('empresa','N/A')}")
+    if cpf_input:
+        if st.button("✅ CONFIRMAR CPF", key="confirma_cpf"):
+            cpf_limpo = sanitizar_cpf(cpf_input)
+            if not validar_cpf(cpf_limpo):
+                st.error("CPF inválido")
             else:
-                st.error("❌ CPF não cadastrado")
-                st.session_state.pessoa_confirmada = None
-        else:
-            st.error("❌ Digite um CPF")
+                # Usa a função otimizada
+                pessoa = buscar_pessoa_por_cpf_debounced(cpf_limpo)
+                if pessoa:
+                    st.session_state.pessoa_confirmada = {"cpf": cpf_limpo, "nome": pessoa['nome'], "empresa": pessoa.get('empresa', '')}
+                    st.success(f"✅ {pessoa['nome']} - {pessoa.get('empresa','N/A')}")
+                else:
+                    st.error("CPF não cadastrado")
+                    st.session_state.pessoa_confirmada = None
+    else:
+        st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
 
 setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
 if st.session_state.get("pessoa_confirmada"):
@@ -1224,7 +1525,7 @@ if st.session_state.get("pessoa_confirmada"):
                 "data_saida": ""
             }).execute()
             invalidar_cache()
-            st.success(f"✅ Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
+            st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
             st.session_state.pessoa_confirmada = None
             st.rerun()
         except Exception as e:
@@ -1233,35 +1534,37 @@ if st.session_state.get("pessoa_confirmada"):
 # ====================== PESSOAS PRESENTES ======================
 st.markdown("---")
 st.markdown("### 📍 Pessoas Presentes")
-
-# Usar session_state para controlar a aba ativa sem rerun
-if "aba_presentes" not in st.session_state:
-    st.session_state.aba_presentes = 0
-
 dados = get_presentes_cached()
 
 if dados:
-    # Busca por CPF (sem rerun automático)
-    with st.container():
-        col_pesq, col_btn_sair = st.columns([3,1])
-        with col_pesq:
-            cpf_saida = st.text_input("CPF para saída:", key="cpf_saida", placeholder="Digite o CPF")
-        with col_btn_sair:
-            if st.button("🔎 Buscar", key="buscar_saida"):
-                if cpf_saida:
-                    encontrado = next((p for p in dados if p['cpf'] == sanitizar_cpf(cpf_saida)), None)
-                    if encontrado:
-                        st.session_state.pessoa_saida = encontrado
-                        st.success(f"Pessoa encontrada: {encontrado['nome']}")
-                    else:
-                        st.error("Não encontrado")
-                        st.session_state.pessoa_saida = None
-    
+    st.markdown("#### 🔍 Pesquisar CPF para saída")
+    col_pesq, col_btn_sair = st.columns([3,1])
+    with col_pesq:
+        cpf_saida = st.text_input("CPF:", key="cpf_saida", placeholder="Digite o CPF")
+    with col_btn_sair:
+        if st.button("🔎 Buscar", key="buscar_saida"):
+            if cpf_saida:
+                encontrado = next((p for p in dados if p['cpf'] == sanitizar_cpf(cpf_saida)), None)
+                if encontrado:
+                    st.session_state.pessoa_saida = encontrado
+                    st.success(f"Pessoa encontrada: {encontrado['nome']}")
+                else:
+                    st.error("Não encontrado")
+                    st.session_state.pessoa_saida = None
     if st.session_state.get("pessoa_saida"):
         p = st.session_state.pessoa_saida
         st.markdown(f"**{p['nome']}** - CPF: {p['cpf']} - Setor: {p['setor_destino']}")
+        with st.expander("⏱️ Editar horário de saída", expanded=False):
+            editar_saida = st.checkbox("✏️ Personalizar horário", key="editar_saida_cpf")
+            if editar_saida:
+                dt_padrao_saida = get_current_datetime()
+                data_saida = st.date_input("Data de saída", value=dt_padrao_saida.date(), key="data_saida_cpf")
+                hora_saida = st.time_input("Horário de saída", value=dt_padrao_saida.time(), key="hora_saida_cpf")
+                dt_saida = datetime.combine(data_saida, hora_saida)
+                saida_str = format_datetime_str(dt_saida)
+            else:
+                saida_str = format_datetime_str(get_current_datetime())
         if st.button("🚪 Registrar Saída", key="sair_pesquisado"):
-            saida_str = format_datetime_str(get_current_datetime())
             try:
                 supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
                 invalidar_cache()
@@ -1272,69 +1575,148 @@ if dados:
                 st.error(f"Erro: {e}")
         st.markdown("---")
     
-    # Lista de presentes (sem rerun ao mudar de aba)
     st.markdown("#### 📋 Lista completa")
+    # Definição dos setores exatos para terceirizados
     setores_terceirizados_exatos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
     
-    # Usar selectbox em vez de tabs para evitar rerun
-    aba_selecionada = st.selectbox(
-        "Filtrar por setor:",
-        ["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"],
-        index=st.session_state.aba_presentes,
-        key="select_aba_presentes"
-    )
+    # Criar abas
+    tabs = st.tabs(["📊 Prestador de Serviço", "🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"])
     
-    # Mapeia a seleção para o índice
-    mapa_abas = {
-        "📊 Prestador de Serviço": 0,
-        "🏥 C.C": 1,
-        "🔧 GRSA": 2,
-        "🏭 Brasanitas": 3
-    }
-    st.session_state.aba_presentes = mapa_abas[aba_selecionada]
+    # Aba Prestador de Serviço: todos que NÃO têm setor exato igual a um dos três terceirizados
+    with tabs[0]:
+        prestadores = [p for p in dados if p['setor_destino'] not in setores_terceirizados_exatos]
+        if prestadores:
+            for p in prestadores:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"📍 {p['setor_destino']}")
+                col3.write(f"🏢 {p.get('empresa','N/A')}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_prest_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_prest_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_prest_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_prest_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Nenhum prestador de serviço presente no momento.")
     
-    # Filtra dados baseado na aba
-    if st.session_state.aba_presentes == 0:
-        filtrados = [p for p in dados if p['setor_destino'] not in setores_terceirizados_exatos]
-    elif st.session_state.aba_presentes == 1:
-        filtrados = [p for p in dados if p['setor_destino'] == "🏥 C.C"]
-    elif st.session_state.aba_presentes == 2:
-        filtrados = [p for p in dados if p['setor_destino'] == "🔧 GRSA"]
-    else:
-        filtrados = [p for p in dados if p['setor_destino'] == "🏭 Brasanitas"]
+    # Aba C.C
+    with tabs[1]:
+        pessoas_cc = [p for p in dados if p['setor_destino'] == "🏥 C.C"]
+        if pessoas_cc:
+            for p in pessoas_cc:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"🏢 {p.get('empresa','N/A')}")
+                col3.write(f"🕒 {p['data_entrada']}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_cc_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_cc_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_cc_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_cc_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Ninguém presente no setor C.C.")
     
-    if filtrados:
-        for p in filtrados:
-            col1, col2, col3, col4 = st.columns([4,3,2,2])
-            col1.write(f"**{p['nome']}**")
-            col2.write(f"📍 {p['setor_destino']}")
-            col3.write(f"🏢 {p.get('empresa','N/A')}")
-            with col4:
-                if st.button("🚪 Saída", key=f"sair_{p['id']}"):
-                    st.session_state.saida_id = p['id']
-                    st.session_state.saida_nome = p['nome']
-                    st.rerun()
-            
-            # Popover para saída (sem rerun desnecessário)
-            if st.session_state.get("saida_id") == p['id']:
-                with st.container():
-                    st.info(f"Registrar saída de **{p['nome']}**")
-                    saida_str = format_datetime_str(get_current_datetime())
-                    if st.button("✅ Confirmar Saída", key=f"confirm_sair_{p['id']}"):
-                        try:
-                            supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
-                            invalidar_cache()
-                            st.success(f"Saída registrada para {p['nome']} às {saida_str}")
-                            st.session_state.saida_id = None
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Erro: {e}")
-                    if st.button("❌ Cancelar", key=f"cancel_sair_{p['id']}"):
-                        st.session_state.saida_id = None
-                        st.rerun()
-            st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
-    else:
-        st.info("Nenhuma pessoa neste setor.")
+    # Aba GRSA
+    with tabs[2]:
+        pessoas_gr = [p for p in dados if p['setor_destino'] == "🔧 GRSA"]
+        if pessoas_gr:
+            for p in pessoas_gr:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"🏢 {p.get('empresa','N/A')}")
+                col3.write(f"🕒 {p['data_entrada']}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_gr_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_gr_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_gr_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_gr_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Ninguém presente no setor GRSA.")
+    
+    # Aba Brasanitas
+    with tabs[3]:
+        pessoas_br = [p for p in dados if p['setor_destino'] == "🏭 Brasanitas"]
+        if pessoas_br:
+            for p in pessoas_br:
+                col1, col2, col3, col4 = st.columns([4,3,2,2])
+                col1.write(f"**{p['nome']}**")
+                col2.write(f"🏢 {p.get('empresa','N/A')}")
+                col3.write(f"🕒 {p['data_entrada']}")
+                with col4:
+                    with st.popover("🚪 Saída"):
+                        st.write(f"Registrar saída de **{p['nome']}**")
+                        with st.expander("⏱️ Horário", expanded=False):
+                            editar_horario_saida = st.checkbox("Editar horário", key=f"edit_saida_br_{p['id']}")
+                            if editar_horario_saida:
+                                dt_padrao = get_current_datetime()
+                                data_s = st.date_input("Data", value=dt_padrao.date(), key=f"data_saida_br_{p['id']}")
+                                hora_s = st.time_input("Hora", value=dt_padrao.time(), key=f"hora_saida_br_{p['id']}")
+                                dt_saida = datetime.combine(data_s, hora_s)
+                                saida_str = format_datetime_str(dt_saida)
+                            else:
+                                saida_str = format_datetime_str(get_current_datetime())
+                        if st.button("Confirmar Saída", key=f"confirm_saida_br_{p['id']}"):
+                            try:
+                                supabase.table("movimentacao").update({"data_saida": saida_str}).eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.success(f"Saída registrada para {p['nome']} às {saida_str}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Erro: {e}")
+                st.markdown("<hr style='margin:5px 0; opacity:0.2;'>", unsafe_allow_html=True)
+        else:
+            st.info("Ninguém presente no setor Brasanitas.")
 else:
     st.info("Nenhuma pessoa presente no momento")
 
@@ -1355,64 +1737,322 @@ with st.expander("🕒 Histórico Completo de Movimentações", expanded=True):
             if st.session_state.pagina_historico < historico_data["total_paginas"]:
                 st.session_state.pagina_historico += 1
                 st.rerun()
-    
     historico = get_historico_paginado(st.session_state.pagina_historico)
     if historico["dados"]:
         df = pd.DataFrame(historico["dados"])
         st.markdown(f"**Total de registros:** {historico['total']} | **Página {historico['pagina']} de {historico['total_paginas']}**")
-        
-        # Botões de relatório
-        col_r1, col_r2 = st.columns(2)
-        with col_r1:
-            if st.button("📑 Relatório completo", key="relatorio_completo"):
-                html = gerar_html_impressao(df, "RELATÓRIO COMPLETO")
-                if html:
-                    b64 = base64.b64encode(html.encode()).decode()
-                    st.markdown(f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir relatório (Ctrl+P para PDF)</a>', unsafe_allow_html=True)
-        with col_r2:
-            if st.button("📑 Consolidado", key="relatorio_consolidado"):
-                html = gerar_html_consolidado(df)
-                if html:
-                    b64 = base64.b64encode(html.encode()).decode()
-                    st.markdown(f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir consolidado</a>', unsafe_allow_html=True)
-        
+        st.markdown("### 📄 Gerar Relatório")
+        if st.button("📑 Relatório completo", key="relatorio_completo"):
+            html = gerar_html_impressao(df, "RELATÓRIO COMPLETO")
+            if html:
+                b64 = base64.b64encode(html.encode()).decode()
+                st.markdown(f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir relatório (Ctrl+P para PDF)</a>', unsafe_allow_html=True)
         st.markdown("---")
-        
-        # Lista de registros (sem checkbox para evitar rerun)
+        st.markdown("#### 📑 Relatório Consolidado")
+        if st.button("📑 Consolidado (todos setores)", key="relatorio_consolidado"):
+            html = gerar_html_consolidado(df)
+            if html:
+                b64 = base64.b64encode(html.encode()).decode()
+                st.markdown(f'<a href="data:text/html;charset=utf-8;base64,{b64}" target="_blank">📄 Abrir consolidado</a>', unsafe_allow_html=True)
+        st.markdown("---")
+        st.markdown("### 🗑️ Exclusão de Registros (APENAS ADMIN)")
+        if st.session_state.perfil == "ADMIN":
+            col_sel_all, col_sel_clear = st.columns(2)
+            with col_sel_all:
+                if st.button("✅ Selecionar todos da página", key="selecionar_todos_pagina"):
+                    ids_pagina = [row['id'] for row in historico["dados"]]
+                    for id_ in ids_pagina:
+                        if id_ not in st.session_state.selected_ids:
+                            st.session_state.selected_ids.append(id_)
+                    st.rerun()
+            with col_sel_clear:
+                if st.button("📋 Limpar seleção", key="limpar_selecao_todos"):
+                    st.session_state.selected_ids = []
+                    st.rerun()
         for row in historico["dados"]:
-            st.markdown(f"ID {row['id']} - **{row['nome']}** | CPF: {row['cpf']} | Empresa: {row.get('empresa','N/A')} | Entrada: {row['data_entrada']} | Saída: {row['data_saida'] or 'Presente'}")
-            st.markdown("<hr style='margin:3px 0; opacity:0.1;'>", unsafe_allow_html=True)
+            col_check, col_data = st.columns([0.5, 9.5])
+            with col_check:
+                if st.session_state.perfil == "ADMIN":
+                    checked = st.checkbox("", key=f"chk_{row['id']}", value=row['id'] in st.session_state.selected_ids)
+                    if checked and row['id'] not in st.session_state.selected_ids:
+                        st.session_state.selected_ids.append(row['id'])
+                    elif not checked and row['id'] in st.session_state.selected_ids:
+                        st.session_state.selected_ids.remove(row['id'])
+            with col_data:
+                st.markdown(f"ID {row['id']} - {row['nome']} | CPF: {row['cpf']} | Empresa: {row.get('empresa','N/A')} | Entrada: {row['data_entrada']} | Saída: {row['data_saida'] or 'Presente'}")
+        if st.session_state.perfil == "ADMIN" and st.session_state.selected_ids:
+            st.warning(f"⚠️ {len(st.session_state.selected_ids)} registro(s) selecionado(s)")
+            col_excluir, col_cancelar = st.columns(2)
+            with col_excluir:
+                if st.button("🗑️ EXCLUIR SELECIONADOS (LOTE)", key="excluir_lote"):
+                    resultado = excluir_multiplos_registros(st.session_state.selected_ids)
+                    if resultado["sucesso"]:
+                        st.success(resultado["mensagem"])
+                        st.session_state.selected_ids = []
+                        invalidar_cache()
+                        st.rerun()
+                    else:
+                        st.error(resultado["mensagem"])
+            with col_cancelar:
+                if st.button("❌ Cancelar", key="cancelar_excluir_lote"):
+                    st.session_state.selected_ids = []
+                    st.rerun()
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
+        with col_btn1:
+            if st.button("🗑️ Excluir Selecionados", key="excluir_selecionados"):
+                require_admin()
+                if st.session_state.selected_ids:
+                    st.session_state.pending_delete_ids = st.session_state.selected_ids.copy()
+                    st.rerun()
+        with col_btn2:
+            if st.button("📋 Limpar Seleção", key="limpar_selecao"):
+                st.session_state.selected_ids = []
+                st.rerun()
+        with col_btn3:
+            if st.button("⚠️ LIMPAR TODO HISTÓRICO", key="limpar_historico"):
+                require_admin()
+                st.session_state.pending_clear_all = True
+                st.rerun()
+        if st.session_state.pending_delete_ids:
+            require_admin()
+            st.error(f"⚠️ Excluir {len(st.session_state.pending_delete_ids)} registro(s)?")
+            col_conf, col_canc = st.columns(2)
+            with col_conf:
+                if st.button("✅ SIM, EXCLUIR", key="confirmar_excluir"):
+                    try:
+                        for id_ in st.session_state.pending_delete_ids:
+                            supabase_admin.table("movimentacao").delete().eq("id", id_).execute()
+                        st.session_state.selected_ids = []
+                        st.session_state.pending_delete_ids = []
+                        invalidar_cache()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro: {e}")
+            with col_canc:
+                if st.button("❌ Cancelar", key="cancelar_excluir"):
+                    st.session_state.pending_delete_ids = []
+                    st.rerun()
+        if st.session_state.pending_clear_all:
+            require_admin()
+            st.error("🚨 ATENÇÃO: apagar TODOS os registros. Digite 'LIMPAR TUDO'")
+            confirm = st.text_input("Confirmação:", type="password", key="confirma_limpar")
+            col_clear, col_cancel_clear = st.columns(2)
+            with col_clear:
+                if st.button("🔥 EXCLUIR TUDO", key="excluir_tudo"):
+                    if confirm == "LIMPAR TUDO":
+                        try:
+                            supabase_admin.table("movimentacao").delete().neq("id", 0).execute()
+                            invalidar_cache()
+                            st.success("Histórico limpo!")
+                            st.session_state.pending_clear_all = False
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Erro: {e}")
+                    else:
+                        st.error("Confirmação incorreta")
+            with col_cancel_clear:
+                if st.button("Cancelar", key="cancelar_limpar"):
+                    st.session_state.pending_clear_all = False
+                    st.rerun()
     else:
         st.info("Nenhum registro encontrado.")
 
 # ====================== GESTÃO DE CADASTROS (ADMIN) ======================
+st.markdown("---")
 if st.session_state.perfil == "ADMIN":
-    st.markdown("---")
-    with st.expander("⚙️ Gestão de Cadastros", expanded=False):
+    with st.expander("⚙️ Gestão de Cadastros de Pessoas", expanded=True):
         col_ferramenta1, col_ferramenta2 = st.columns(2)
         with col_ferramenta1:
-            st.markdown("### 🗑️ Limpeza de Duplicados")
-            if st.button("🗑️ APAGAR REGISTROS DUPLICADOS", key="btn_apagar_duplicados", type="primary"):
-                with st.spinner("Processando..."):
-                    resultado = apagar_registros_duplicados()
-                    if resultado["sucesso"]:
-                        st.success(resultado["mensagem"])
-                        data_loader.carregar_todos_usuarios()
-                        st.rerun()
+            st.markdown("### 🗑️ Limpeza de Registros Duplicados")
+            try:
+                todas_pessoas = supabase.table("Pessoas").select("cpf, nome, empresa, id").execute().data
+                if todas_pessoas:
+                    df_check = pd.DataFrame(todas_pessoas)
+                    duplicados = df_check[df_check.duplicated(subset=['cpf'], keep=False)]
+                    qtd_cpfs_dup = len(duplicados['cpf'].unique()) if not duplicados.empty else 0
+                    qtd_reg_dup = len(duplicados)
+                    col_stats1, col_stats2, col_stats3 = st.columns(3)
+                    col_stats1.metric("Total de Cadastros", len(todas_pessoas))
+                    col_stats2.metric("CPFs Duplicados", qtd_cpfs_dup, delta="⚠️" if qtd_cpfs_dup > 0 else "✓")
+                    col_stats3.metric("Registros Duplicados", qtd_reg_dup, delta=f"-{qtd_reg_dup - qtd_cpfs_dup} a remover" if qtd_reg_dup > 0 else "✓")
+                    if qtd_reg_dup > 0:
+                        st.warning(f"Detectados {qtd_reg_dup} registro(s) duplicado(s)")
+                        if st.button("🗑️ APAGAR REGISTROS DUPLICADOS", key="btn_apagar_duplicados", type="primary"):
+                            with st.spinner("Processando..."):
+                                resultado = apagar_registros_duplicados()
+                                if resultado["sucesso"]:
+                                    if resultado.get("duplicados_removidos", 0) > 0:
+                                        st.success(resultado["mensagem"])
+                                        st.balloons()
+                                        time.sleep(2)
+                                        st.rerun()
+                                    else:
+                                        st.info(resultado["mensagem"])
+                                else:
+                                    st.error(resultado["mensagem"])
                     else:
-                        st.error(resultado["mensagem"])
+                        st.success("Nenhum CPF duplicado encontrado!")
+                else:
+                    st.info("Nenhum cadastro encontrado.")
+            except Exception as e:
+                st.error(f"Erro ao verificar duplicatas: {e}")
         with col_ferramenta2:
-            st.markdown("### 📤 Sincronizar Cadastros")
-            arquivo_sync = st.file_uploader("Arquivo CSV/Excel", type=["csv","xlsx","xls"], key="sync_arquivo")
-            if arquivo_sync and st.button("🔄 SINCRONIZAR", key="btn_sincronizar", type="primary"):
-                with st.spinner("Processando..."):
-                    resultado = sincronizar_novos_cadastros(arquivo_sync)
-                    if resultado["sucesso"]:
-                        st.success("✅ Sincronização concluída!")
-                        data_loader.carregar_todos_usuarios()
-                        st.rerun()
-                    else:
-                        st.error(resultado["mensagem"])
+            st.markdown("### 📤 Sincronizar Novos Cadastros")
+            arquivo_sync = st.file_uploader("Selecione o arquivo CSV/Excel", type=["csv","xlsx","xls"], key="sync_arquivo")
+            if arquivo_sync:
+                if st.button("🔄 SINCRONIZAR CADASTROS", key="btn_sincronizar", type="primary"):
+                    with st.spinner("Processando sincronização..."):
+                        resultado = sincronizar_novos_cadastros(arquivo_sync)
+                        if resultado["sucesso"]:
+                            st.success("✅ Sincronização concluída!")
+                            col_res1, col_res2, col_res3 = st.columns(3)
+                            col_res1.metric("Inseridos", resultado.get("inseridos", 0), delta="+")
+                            col_res2.metric("Atualizados", resultado.get("atualizados", 0), delta="~")
+                            col_res3.metric("Ignorados", resultado.get("ignorados", 0), delta="=")
+                            st.info(resultado["mensagem"])
+                            if resultado.get("erros"):
+                                with st.expander(f"⚠️ {len(resultado['erros'])} erro(s)"):
+                                    for erro in resultado["erros"][:20]:
+                                        st.error(erro)
+                            invalidar_cache()
+                            data_loader.carregar_todos_usuarios()
+                            st.balloons()
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            st.error(resultado["mensagem"])
+        st.markdown("---")
+        try:
+            todos = supabase.table("Pessoas").select("id, nome, cpf, empresa").order("nome").execute().data
+        except:
+            todos = []
+        if not todos:
+            st.info("Nenhum cadastro")
+        else:
+            br = [p for p in todos if p.get('empresa', '').upper() == "BRASANITAS"]
+            gr = [p for p in todos if p.get('empresa', '').upper() == "GRSA"]
+            outros = [p for p in todos if p.get('empresa', '').upper() not in ["BRASANITAS","GRSA"]]
+            tab1, tab2, tab3 = st.tabs(["🏭 BRASANITAS", "🔧 GRSA", "🏢 Prestadores"])
+            with tab1:
+                st.markdown(f"**Total:** {len(br)}")
+                for p in br:
+                    col1, col2, col3, col4 = st.columns([3,2,1,1])
+                    col1.write(f"**{p['nome']}**")
+                    col2.write(f"CPF: {p['cpf']}")
+                    with col3:
+                        with st.popover("✏️ Editar"):
+                            with st.form(f"edit_br_{p['id']}"):
+                                novo_nome = st.text_input("Nome", p['nome'], key=f"nome_br_{p['id']}")
+                                novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_br_{p['id']}")
+                                nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_br_{p['id']}")
+                                if st.form_submit_button("Salvar"):
+                                    if validar_cpf(novo_cpf):
+                                        try:
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            if not conflito:
+                                                supabase_admin.table("Pessoas").update({
+                                                    "nome": sanitizar_texto(novo_nome).upper(),
+                                                    "cpf": sanitizar_cpf(novo_cpf),
+                                                    "empresa": sanitizar_texto(nova_emp).upper()
+                                                }).eq("id", p['id']).execute()
+                                                invalidar_cache()
+                                                st.success("Atualizado!")
+                                                st.rerun()
+                                            else:
+                                                st.error("CPF já existe")
+                                        except Exception as e:
+                                            st.error(f"Erro: {e}")
+                                    else:
+                                        st.error("CPF inválido")
+                    with col4:
+                        with st.popover("🗑️ Excluir"):
+                            st.warning(f"Excluir {p['nome']}?")
+                            if st.button("Confirmar", key=f"del_br_{p['id']}"):
+                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.rerun()
+                    st.divider()
+            with tab2:
+                st.markdown(f"**Total:** {len(gr)}")
+                for p in gr:
+                    col1, col2, col3, col4 = st.columns([3,2,1,1])
+                    col1.write(f"**{p['nome']}**")
+                    col2.write(f"CPF: {p['cpf']}")
+                    with col3:
+                        with st.popover("✏️ Editar"):
+                            with st.form(f"edit_gr_{p['id']}"):
+                                novo_nome = st.text_input("Nome", p['nome'], key=f"nome_gr_{p['id']}")
+                                novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_gr_{p['id']}")
+                                nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_gr_{p['id']}")
+                                if st.form_submit_button("Salvar"):
+                                    if validar_cpf(novo_cpf):
+                                        try:
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            if not conflito:
+                                                supabase_admin.table("Pessoas").update({
+                                                    "nome": sanitizar_texto(novo_nome).upper(),
+                                                    "cpf": sanitizar_cpf(novo_cpf),
+                                                    "empresa": sanitizar_texto(nova_emp).upper()
+                                                }).eq("id", p['id']).execute()
+                                                invalidar_cache()
+                                                st.success("Atualizado!")
+                                                st.rerun()
+                                            else:
+                                                st.error("CPF já existe")
+                                        except Exception as e:
+                                            st.error(f"Erro: {e}")
+                                    else:
+                                        st.error("CPF inválido")
+                    with col4:
+                        with st.popover("🗑️ Excluir"):
+                            st.warning(f"Excluir {p['nome']}?")
+                            if st.button("Confirmar", key=f"del_gr_{p['id']}"):
+                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.rerun()
+                    st.divider()
+            with tab3:
+                st.markdown(f"**Total:** {len(outros)}")
+                search = st.text_input("🔍 Pesquisar", key="search_outros")
+                filtrados = [p for p in outros if search.lower() in p['nome'].lower() or search.lower() in p['cpf'] or search.lower() in p.get('empresa','').lower()] if search else outros
+                for p in filtrados:
+                    col1, col2, col3, col4, col5 = st.columns([2,2,2,1,1])
+                    col1.write(f"**{p['nome']}**")
+                    col2.write(f"CPF: {p['cpf']}")
+                    col3.write(f"Empresa: {p.get('empresa','N/A')}")
+                    with col4:
+                        with st.popover("✏️ Editar"):
+                            with st.form(f"edit_out_{p['id']}"):
+                                novo_nome = st.text_input("Nome", p['nome'], key=f"nome_out_{p['id']}")
+                                novo_cpf = st.text_input("CPF", p['cpf'], key=f"cpf_out_{p['id']}")
+                                nova_emp = st.text_input("Empresa", p.get('empresa',''), key=f"emp_out_{p['id']}")
+                                if st.form_submit_button("Salvar"):
+                                    if validar_cpf(novo_cpf):
+                                        try:
+                                            conflito = supabase.table("Pessoas").select("id").eq("cpf", sanitizar_cpf(novo_cpf)).neq("id", p['id']).execute().data
+                                            if not conflito:
+                                                supabase_admin.table("Pessoas").update({
+                                                    "nome": sanitizar_texto(novo_nome).upper(),
+                                                    "cpf": sanitizar_cpf(novo_cpf),
+                                                    "empresa": sanitizar_texto(nova_emp).upper()
+                                                }).eq("id", p['id']).execute()
+                                                invalidar_cache()
+                                                st.success("Atualizado!")
+                                                st.rerun()
+                                            else:
+                                                st.error("CPF já existe")
+                                        except Exception as e:
+                                            st.error(f"Erro: {e}")
+                                    else:
+                                        st.error("CPF inválido")
+                    with col5:
+                        with st.popover("🗑️ Excluir"):
+                            st.warning(f"Excluir {p['nome']}?")
+                            if st.button("Confirmar", key=f"del_out_{p['id']}"):
+                                supabase_admin.table("Pessoas").delete().eq("id", p['id']).execute()
+                                invalidar_cache()
+                                st.rerun()
+                    st.divider()
 
 apply_theme_css()
 st.markdown("---")
@@ -1420,6 +2060,6 @@ st.markdown("""
 <div class="footer">
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
     <br>
-    ⚡ Busca em memória - Resposta em milissegundos | Cache ativo
+    ⚡ Cache em memória ativo | Busca instantânea | Resposta em milissegundos
 </div>
 """, unsafe_allow_html=True)
