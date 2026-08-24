@@ -1491,7 +1491,7 @@ st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados / Instrumentadores"], horizontal=True, key="tipo_pessoa")
 if tipo == "🏢 Prestador de serviços":
-    destinos = ["🏥 C.C PRESTADOR DE SERVIÇOS", "🥼 HEPIDEMIOLOGIA", "👨🏻‍💻 T.I", "🧺LAVANDERIA", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "👨‍🔬 Laboratório", "💊 Farmacia", "🏥 P.A", "👶 PEDIATRIA P.A", "⚙️ ENG.CLINICA", "🧹 HORTELARIA", "📦 OPME 6°AND", "📦 OPME 9°AND", "🔒 SSGA", "🏥 CDU", "⚕️ ONCOLOGIA", "🛠️ PREST_BRASANITAS ", "🛠️ PREST_GRSA"]
+    destinos = ["🏥 C.C PRESTADOR DE SERVIÇOS", "🥼 HEPIDEMIOLOGIA", "👨🏻‍💻 T.I", "🧺LAVANDERIA", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "👨‍🔬 Laboratório", "💊 Farmacia", "🏥 P.A", "👶 PEDIATRIA P.A", "⚙️ ENG.CLINICA", "🧹 HOTELARIA", "📦 OPME 6°AND", "📦 OPME 9°AND", "🔒 SSGA", "🏥 CDU", "⚕️ ONCOLOGIA", "🛠️ PREST_BRASANITAS ", "🛠️ PREST_GRSA"]
 else:
     destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
