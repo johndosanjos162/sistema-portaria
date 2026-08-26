@@ -25,16 +25,17 @@ CACHE_TTL_PADRAO = 43200
 ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
 
-# ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO 4.0) ======================
+# ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO 5.0) ======================
 class IAEngine:
     """
-    Motor Autônomo com auto-otimização, detecção de anomalias e aprendizado contínuo.
+    Motor Autônomo com auto-otimização, detecção de anomalias, aprendizado contínuo,
+    criação dinâmica de ferramentas, previsão de tendências e categorização de memórias.
     """
     def __init__(self):
         # Inicializa o estado (mantido no session_state)
         if "ia_engine" not in st.session_state:
             st.session_state.ia_engine = {
-                "versao": "4.0.0",
+                "versao": "5.0.0",
                 "inicio": datetime.now().isoformat(),
                 "ultima_atualizacao": datetime.now().isoformat(),
                 "ciclos": 0,
@@ -53,6 +54,7 @@ class IAEngine:
                 "patches": [],
                 "sugestoes_db": [],
                 "anomalias": [],
+                "predicao": {},
                 "agentes": {
                     "observability": {"ultima_coleta": datetime.now().isoformat()},
                     "memory": {},
@@ -64,7 +66,7 @@ class IAEngine:
         self.estado = st.session_state.ia_engine
         self.versao = self.estado["versao"]
         self.inicio = datetime.fromisoformat(self.estado["inicio"])
-        self._ultima_execucao = 0  # para controle de frequência
+        self._ultima_execucao = 0
 
     # ------------------- MÉTRICAS E REGISTROS -------------------
     def registrar_metrica(self, nome, valor):
@@ -120,10 +122,23 @@ class IAEngine:
         # 4. Detecção de anomalias (comportamento suspeito)
         self._detectar_anomalias()
 
-        # 5. Sugestões de banco de dados (índices)
+        # 5. Criação de ferramentas dinâmicas para cada anomalia detectada
+        for anom in self.estado.get("anomalias", []):
+            if anom.get("severidade") in ("ALTA", "MÉDIA"):
+                self._criar_ferramenta_para_anomalia(anom)
+
+        # 6. Previsão de tendências (a cada 2 ciclos)
+        if self.estado["ciclos"] % 2 == 0:
+            self._prever_tendencias()
+
+        # 7. Categorização de memórias (a cada 5 ciclos)
+        if self.estado["ciclos"] % 5 == 0:
+            self._categorizar_memorias()
+
+        # 8. Sugestões de banco de dados (índices)
         self._sugerir_indices(tempo_medio, hit_ratio)
 
-        # 6. Auto-patch (simulação de correção)
+        # 9. Auto-patch (simulação de correção)
         if self.estado["ciclos"] % 3 == 0:
             patch = {
                 "id": str(uuid.uuid4())[:8],
@@ -133,9 +148,9 @@ class IAEngine:
                 "aplicado": True
             }
             self.estado["patches"].append(patch)
-            self.estado["versao"] = f"4.0.{len(self.estado['patches'])}"
+            self.estado["versao"] = f"5.0.{len(self.estado['patches'])}"
 
-        # 7. Atualiza timestamp
+        # 10. Atualiza timestamp
         self.estado["ultima_atualizacao"] = datetime.now().isoformat()
         self.estado["agentes"]["observability"]["ultima_coleta"] = datetime.now().isoformat()
 
@@ -150,7 +165,6 @@ class IAEngine:
         ]
         for nome, cache_obj, ttl_min, ttl_max in caches:
             ttl_atual = cache_obj.ttl_seconds
-            # Decisão baseada em hit_ratio e tempo médio
             if hit_ratio > 85 and tempo_medio < 200:
                 novo_ttl = min(int(ttl_atual * 1.2), ttl_max)
             elif hit_ratio < 60 or tempo_medio > 500:
@@ -158,7 +172,7 @@ class IAEngine:
             elif hit_ratio < 75:
                 novo_ttl = max(int(ttl_atual * 0.9), ttl_min)
             else:
-                novo_ttl = ttl_atual  # mantém
+                novo_ttl = ttl_atual
 
             if novo_ttl != ttl_atual:
                 cache_obj.ttl_seconds = novo_ttl
@@ -171,9 +185,7 @@ class IAEngine:
     # ------------------- GERAÇÃO DE MEMÓRIAS -------------------
     def _gerar_memorias(self, tempo_medio, hit_ratio):
         """Cria memórias sintéticas para aumentar o número ativo."""
-        # Se houver poucas memórias, gera uma baseada em dados reais
         if len(self.estado["memorias"]) < 50:
-            # Memória sobre pico de acesso
             fluxo = get_fluxo_acesso_por_hora()
             if fluxo is not None and not fluxo.empty:
                 hora_pico = fluxo.loc[fluxo['total_acessos'].idxmax()]['hora']
@@ -182,14 +194,12 @@ class IAEngine:
                     f"Pico de acesso detectado às {int(hora_pico)}h. Reforçar monitoramento.",
                     relevancia=0.7
                 )
-            # Memória sobre performance
             if tempo_medio > 300:
                 self.registrar_memoria(
                     "performance",
                     f"Tempo de query elevado ({tempo_medio:.0f}ms). Considere os índices sugeridos.",
                     relevancia=0.8
                 )
-            # Memória sobre cache
             if hit_ratio < 60:
                 self.registrar_memoria(
                     "cache",
@@ -197,7 +207,6 @@ class IAEngine:
                     relevancia=0.7
                 )
 
-        # A cada 2 ciclos, registra uma memória de "aprendizado"
         if self.estado["ciclos"] % 2 == 0:
             self.registrar_memoria(
                 "aprendizado",
@@ -208,9 +217,8 @@ class IAEngine:
     # ------------------- DETECÇÃO DE ANOMALIAS -------------------
     def _detectar_anomalias(self):
         """Analisa entradas recentes e identifica comportamentos suspeitos."""
-        self.estado["anomalias"] = []  # reseta
+        self.estado["anomalias"] = []
         try:
-            # Busca últimas 200 entradas
             dados = supabase.table("movimentacao").select(
                 "cpf, nome, data_entrada, setor_destino, empresa"
             ).order("data_entrada", desc=True).limit(200).execute().data
@@ -227,11 +235,10 @@ class IAEngine:
                     dt = datetime.fromisoformat(reg['data_entrada'].replace('/', '-'))
                 except:
                     continue
-                # Filtra últimos 60 minutos
                 if (agora - dt).seconds < 3600:
                     cpfs_entradas.setdefault(cpf, []).append(dt)
 
-            # 1. Múltiplas entradas em menos de 10 minutos (clonagem ou erro)
+            # Múltiplas entradas em menos de 10 minutos
             for cpf, tempos in cpfs_entradas.items():
                 if len(tempos) >= 3:
                     tempos.sort()
@@ -245,7 +252,7 @@ class IAEngine:
                             })
                             break
 
-            # 2. Acessos noturnos (00h-05h) para prestadores (regra de negócio)
+            # Acessos noturnos para prestadores
             if 0 <= agora.hour < 5:
                 for reg in dados[:20]:
                     if "PREST" in reg.get('empresa', '').upper() or "TERCEIRIZADO" in reg.get('empresa', '').upper():
@@ -259,9 +266,155 @@ class IAEngine:
         except Exception as e:
             self.registrar_erro("_detectar_anomalias", e)
 
+    # =================== NOVAS FUNÇÕES EXPANDIDAS ===================
+
+    # ---------- AGENTE TOOL: CRIAÇÃO DINÂMICA DE FERRAMENTAS ----------
+    def _criar_ferramenta_para_anomalia(self, anomalia):
+        """Gera dinamicamente uma ferramenta (código Python) para investigar a anomalia."""
+        tipo = anomalia["tipo"]
+        cpf = anomalia.get("cpf", "")
+        tool_id = str(uuid.uuid4())[:8]
+
+        if tipo == "MÚLTIPLAS_ENTRADAS_RÁPIDAS":
+            codigo = f"""
+def analisar_entradas_rapidas(cpf='{cpf}'):
+    '''Analisa padrões de entrada para um CPF suspeito.'''
+    import pandas as pd
+    from datetime import datetime, timedelta
+    dados = supabase.table("movimentacao") \\
+        .select("data_entrada, setor_destino") \\
+        .eq("cpf", cpf) \\
+        .gte("data_entrada", (datetime.now() - timedelta(hours=24)).isoformat()) \\
+        .execute()
+    df = pd.DataFrame(dados.data)
+    if df.empty:
+        return "Nenhum registro encontrado."
+    df['data_entrada'] = pd.to_datetime(df['data_entrada'])
+    df = df.sort_values('data_entrada')
+    df['intervalo_min'] = df['data_entrada'].diff().dt.total_seconds() / 60
+    return df[['data_entrada', 'setor_destino', 'intervalo_min']].to_dict()
+"""
+        elif tipo == "ACESSO_NOTURNO_INCOMUM":
+            codigo = f"""
+def analisar_acesso_noturno(cpf='{cpf}'):
+    '''Verifica histórico de acessos noturnos para este CPF.'''
+    import pandas as pd
+    from datetime import datetime
+    dados = supabase.table("movimentacao") \\
+        .select("data_entrada, setor_destino") \\
+        .eq("cpf", cpf) \\
+        .execute()
+    df = pd.DataFrame(dados.data)
+    if df.empty:
+        return "Nenhum registro encontrado."
+    df['data_entrada'] = pd.to_datetime(df['data_entrada'])
+    df['hora'] = df['data_entrada'].dt.hour
+    noturnos = df[df['hora'].between(0, 5)]
+    return {{
+        "total_acessos": len(df),
+        "acessos_noturnos": len(noturnos),
+        "proporcao": len(noturnos)/len(df)*100 if len(df)>0 else 0
+    }}
+"""
+        else:
+            return  # não mapeado
+
+        nova_ferramenta = {
+            "id": tool_id,
+            "nome": f"Analisador de {tipo.lower().replace('_', ' ')}",
+            "descricao": f"Gerada automaticamente para investigar: {anomalia['detalhe']}",
+            "codigo": codigo,
+            "criada_em": datetime.now().isoformat(),
+            "origem": "anomalia",
+            "anomalia_id": anomalia.get("cpf", "geral")
+        }
+        self.estado["ferramentas"].append(nova_ferramenta)
+        self.registrar_memoria(
+            "tool_creation",
+            f"Ferramenta '{nova_ferramenta['nome']}' criada para investigar anomalia.",
+            relevancia=0.9
+        )
+
+    # ---------- AGENTE OBSERVABILITY: PREVISÃO DE TENDÊNCIAS ----------
+    def _prever_tendencias(self):
+        """Calcula tendências de tempo de query e hit ratio usando regressão linear simples."""
+        tempos = self.estado["metricas"]["tempo_query"]
+        if len(tempos) < 5:
+            self.estado["predicao"] = {"status": "dados_insuficientes"}
+            return
+
+        # Regressão linear para tempo de query
+        x = list(range(len(tempos)))
+        n = len(x)
+        sx = sum(x)
+        sy = sum(tempos)
+        sxx = sum(xi**2 for xi in x)
+        sxy = sum(xi * yi for xi, yi in zip(x, tempos))
+        slope = (n * sxy - sx * sy) / (n * sxx - sx**2) if (n * sxx - sx**2) != 0 else 0
+        intercept = (sy - slope * sx) / n
+        ultimo_valor = tempos[-1]
+        proximo_valor = slope * n + intercept
+
+        hits = self.estado["metricas"]["cache_hits"]
+        misses = self.estado["metricas"]["cache_misses"]
+        total = hits + misses
+        hit_ratio_atual = (hits / total * 100) if total > 0 else 0
+
+        predicao = {
+            "tempo_query": {
+                "ultimo": ultimo_valor,
+                "proximo_previsto": proximo_valor,
+                "tendencia": "crescente" if slope > 5 else ("decrescente" if slope < -5 else "estável"),
+                "slope": slope
+            },
+            "hit_ratio": {
+                "atual": hit_ratio_atual,
+                "tendencia": "estável"
+            },
+            "status": "ok"
+        }
+
+        if proximo_valor > 600 and slope > 0:
+            self.registrar_memoria(
+                "predicao",
+                f"⚠️ Tendência de degradação: tempo de query previsto para {proximo_valor:.0f}ms. Sugiro revisar índices.",
+                relevancia=0.95
+            )
+
+        self.estado["predicao"] = predicao
+
+    # ---------- AGENTE MEMORY: CATEGORIZAÇÃO POR RELEVÂNCIA ----------
+    def _categorizar_memorias(self):
+        """Reavalia todas as memórias, agrupando por similaridade e recalculando relevância."""
+        if not self.estado["memorias"]:
+            return
+
+        grupos = defaultdict(list)
+        for mem in self.estado["memorias"]:
+            chave = (mem["tipo"], mem["conteudo"][:50])
+            grupos[chave].append(mem)
+
+        novas_memorias = []
+        for chave, lista in grupos.items():
+            ultima_data = max(datetime.fromisoformat(m["timestamp"]) for m in lista)
+            recencia_horas = (datetime.now() - ultima_data).total_seconds() / 3600
+            frequencia = len(lista)
+            impacto_medio = sum(m["relevancia"] for m in lista) / len(lista)
+
+            score = (1 / (1 + recencia_horas)) * 0.4 + (frequencia / 10) * 0.3 + impacto_medio * 0.3
+            score = min(score, 1.0)
+
+            mem_representante = lista[0].copy()
+            mem_representante["relevancia"] = round(score, 2)
+            mem_representante["frequencia"] = frequencia
+            mem_representante["ultima_ocorrencia"] = ultima_data.isoformat()
+            novas_memorias.append(mem_representante)
+
+        self.estado["memorias"] = sorted(novas_memorias, key=lambda x: x["relevancia"], reverse=True)[:500]
+        self.estado["ultima_atualizacao"] = datetime.now().isoformat()
+
     # ------------------- SUGESTÕES DE BANCO DE DADOS -------------------
     def _sugerir_indices(self, tempo_medio, hit_ratio):
-        """Gera recomendações de índices SQL sem executá-los."""
         sugestoes = []
         if tempo_medio > 400:
             sugestoes.append("CREATE INDEX IF NOT EXISTS idx_movimentacao_data_entrada ON movimentacao(data_entrada);")
@@ -291,7 +444,8 @@ class IAEngine:
             "ferramentas": self.estado["ferramentas"][-3:],
             "patches": self.estado["patches"][-3:],
             "anomalias": self.estado["anomalias"],
-            "sugestoes_db": self.estado["sugestoes_db"]
+            "sugestoes_db": self.estado["sugestoes_db"],
+            "predicao": self.estado["predicao"]
         }
 
 # ====================== INICIALIZAÇÃO DA IA ======================
@@ -387,7 +541,6 @@ except Exception as e:
 
 # ====================== CRIAÇÃO AUTOMÁTICA DA COLUNA (se não existir) ======================
 try:
-    # Tenta criar a coluna (se já existir, o comando é ignorado graças ao IF NOT EXISTS)
     supabase_admin.rpc('exec_sql', {'sql': 'ALTER TABLE movimentacao ADD COLUMN IF NOT EXISTS responsavel_liberacao TEXT;'}).execute()
 except Exception as e:
     if 'PGRST' in str(e) or '42703' in str(e):
@@ -406,7 +559,7 @@ VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
 def get_fluxo_acesso_por_hora():
     cache_key = "fluxo_acesso_hora"
     cached = cache_fluxo_acesso.get(cache_key)
-    if cached is not None:  # CORREÇÃO AQUI
+    if cached is not None:
         return cached
     
     try:
@@ -518,7 +671,7 @@ def buscar_pessoa_por_cpf_debounced(cpf):
 def get_estatisticas_cached():
     cache_key = "estatisticas"
     cached = cache_estatisticas.get(cache_key)
-    if cached is not None:  # CORREÇÃO AQUI
+    if cached is not None:
         return cached
     inicio = time.time()
     try:
@@ -546,7 +699,7 @@ def refresh_estatisticas_view():
 def get_presentes_cached():
     cache_key = "presentes"
     cached = cache_presentes.get(cache_key)
-    if cached is not None:  # CORREÇÃO AQUI
+    if cached is not None:
         return cached
     try:
         dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
@@ -977,9 +1130,9 @@ def sincronizar_novos_cadastros(arquivo_csv):
         engine.registrar_erro("sincronizar_novos_cadastros", e)
         return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
 
-# ====================== PÁGINA DA IA ENGINE (atualizada) ======================
+# ====================== PÁGINA DA IA ENGINE (atualizada com novos recursos) ======================
 def pagina_ia_engine():
-    """Painel completo da IA Engine com exibição de sugestões e métricas avançadas."""
+    """Painel completo da IA Engine com exibição de ferramentas, previsões e memórias categorizadas."""
     st.markdown("## 🧠 IA Engine - Motor Autônomo do Sistema")
     st.markdown(f"**Versão:** {engine.versao} | **Ativo há:** {str(datetime.now() - engine.inicio).split('.')[0]}")
     st.markdown("---")
@@ -1065,26 +1218,52 @@ def pagina_ia_engine():
     
     st.markdown("---")
     
-    # Memórias recentes
-    st.markdown("### 🧠 Memórias de Longo Prazo")
+    # ================= NOVA SEÇÃO: FERRAMENTAS DINÂMICAS =================
+    st.markdown("### 🛠️ Ferramentas Dinâmicas (Geradas por Anomalias)")
+    tools = engine.estado.get("ferramentas", [])
+    if tools:
+        for tool in tools[-5:]:  # últimas 5
+            with st.expander(f"🔧 {tool['nome']} (ID: {tool['id']})"):
+                st.caption(f"{tool['descricao']} - Criada em {tool['criada_em'][:16]}")
+                st.code(tool['codigo'], language='python')
+    else:
+        st.info("Nenhuma ferramenta criada ainda. A IA criará ferramentas quando anomalias forem detectadas.")
+    
+    st.markdown("---")
+    
+    # ================= NOVA SEÇÃO: PREVISÕES DE PERFORMANCE =================
+    st.markdown("### 📈 Previsões de Performance")
+    pred = engine.estado.get("predicao", {})
+    if pred.get("status") == "ok":
+        col_a, col_b = st.columns(2)
+        with col_a:
+            tq = pred["tempo_query"]
+            st.metric("Tempo médio atual", f"{tq['ultimo']:.0f}ms")
+            st.metric("Próximo previsto", f"{tq['proximo_previsto']:.0f}ms", 
+                      delta=f"{tq['proximo_previsto'] - tq['ultimo']:.0f}ms")
+            st.caption(f"Tendência: {tq['tendencia']} (inclinação {tq['slope']:.2f})")
+        with col_b:
+            hr = pred["hit_ratio"]
+            st.metric("Hit ratio atual", f"{hr['atual']:.0f}%")
+            st.caption(f"Tendência: {hr['tendencia']}")
+    else:
+        st.info("Aguardando dados suficientes para previsões (mínimo 5 medições).")
+    
+    st.markdown("---")
+    
+    # ================= NOVA SEÇÃO: MEMÓRIAS CATEGORIZADAS =================
+    st.markdown("### 🧠 Memórias Categorizadas (Top 10)")
     if engine.estado["memorias"]:
-        for mem in engine.estado["memorias"][-5:]:
-            st.info(f"**{mem['tipo'].upper()}** - {mem['conteudo']} (relevância: {mem['relevancia']:.1f})")
+        for mem in engine.estado["memorias"][:10]:
+            st.info(
+                f"**{mem['tipo'].upper()}** (score: {mem['relevancia']:.2f}, freq: {mem.get('frequencia',1)}) – {mem['conteudo']}"
+            )
     else:
-        st.info("Nenhuma memória registrada ainda.")
+        st.info("Nenhuma memória registrada.")
     
     st.markdown("---")
     
-    # Ferramentas criadas
-    st.markdown("### 🛠️ Ferramentas Dinâmicas")
-    if engine.estado["ferramentas"]:
-        for tool in engine.estado["ferramentas"]:
-            st.code(f"{tool['nome']}: {tool['descricao']}")
-    else:
-        st.info("Nenhuma ferramenta criada ainda.")
-    
-    st.markdown("---")
-    
+    # ================= SEÇÕES EXISTENTES =================
     # Auto-patches
     st.markdown("### 🔄 Auto-Patches Aplicados")
     if engine.estado["patches"]:
@@ -1156,7 +1335,7 @@ st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== CSS ======================
+# ====================== CSS (estilos anteriores, mantidos) ======================
 st.markdown("""
 <style>
     html, body {
@@ -1390,7 +1569,6 @@ else:
 # ====================== EXECUÇÃO AUTÔNOMA DA IA (TIMER) ======================
 agora_timestamp = time.time()
 if agora_timestamp - st.session_state.ultimo_ciclo_ia >= st.session_state.intervalo_ia:
-    # Executa a IA em background (sem spinner para não bloquear)
     engine.analisar_agora()
     st.session_state.ultimo_ciclo_ia = agora_timestamp
 
@@ -1404,7 +1582,7 @@ st.markdown(f"""
             </div>
             <div>
                 <h1 style="margin:0;font-size:18px; background:linear-gradient(135deg,cyan,magenta); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">JOHN ACESSOS - CYBER SECURITY 2026</h1>
-                <p style="margin:0;color:#aaf;font-size:10px;">🧠 IA ENGINE • MOTOR AUTÔNOMO</p>
+                <p style="margin:0;color:#aaf;font-size:10px;">🧠 IA ENGINE v{engine.versao} • MOTOR AUTÔNOMO</p>
             </div>
         </div>
         <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
@@ -1467,7 +1645,6 @@ with st.sidebar:
     with st.sidebar.expander("🤖 IA Autônoma", expanded=False):
         intervalo = st.selectbox("Intervalo de análise (segundos)", [30, 60, 120, 300, 600], index=1)
         st.session_state.intervalo_ia = intervalo
-        # Próxima execução
         prox = st.session_state.intervalo_ia - (time.time() - st.session_state.ultimo_ciclo_ia) % st.session_state.intervalo_ia
         st.caption(f"Próxima execução em {prox:.0f}s")
         if st.button("▶️ Executar agora", use_container_width=True):
@@ -1712,13 +1889,11 @@ st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados / Instrumentadores"], horizontal=True, key="tipo_pessoa")
 
-# Define os destinos padrão
 if tipo == "🏢 Prestador de serviços":
     destinos_padrao = ["🏥 C.C PRESTADOR DE SERVIÇOS", "🥼 HEPIDEMIOLOGIA", "👨🏻‍💻 T.I", "🧺LAVANDERIA", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "👨‍🔬 Laboratório", "💊 Farmacia", "🏥 P.A", "👶 PEDIATRIA P.A", "⚙️ ENG.CLINICA", "🧹 HOTELARIA", "📦 OPME 6°AND", "📦 OPME 9°AND", "🔒 SSGA", "🏥 CDU", "⚕️ ONCOLOGIA", "🛠️ PREST_BRASANITAS ", "🛠️ PREST_GRSA"]
 else:
     destinos_padrao = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
 
-# Adiciona a opção "Outro"
 destinos_com_outro = destinos_padrao + ["📝 Outro (digitar)"]
 
 col_cpf, col_btn = st.columns([3,1])
@@ -1741,10 +1916,8 @@ with col_btn:
     else:
         st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
 
-# Seleção do destino
 setor_escolhido = st.selectbox("📍 Destino:", destinos_com_outro, key="destino")
 
-# Se a opção "Outro" for escolhida, exibe campo de texto
 if setor_escolhido == "📝 Outro (digitar)":
     setor_digitado = st.text_input("✏️ Digite o nome do setor:", placeholder="Ex: Almoxarifado", key="setor_digitado")
     setor_final = sanitizar_texto(setor_digitado).strip().upper() if setor_digitado else ""
