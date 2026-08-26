@@ -21,8 +21,12 @@ import hashlib
 import random
 
 # ====================== CONFIGURAÇÕES ======================
-CACHE_TTL_PADRAO = 43200
-ITENS_POR_PAGINA = 50
+# TTLs específicos para cada tipo de dado (otimização)
+CACHE_TTL_ESTATICOS = 86400      # 24h – pessoas, setores (pouca alteração)
+CACHE_TTL_DINAMICOS = 600        # 10min – presentes, estatísticas
+CACHE_TTL_FLUXO = 86400          # 24h – fluxo agregado (histórico)
+CACHE_TTL_TOTAL_HISTORICO = 300  # 5min – contagem total do histórico
+ITENS_POR_PAGINA = 100           # Aumentado para reduzir consultas
 DEBOUNCE_WAIT_MS = 500
 
 # ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO STREAMLIT) ======================
@@ -85,12 +89,12 @@ class IAEngine:
             "relevancia": relevancia,
             "timestamp": datetime.now().isoformat()
         })
-        # Mantém apenas 100 mais relevantes
+        # Mantém apenas 500 mais relevantes (aumentado de 100)
         self.estado["memorias"] = sorted(
             self.estado["memorias"],
             key=lambda x: x["relevancia"],
             reverse=True
-        )[:100]
+        )[:500]
         self.estado["ultima_atualizacao"] = datetime.now().isoformat()
     
     def analisar_agora(self):
@@ -173,7 +177,7 @@ engine = IAEngine()
 
 # ====================== CLASSES DE CACHE ======================
 class TimedCache:
-    def __init__(self, ttl_seconds=CACHE_TTL_PADRAO):
+    def __init__(self, ttl_seconds=600):
         self.ttl_seconds = ttl_seconds
         self.cache_data = {}
         self.cache_times = {}
@@ -217,11 +221,12 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
         return wrapper
     return decorator
 
-# Instâncias de cache
-cache_estatisticas = TimedCache(ttl_seconds=43200)
-cache_pessoas = TimedCache(ttl_seconds=43200)
-cache_presentes = TimedCache(ttl_seconds=43200)
-cache_fluxo_acesso = TimedCache(ttl_seconds=43200)
+# Instâncias de cache com TTLs específicos (otimização)
+cache_estatisticas = TimedCache(ttl_seconds=CACHE_TTL_DINAMICOS)    # 10min
+cache_pessoas = TimedCache(ttl_seconds=CACHE_TTL_ESTATICOS)         # 24h
+cache_presentes = TimedCache(ttl_seconds=CACHE_TTL_DINAMICOS)       # 10min
+cache_fluxo_acesso = TimedCache(ttl_seconds=CACHE_TTL_FLUXO)        # 24h
+cache_total_historico = TimedCache(ttl_seconds=CACHE_TTL_TOTAL_HISTORICO)  # 5min
 
 # ====================== FUNÇÕES AUXILIARES ======================
 def invalidar_cache():
@@ -229,6 +234,7 @@ def invalidar_cache():
     cache_pessoas.clear()
     cache_presentes.clear()
     cache_fluxo_acesso.clear()
+    cache_total_historico.clear()
 
 def registrar_tempo_query(tempo_ms):
     if "tempos_query" not in st.session_state:
@@ -353,12 +359,29 @@ def excluir_multiplos_registros(ids, tabela="movimentacao"):
         engine.registrar_erro("excluir_multiplos_registros", e)
         return {"sucesso": False, "mensagem": f"Erro: {e}"}
 
+# ====================== FUNÇÃO AUXILIAR PARA CONTAGEM TOTAL CACHEADA ======================
+def get_total_historico_cached():
+    """
+    Retorna o total de registros na tabela movimentacao, com cache de 5 minutos.
+    """
+    cache_key = "total_historico"
+    cached = cache_total_historico.get(cache_key)
+    if cached is not None:
+        return cached
+    try:
+        total = supabase.table("movimentacao").select("id", count="exact").execute().count
+        cache_total_historico.set(cache_key, total)
+        return total
+    except Exception as e:
+        engine.registrar_erro("get_total_historico_cached", e)
+        return 0
+
 def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
     inicio = time.time()
     offset = (pagina - 1) * itens_por_pagina
     try:
-        total = supabase.table("movimentacao").select("id", count="estimated").execute()
-        total_registros = total.count if hasattr(total, 'count') else 0
+        # Usa contagem cacheada
+        total_registros = get_total_historico_cached()
         dados = supabase.table("movimentacao")\
             .select("*")\
             .order("id", desc=True)\
@@ -670,12 +693,9 @@ def require_any_login():
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
-    # Lista de colunas que queremos exibir (incluindo responsavel_liberacao)
     colunas_base = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida', 'responsavel_liberacao']
-    # Garantir que a coluna 'responsavel_liberacao' exista no DataFrame
     if 'responsavel_liberacao' not in df.columns:
         df['responsavel_liberacao'] = ''
-    # Selecionar apenas as colunas que existem (para não quebrar se faltar alguma)
     colunas_existentes = [c for c in colunas_base if c in df.columns]
     df_rel = df[colunas_existentes].copy().fillna('')
     tabela = df_rel.to_html(escape=True, index=False)
@@ -704,7 +724,6 @@ def gerar_html_consolidado(df):
     if df.empty:
         return None
 
-    # Garantir que a coluna 'responsavel_liberacao' exista
     if 'responsavel_liberacao' not in df.columns:
         df['responsavel_liberacao'] = ''
 
@@ -1222,6 +1241,20 @@ if st.session_state.session_id:
 else:
     total_conectados = 0
 
+# ====================== PRÉ-CARREGAMENTO DE CACHES (BACKGROUND) ======================
+# Dispara threads para popular caches críticos sem bloquear a interface
+def preload_caches():
+    # Já executa as funções que populam os caches
+    get_presentes_cached()
+    get_estatisticas_cached()
+    get_fluxo_acesso_por_hora()
+
+# Executa apenas uma vez por sessão
+if "caches_precarregados" not in st.session_state:
+    st.session_state.caches_precarregados = True
+    # Usa thread para não travar a renderização
+    threading.Thread(target=preload_caches, daemon=True).start()
+
 # ====================== HEADER ======================
 st.markdown(f"""
 <div style="background: rgba(8,8,20,0.6); backdrop-filter: blur(8px); border-radius: 20px; padding: 10px 20px; margin-bottom: 20px; border: 1px solid cyan;">
@@ -1377,7 +1410,7 @@ with st.expander("📊 Métricas de Performance", expanded=False):
     with col_m3:
         total_cached = len(cache_estatisticas.cache_data) + len(cache_pessoas.cache_data) + len(cache_presentes.cache_data)
         st.metric("💾 Registros em cache", total_cached)
-    st.caption(f"⚙️ Configurações: Cache TTL: {CACHE_TTL_PADRAO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
+    st.caption(f"⚙️ Configurações: Cache TTL: Estáticos={CACHE_TTL_ESTATICOS}s, Dinâmicos={CACHE_TTL_DINAMICOS}s, Fluxo={CACHE_TTL_FLUXO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
     if st.button("🔄 Atualizar Estatísticas", key="refresh_stats_view", use_container_width=True):
         with st.spinner("Atualizando..."):
             if refresh_estatisticas_view():
@@ -1609,7 +1642,9 @@ if dados:
     with col_btn_sair:
         if st.button("🔎 Buscar", key="buscar_saida"):
             if cpf_saida:
-                encontrado = next((p for p in dados if p['cpf'] == sanitizar_cpf(cpf_saida)), None)
+                # Normaliza CPF para comparação
+                cpf_limpo = sanitizar_cpf(cpf_saida)
+                encontrado = next((p for p in dados if p['cpf'] == cpf_limpo), None)
                 if encontrado:
                     st.session_state.pessoa_saida = encontrado
                     st.success(f"Pessoa encontrada: {encontrado['nome']}")
