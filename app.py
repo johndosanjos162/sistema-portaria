@@ -261,20 +261,14 @@ except Exception as e:
 
 # ====================== CRIAÇÃO AUTOMÁTICA DA COLUNA (se não existir) ======================
 try:
-    # Verifica se a coluna existe (tenta selecionar 1 registro com a coluna)
-    test = supabase_admin.table("movimentacao").select("responsavel_liberacao").limit(1).execute()
+    # Tenta criar a coluna (se já existir, o comando é ignorado graças ao IF NOT EXISTS)
+    supabase_admin.rpc('exec_sql', {'sql': 'ALTER TABLE movimentacao ADD COLUMN IF NOT EXISTS responsavel_liberacao TEXT;'}).execute()
 except Exception as e:
-    if "PGRST204" in str(e):  # coluna não encontrada
-        st.warning("🔄 Criando coluna 'responsavel_liberacao' na tabela movimentacao...")
-        try:
-            supabase_admin.rpc('exec_sql', {'sql': 'ALTER TABLE movimentacao ADD COLUMN responsavel_liberacao TEXT;'}).execute()
-            st.success("✅ Coluna criada com sucesso! Recarregue a página.")
-            # Força recarregar após 2 segundos
-            time.sleep(2)
-            st.rerun()
-        except Exception as sql_error:
-            st.error(f"❌ Não foi possível criar a coluna automaticamente. Execute manualmente no SQL Editor:\n\n```sql\nALTER TABLE movimentacao ADD COLUMN responsavel_liberacao TEXT;\n```\n\nErro: {sql_error}")
-            st.stop()
+    if 'PGRST' in str(e) or '42703' in str(e):
+        st.error("❌ A coluna 'responsavel_liberacao' não existe e não foi possível criá-la automaticamente.")
+        st.info("Por favor, execute o comando abaixo no SQL Editor do Supabase e recarregue a página:")
+        st.code("ALTER TABLE movimentacao ADD COLUMN responsavel_liberacao TEXT;", language='sql')
+        st.stop()
     else:
         st.error(f"Erro inesperado: {e}")
         st.stop()
@@ -993,7 +987,7 @@ if "pagina_atual" not in st.session_state:
 # ====================== CONFIGURAÇÃO DA PÁGINA ======================
 st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
 
-# Carregar configurações de tema (AGORA AS FUNÇÕES JÁ ESTÃO DEFINIDAS)
+# Carregar configurações de tema
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
@@ -1519,10 +1513,15 @@ with st.expander("📋 Formulário de Cadastro", expanded=False):
 st.markdown("---")
 st.markdown("### 📋 Registrar Movimentação")
 tipo = st.radio("👥 Tipo de Pessoa:", ["🏢 Prestador de serviços", "🔧 Terceirizados / Instrumentadores"], horizontal=True, key="tipo_pessoa")
+
+# Define os destinos padrão
 if tipo == "🏢 Prestador de serviços":
-    destinos = ["🏥 C.C PRESTADOR DE SERVIÇOS", "🥼 HEPIDEMIOLOGIA", "👨🏻‍💻 T.I", "🧺LAVANDERIA", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "👨‍🔬 Laboratório", "💊 Farmacia", "🏥 P.A", "👶 PEDIATRIA P.A", "⚙️ ENG.CLINICA", "🧹 HOTELARIA", "📦 OPME 6°AND", "📦 OPME 9°AND", "🔒 SSGA", "🏥 CDU", "⚕️ ONCOLOGIA", "🛠️ PREST_BRASANITAS ", "🛠️ PREST_GRSA"]
+    destinos_padrao = ["🏥 C.C PRESTADOR DE SERVIÇOS", "🥼 HEPIDEMIOLOGIA", "👨🏻‍💻 T.I", "🧺LAVANDERIA", "❤️ Hemodinâmica", "📦 OPME", "🏭 CME", "🔬 Endoscopia", "🔧 Manutenção", "👨‍🔬 Laboratório", "💊 Farmacia", "🏥 P.A", "👶 PEDIATRIA P.A", "⚙️ ENG.CLINICA", "🧹 HOTELARIA", "📦 OPME 6°AND", "📦 OPME 9°AND", "🔒 SSGA", "🏥 CDU", "⚕️ ONCOLOGIA", "🛠️ PREST_BRASANITAS ", "🛠️ PREST_GRSA"]
 else:
-    destinos = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
+    destinos_padrao = ["🏥 C.C", "🔧 GRSA", "🏭 Brasanitas"]
+
+# Adiciona a opção "Outro"
+destinos_com_outro = destinos_padrao + ["📝 Outro (digitar)"]
 
 col_cpf, col_btn = st.columns([3,1])
 with col_cpf:
@@ -1544,7 +1543,16 @@ with col_btn:
     else:
         st.button("✅ CONFIRMAR CPF", disabled=True, key="confirma_cpf_disabled")
 
-setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
+# Seleção do destino
+setor_escolhido = st.selectbox("📍 Destino:", destinos_com_outro, key="destino")
+
+# Se a opção "Outro" for escolhida, exibe campo de texto
+if setor_escolhido == "📝 Outro (digitar)":
+    setor_digitado = st.text_input("✏️ Digite o nome do setor:", placeholder="Ex: Almoxarifado", key="setor_digitado")
+    setor_final = sanitizar_texto(setor_digitado).strip().upper() if setor_digitado else ""
+else:
+    setor_final = setor_escolhido
+
 if st.session_state.get("pessoa_confirmada"):
     # ----- NOVO CAMPO: Responsável pela liberação -----
     responsavel = st.text_input("👤 Responsável pela liberação:", placeholder="Nome completo do responsável", key="responsavel_entrada")
@@ -1558,10 +1566,17 @@ if st.session_state.get("pessoa_confirmada"):
             data_entrada_str = format_datetime_str(dt_entrada)
         else:
             data_entrada_str = format_datetime_str(get_current_datetime())
+    
+    # Validação do setor quando "Outro" foi escolhido
+    if setor_escolhido == "📝 Outro (digitar)" and not setor_final:
+        st.warning("⚠️ Por favor, digite o nome do setor.")
+    
     if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
         # Validação do responsável
         if not responsavel.strip():
             st.error("❌ O campo 'Responsável pela liberação' é obrigatório.")
+        elif setor_escolhido == "📝 Outro (digitar)" and not setor_final:
+            st.error("❌ O campo 'Setor digitado' é obrigatório.")
         else:
             p = st.session_state.pessoa_confirmada
             try:
@@ -1569,13 +1584,13 @@ if st.session_state.get("pessoa_confirmada"):
                     "cpf": p['cpf'],
                     "nome": p['nome'],
                     "empresa": p['empresa'],
-                    "setor_destino": setor_escolhido,
+                    "setor_destino": setor_final,  # Usa o valor final (padrão ou digitado)
                     "data_entrada": data_entrada_str,
                     "data_saida": "",
-                    "responsavel_liberacao": responsavel.strip().upper()  # NOVO CAMPO
+                    "responsavel_liberacao": responsavel.strip().upper()
                 }).execute()
                 invalidar_cache()
-                st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
+                st.success(f"Entrada registrada para {setor_final} às {data_entrada_str}!")
                 st.session_state.pessoa_confirmada = None
                 st.rerun()
             except Exception as e:
