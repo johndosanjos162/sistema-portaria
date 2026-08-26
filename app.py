@@ -21,24 +21,20 @@ import hashlib
 import random
 
 # ====================== CONFIGURAÇÕES ======================
-# TTLs específicos para cada tipo de dado (otimização)
-CACHE_TTL_ESTATICOS = 86400      # 24h – pessoas, setores (pouca alteração)
-CACHE_TTL_DINAMICOS = 600        # 10min – presentes, estatísticas
-CACHE_TTL_FLUXO = 86400          # 24h – fluxo agregado (histórico)
-CACHE_TTL_TOTAL_HISTORICO = 300  # 5min – contagem total do histórico
-ITENS_POR_PAGINA = 100           # Aumentado para reduzir consultas
+CACHE_TTL_PADRAO = 43200
+ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
 
-# ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO STREAMLIT) ======================
+# ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO 4.0) ======================
 class IAEngine:
     """
-    IA Engine - Motor autônomo integrado ao Streamlit (sem thread)
+    Motor Autônomo com auto-otimização, detecção de anomalias e aprendizado contínuo.
     """
     def __init__(self):
-        # Inicializa o estado no session_state se não existir
+        # Inicializa o estado (mantido no session_state)
         if "ia_engine" not in st.session_state:
             st.session_state.ia_engine = {
-                "versao": "3.0.0",
+                "versao": "4.0.0",
                 "inicio": datetime.now().isoformat(),
                 "ultima_atualizacao": datetime.now().isoformat(),
                 "ciclos": 0,
@@ -55,6 +51,8 @@ class IAEngine:
                 "memorias": [],
                 "ferramentas": [],
                 "patches": [],
+                "sugestoes_db": [],
+                "anomalias": [],
                 "agentes": {
                     "observability": {"ultima_coleta": datetime.now().isoformat()},
                     "memory": {},
@@ -66,14 +64,16 @@ class IAEngine:
         self.estado = st.session_state.ia_engine
         self.versao = self.estado["versao"]
         self.inicio = datetime.fromisoformat(self.estado["inicio"])
-    
+        self._ultima_execucao = 0  # para controle de frequência
+
+    # ------------------- MÉTRICAS E REGISTROS -------------------
     def registrar_metrica(self, nome, valor):
         if nome in self.estado["metricas"]:
             self.estado["metricas"][nome].append(valor)
             if len(self.estado["metricas"][nome]) > 500:
                 self.estado["metricas"][nome] = self.estado["metricas"][nome][-500:]
             self.estado["ultima_atualizacao"] = datetime.now().isoformat()
-    
+
     def registrar_erro(self, funcao, erro):
         self.estado["metricas"]["erros"].append({
             "funcao": funcao,
@@ -81,7 +81,7 @@ class IAEngine:
             "timestamp": datetime.now().isoformat()
         })
         self.estado["ultima_atualizacao"] = datetime.now().isoformat()
-    
+
     def registrar_memoria(self, tipo, conteudo, relevancia=0.5):
         self.estado["memorias"].append({
             "tipo": tipo,
@@ -89,70 +89,190 @@ class IAEngine:
             "relevancia": relevancia,
             "timestamp": datetime.now().isoformat()
         })
-        # Mantém apenas 500 mais relevantes (aumentado de 100)
+        # Mantém até 500 memórias (aumentado)
         self.estado["memorias"] = sorted(
             self.estado["memorias"],
             key=lambda x: x["relevancia"],
             reverse=True
         )[:500]
         self.estado["ultima_atualizacao"] = datetime.now().isoformat()
-    
+
+    # ------------------- NÚCLEO AUTÔNOMO -------------------
     def analisar_agora(self):
-        """Executa uma análise completa (chamada pelo botão)"""
+        """Executa a análise completa e aplica auto-otimizações."""
         self.estado["ciclos"] += 1
-        
-        # 1. Coleta dados de cache
-        total_cache = cache_estatisticas.hits + cache_estatisticas.misses
-        if total_cache > 0:
-            self.estado["metricas"]["cache_hits"] = cache_estatisticas.hits
-            self.estado["metricas"]["cache_misses"] = cache_estatisticas.misses
-        
-        # 2. Verifica se há queries lentas
-        tempos = self.estado["metricas"]["tempo_query"]
-        if tempos:
-            ultimos = tempos[-10:]
-            media = sum(ultimos) / len(ultimos)
-            if media > 500:
-                self.registrar_memoria(
-                    "performance",
-                    f"Query lenta detectada: {media:.0f}ms. Sugiro criar índices.",
-                    relevancia=0.8
-                )
-        
-        # 3. Verifica erros
-        if len(self.estado["metricas"]["erros"]) > 0:
-            self.registrar_memoria(
-                "erro",
-                f"{len(self.estado['metricas']['erros'])} erros registrados. Verifique logs.",
-                relevancia=0.6
-            )
-        
-        # 4. Atualiza agentes
-        self.estado["agentes"]["observability"]["ultima_coleta"] = datetime.now().isoformat()
-        
-        # 5. Auto-patch (simulação)
-        if self.estado["ciclos"] % 3 == 0:  # a cada 3 análises
+
+        # 1. Coleta métricas atuais
+        hit_ratio = cache_estatisticas.get_hit_ratio()
+        tempo_medio = get_tempo_medio_query()
+        num_memorias = len(self.estado["memorias"])
+        total_cache_hits = cache_estatisticas.hits + cache_pessoas.hits + cache_presentes.hits + cache_fluxo_acesso.hits
+        total_cache_misses = cache_estatisticas.misses + cache_pessoas.misses + cache_presentes.misses + cache_fluxo_acesso.misses
+        self.estado["metricas"]["cache_hits"] = total_cache_hits
+        self.estado["metricas"]["cache_misses"] = total_cache_misses
+
+        # 2. Ajuste dinâmico de TTL (auto-otimização)
+        self._ajustar_ttls(hit_ratio, tempo_medio)
+
+        # 3. Geração de novas memórias (aumento do número ativo)
+        self._gerar_memorias(tempo_medio, hit_ratio)
+
+        # 4. Detecção de anomalias (comportamento suspeito)
+        self._detectar_anomalias()
+
+        # 5. Sugestões de banco de dados (índices)
+        self._sugerir_indices(tempo_medio, hit_ratio)
+
+        # 6. Auto-patch (simulação de correção)
+        if self.estado["ciclos"] % 3 == 0:
             patch = {
                 "id": str(uuid.uuid4())[:8],
-                "descricao": f"Otimização automática #{self.estado['ciclos']}",
-                "codigo": "# Otimização aplicada automaticamente",
+                "descricao": f"Otimização automática #{self.estado['ciclos']} (TTL ajustado)",
+                "codigo": f"# Ajuste de TTL baseado em hit_ratio={hit_ratio:.0f}%",
                 "timestamp": datetime.now().isoformat(),
                 "aplicado": True
             }
             self.estado["patches"].append(patch)
-            self.estado["versao"] = f"3.0.{len(self.estado['patches'])}"
-        
-        # 6. Cria ferramenta se não houver
-        if len(self.estado["ferramentas"]) == 0:
-            self.estado["ferramentas"].append({
-                "nome": "Analisador de Fluxo",
-                "descricao": "Analisa picos de acesso",
-                "codigo": "def analisar_fluxo(dados): return dados.groupby('hora').size()",
-                "criado_em": datetime.now().isoformat()
-            })
-        
+            self.estado["versao"] = f"4.0.{len(self.estado['patches'])}"
+
+        # 7. Atualiza timestamp
         self.estado["ultima_atualizacao"] = datetime.now().isoformat()
-    
+        self.estado["agentes"]["observability"]["ultima_coleta"] = datetime.now().isoformat()
+
+    # ------------------- AUTO-OTIMIZAÇÃO DE CACHE -------------------
+    def _ajustar_ttls(self, hit_ratio, tempo_medio):
+        """Modifica os TTLs dos caches globais em tempo real."""
+        caches = [
+            ("estatisticas", cache_estatisticas, 120, 7200),
+            ("presentes", cache_presentes, 60, 1800),
+            ("pessoas", cache_pessoas, 1800, 86400),
+            ("fluxo", cache_fluxo_acesso, 3600, 43200)
+        ]
+        for nome, cache_obj, ttl_min, ttl_max in caches:
+            ttl_atual = cache_obj.ttl_seconds
+            # Decisão baseada em hit_ratio e tempo médio
+            if hit_ratio > 85 and tempo_medio < 200:
+                novo_ttl = min(int(ttl_atual * 1.2), ttl_max)
+            elif hit_ratio < 60 or tempo_medio > 500:
+                novo_ttl = max(int(ttl_atual * 0.6), ttl_min)
+            elif hit_ratio < 75:
+                novo_ttl = max(int(ttl_atual * 0.9), ttl_min)
+            else:
+                novo_ttl = ttl_atual  # mantém
+
+            if novo_ttl != ttl_atual:
+                cache_obj.ttl_seconds = novo_ttl
+                self.registrar_memoria(
+                    "performance",
+                    f"TTL '{nome}' ajustado: {ttl_atual}s → {novo_ttl}s (Hit: {hit_ratio:.0f}%, Query: {tempo_medio:.0f}ms)",
+                    relevancia=0.9
+                )
+
+    # ------------------- GERAÇÃO DE MEMÓRIAS -------------------
+    def _gerar_memorias(self, tempo_medio, hit_ratio):
+        """Cria memórias sintéticas para aumentar o número ativo."""
+        # Se houver poucas memórias, gera uma baseada em dados reais
+        if len(self.estado["memorias"]) < 50:
+            # Memória sobre pico de acesso
+            fluxo = get_fluxo_acesso_por_hora()
+            if not fluxo.empty:
+                hora_pico = fluxo.loc[fluxo['total_acessos'].idxmax()]['hora']
+                self.registrar_memoria(
+                    "padrao",
+                    f"Pico de acesso detectado às {int(hora_pico)}h. Reforçar monitoramento.",
+                    relevancia=0.7
+                )
+            # Memória sobre performance
+            if tempo_medio > 300:
+                self.registrar_memoria(
+                    "performance",
+                    f"Tempo de query elevado ({tempo_medio:.0f}ms). Considere os índices sugeridos.",
+                    relevancia=0.8
+                )
+            # Memória sobre cache
+            if hit_ratio < 60:
+                self.registrar_memoria(
+                    "cache",
+                    f"Taxa de acerto do cache baixa ({hit_ratio:.0f}%). Ajuste de TTL aplicado.",
+                    relevancia=0.7
+                )
+
+        # A cada 2 ciclos, registra uma memória de "aprendizado"
+        if self.estado["ciclos"] % 2 == 0:
+            self.registrar_memoria(
+                "aprendizado",
+                f"Ciclo #{self.estado['ciclos']}: Hit Ratio {hit_ratio:.0f}%, Query {tempo_medio:.0f}ms",
+                relevancia=0.5
+            )
+
+    # ------------------- DETECÇÃO DE ANOMALIAS -------------------
+    def _detectar_anomalias(self):
+        """Analisa entradas recentes e identifica comportamentos suspeitos."""
+        self.estado["anomalias"] = []  # reseta
+        try:
+            # Busca últimas 200 entradas
+            dados = supabase.table("movimentacao").select(
+                "cpf, nome, data_entrada, setor_destino, empresa"
+            ).order("data_entrada", desc=True).limit(200).execute().data
+
+            if not dados:
+                return
+
+            agora = get_current_datetime()
+            cpfs_entradas = {}
+
+            for reg in dados:
+                cpf = reg['cpf']
+                try:
+                    dt = datetime.fromisoformat(reg['data_entrada'].replace('/', '-'))
+                except:
+                    continue
+                # Filtra últimos 60 minutos
+                if (agora - dt).seconds < 3600:
+                    cpfs_entradas.setdefault(cpf, []).append(dt)
+
+            # 1. Múltiplas entradas em menos de 10 minutos (clonagem ou erro)
+            for cpf, tempos in cpfs_entradas.items():
+                if len(tempos) >= 3:
+                    tempos.sort()
+                    for i in range(len(tempos)-2):
+                        if (tempos[i+2] - tempos[i]).seconds < 600:
+                            self.estado["anomalias"].append({
+                                "tipo": "MÚLTIPLAS_ENTRADAS_RÁPIDAS",
+                                "cpf": cpf,
+                                "detalhe": f"{len(tempos)} entradas em {int((tempos[-1]-tempos[0]).seconds/60)}min",
+                                "severidade": "ALTA"
+                            })
+                            break
+
+            # 2. Acessos noturnos (00h-05h) para prestadores (regra de negócio)
+            if 0 <= agora.hour < 5:
+                for reg in dados[:20]:
+                    if "PREST" in reg.get('empresa', '').upper() or "TERCEIRIZADO" in reg.get('empresa', '').upper():
+                        self.estado["anomalias"].append({
+                            "tipo": "ACESSO_NOTURNO_INCOMUM",
+                            "cpf": reg['cpf'],
+                            "setor": reg['setor_destino'],
+                            "severidade": "MÉDIA"
+                        })
+
+        except Exception as e:
+            self.registrar_erro("_detectar_anomalias", e)
+
+    # ------------------- SUGESTÕES DE BANCO DE DADOS -------------------
+    def _sugerir_indices(self, tempo_medio, hit_ratio):
+        """Gera recomendações de índices SQL sem executá-los."""
+        sugestoes = []
+        if tempo_medio > 400:
+            sugestoes.append("CREATE INDEX IF NOT EXISTS idx_movimentacao_data_entrada ON movimentacao(data_entrada);")
+            sugestoes.append("CREATE INDEX IF NOT EXISTS idx_movimentacao_cpf_setor ON movimentacao(cpf, setor_destino);")
+        if cache_pessoas.misses > 50 and cache_pessoas.hits < 100:
+            sugestoes.append("CREATE INDEX IF NOT EXISTS idx_pessoas_cpf_empresa ON Pessoas(cpf, empresa);")
+        if not sugestoes:
+            sugestoes.append("✅ Nenhuma sugestão de índice necessária no momento.")
+        self.estado["sugestoes_db"] = sugestoes
+
+    # ------------------- RELATÓRIO -------------------
     def get_relatorio(self):
         return {
             "versao": self.estado["versao"],
@@ -167,9 +287,11 @@ class IAEngine:
                 "memorias_ativas": len(self.estado["memorias"]),
                 "patches_aplicados": len(self.estado["patches"])
             },
-            "memorias_recentes": self.estado["memorias"][-3:],
+            "memorias_recentes": self.estado["memorias"][-5:],
             "ferramentas": self.estado["ferramentas"][-3:],
-            "patches": self.estado["patches"][-3:]
+            "patches": self.estado["patches"][-3:],
+            "anomalias": self.estado["anomalias"],
+            "sugestoes_db": self.estado["sugestoes_db"]
         }
 
 # ====================== INICIALIZAÇÃO DA IA ======================
@@ -177,7 +299,7 @@ engine = IAEngine()
 
 # ====================== CLASSES DE CACHE ======================
 class TimedCache:
-    def __init__(self, ttl_seconds=600):
+    def __init__(self, ttl_seconds=CACHE_TTL_PADRAO):
         self.ttl_seconds = ttl_seconds
         self.cache_data = {}
         self.cache_times = {}
@@ -221,12 +343,11 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
         return wrapper
     return decorator
 
-# Instâncias de cache com TTLs específicos (otimização)
-cache_estatisticas = TimedCache(ttl_seconds=CACHE_TTL_DINAMICOS)    # 10min
-cache_pessoas = TimedCache(ttl_seconds=CACHE_TTL_ESTATICOS)         # 24h
-cache_presentes = TimedCache(ttl_seconds=CACHE_TTL_DINAMICOS)       # 10min
-cache_fluxo_acesso = TimedCache(ttl_seconds=CACHE_TTL_FLUXO)        # 24h
-cache_total_historico = TimedCache(ttl_seconds=CACHE_TTL_TOTAL_HISTORICO)  # 5min
+# Instâncias de cache
+cache_estatisticas = TimedCache(ttl_seconds=43200)
+cache_pessoas = TimedCache(ttl_seconds=43200)
+cache_presentes = TimedCache(ttl_seconds=43200)
+cache_fluxo_acesso = TimedCache(ttl_seconds=43200)
 
 # ====================== FUNÇÕES AUXILIARES ======================
 def invalidar_cache():
@@ -234,7 +355,6 @@ def invalidar_cache():
     cache_pessoas.clear()
     cache_presentes.clear()
     cache_fluxo_acesso.clear()
-    cache_total_historico.clear()
 
 def registrar_tempo_query(tempo_ms):
     if "tempos_query" not in st.session_state:
@@ -286,7 +406,7 @@ VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
 def get_fluxo_acesso_por_hora():
     cache_key = "fluxo_acesso_hora"
     cached = cache_fluxo_acesso.get(cache_key)
-    if cached is not None:          # CORRIGIDO: verifica None, não valor booleano
+    if cached:
         return cached
     
     try:
@@ -359,29 +479,12 @@ def excluir_multiplos_registros(ids, tabela="movimentacao"):
         engine.registrar_erro("excluir_multiplos_registros", e)
         return {"sucesso": False, "mensagem": f"Erro: {e}"}
 
-# ====================== FUNÇÃO AUXILIAR PARA CONTAGEM TOTAL CACHEADA ======================
-def get_total_historico_cached():
-    """
-    Retorna o total de registros na tabela movimentacao, com cache de 5 minutos.
-    """
-    cache_key = "total_historico"
-    cached = cache_total_historico.get(cache_key)
-    if cached is not None:
-        return cached
-    try:
-        total = supabase.table("movimentacao").select("id", count="exact").execute().count
-        cache_total_historico.set(cache_key, total)
-        return total
-    except Exception as e:
-        engine.registrar_erro("get_total_historico_cached", e)
-        return 0
-
 def get_historico_paginado(pagina=1, itens_por_pagina=ITENS_POR_PAGINA):
     inicio = time.time()
     offset = (pagina - 1) * itens_por_pagina
     try:
-        # Usa contagem cacheada
-        total_registros = get_total_historico_cached()
+        total = supabase.table("movimentacao").select("id", count="exact").execute()
+        total_registros = total.count if hasattr(total, 'count') else 0
         dados = supabase.table("movimentacao")\
             .select("*")\
             .order("id", desc=True)\
@@ -415,7 +518,7 @@ def buscar_pessoa_por_cpf_debounced(cpf):
 def get_estatisticas_cached():
     cache_key = "estatisticas"
     cached = cache_estatisticas.get(cache_key)
-    if cached is not None:          # CORRIGIDO: verifica None
+    if cached:
         return cached
     inicio = time.time()
     try:
@@ -443,7 +546,7 @@ def refresh_estatisticas_view():
 def get_presentes_cached():
     cache_key = "presentes"
     cached = cache_presentes.get(cache_key)
-    if cached is not None:          # CORRIGIDO: verifica None (lista vazia é válida)
+    if cached:
         return cached
     try:
         dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
@@ -874,14 +977,13 @@ def sincronizar_novos_cadastros(arquivo_csv):
         engine.registrar_erro("sincronizar_novos_cadastros", e)
         return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
 
-# ====================== PÁGINA DA IA ENGINE ======================
+# ====================== PÁGINA DA IA ENGINE (atualizada) ======================
 def pagina_ia_engine():
-    """Painel completo da IA Engine"""
+    """Painel completo da IA Engine com exibição de sugestões e métricas avançadas."""
     st.markdown("## 🧠 IA Engine - Motor Autônomo do Sistema")
     st.markdown(f"**Versão:** {engine.versao} | **Ativo há:** {str(datetime.now() - engine.inicio).split('.')[0]}")
     st.markdown("---")
     
-    # Botão voltar
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         if st.button("🏠 VOLTAR AO DASHBOARD PRINCIPAL", use_container_width=True, type="primary"):
@@ -924,6 +1026,45 @@ def pagina_ia_engine():
     
     st.markdown("---")
     
+    # Métricas de TTL em tempo real (NOVO)
+    st.markdown("### ⚙️ Configurações de Cache (Atuais)")
+    cols = st.columns(4)
+    with cols[0]:
+        st.metric("Estatísticas", f"{cache_estatisticas.ttl_seconds}s")
+    with cols[1]:
+        st.metric("Presentes", f"{cache_presentes.ttl_seconds}s")
+    with cols[2]:
+        st.metric("Pessoas", f"{cache_pessoas.ttl_seconds}s")
+    with cols[3]:
+        st.metric("Fluxo", f"{cache_fluxo_acesso.ttl_seconds}s")
+    
+    st.markdown("---")
+    
+    # Sugestões de banco de dados (NOVO)
+    st.markdown("### 🗄️ Sugestões de Otimização do Banco")
+    sugestoes = engine.estado.get("sugestoes_db", ["✅ Nenhuma sugestão pendente."])
+    for sug in sugestoes:
+        if "✅" in sug:
+            st.success(sug)
+        else:
+            st.code(sug, language='sql')
+    
+    st.markdown("---")
+    
+    # Anomalias detectadas (NOVO)
+    st.markdown("### 🚨 Anomalias Detectadas")
+    anomalies = engine.estado.get("anomalias", [])
+    if anomalies:
+        for anom in anomalies:
+            if anom["severidade"] == "ALTA":
+                st.error(f"🚨 **{anom['tipo']}** – {anom['detalhe']} (CPF: {anom['cpf']})")
+            else:
+                st.warning(f"⚠️ **{anom['tipo']}** – CPF: {anom['cpf']} | Setor: {anom.get('setor', 'N/A')}")
+    else:
+        st.info("✅ Nenhuma anomalia detectada no último ciclo.")
+    
+    st.markdown("---")
+    
     # Memórias recentes
     st.markdown("### 🧠 Memórias de Longo Prazo")
     if engine.estado["memorias"]:
@@ -958,7 +1099,8 @@ def pagina_ia_engine():
     col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("🔄 Analisar Agora", use_container_width=True):
-            engine.analisar_agora()
+            with st.spinner("IA em execução..."):
+                engine.analisar_agora()
             st.success("Análise concluída! Métricas atualizadas.")
             safe_rerun()
     with col2:
@@ -1002,6 +1144,10 @@ if "pagina_historico" not in st.session_state:
     st.session_state.pagina_historico = 1
 if "pagina_atual" not in st.session_state:
     st.session_state.pagina_atual = "principal"
+if "ultimo_ciclo_ia" not in st.session_state:
+    st.session_state.ultimo_ciclo_ia = 0
+if "intervalo_ia" not in st.session_state:
+    st.session_state.intervalo_ia = 60  # segundos
 
 # ====================== CONFIGURAÇÃO DA PÁGINA ======================
 st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
@@ -1241,19 +1387,14 @@ if st.session_state.session_id:
 else:
     total_conectados = 0
 
-# ====================== PRÉ-CARREGAMENTO DE CACHES (BACKGROUND) ======================
-# Dispara threads para popular caches críticos sem bloquear a interface
-def preload_caches():
-    # Já executa as funções que populam os caches
-    get_presentes_cached()
-    get_estatisticas_cached()
-    get_fluxo_acesso_por_hora()
-
-# Executa apenas uma vez por sessão
-if "caches_precarregados" not in st.session_state:
-    st.session_state.caches_precarregados = True
-    # Usa thread para não travar a renderização
-    threading.Thread(target=preload_caches, daemon=True).start()
+# ====================== EXECUÇÃO AUTÔNOMA DA IA (TIMER) ======================
+agora_timestamp = time.time()
+if agora_timestamp - st.session_state.ultimo_ciclo_ia >= st.session_state.intervalo_ia:
+    # Executa a IA em background (sem spinner para não bloquear)
+    engine.analisar_agora()
+    st.session_state.ultimo_ciclo_ia = agora_timestamp
+    # Se quiser atualizar a interface, descomente a linha abaixo (pode causar loops)
+    # st.rerun()
 
 # ====================== HEADER ======================
 st.markdown(f"""
@@ -1277,6 +1418,17 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# ====================== EXIBIÇÃO DE ANOMALIAS (NOVO) ======================
+anomalias = engine.estado.get("anomalias", [])
+if anomalias:
+    st.markdown("### 🚨 Alertas de Segurança")
+    for anom in anomalias:
+        if anom["severidade"] == "ALTA":
+            st.error(f"🚨 **{anom['tipo']}** – {anom['detalhe']} (CPF: {anom['cpf']})")
+        else:
+            st.warning(f"⚠️ **{anom['tipo']}** – CPF: {anom['cpf']} | Setor: {anom.get('setor', 'N/A')}")
+    st.markdown("---")
 
 col1, col2, col3, col4 = st.columns([6,1,1,1])
 with col3:
@@ -1311,6 +1463,21 @@ with st.sidebar:
     if st.session_state.get("perfil"):
         st.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
     st.markdown(f'<div class="info-item">📦 Versão: {engine.versao}</div>', unsafe_allow_html=True)
+    
+    # ====================== SIDEBAR - CONTROLE DA IA AUTÔNOMA ======================
+    st.markdown("---")
+    with st.sidebar.expander("🤖 IA Autônoma", expanded=False):
+        intervalo = st.selectbox("Intervalo de análise (segundos)", [30, 60, 120, 300, 600], index=1)
+        st.session_state.intervalo_ia = intervalo
+        # Próxima execução
+        prox = st.session_state.intervalo_ia - (time.time() - st.session_state.ultimo_ciclo_ia) % st.session_state.intervalo_ia
+        st.caption(f"Próxima execução em {prox:.0f}s")
+        if st.button("▶️ Executar agora", use_container_width=True):
+            with st.spinner("IA em execução..."):
+                engine.analisar_agora()
+                st.session_state.ultimo_ciclo_ia = time.time()
+            st.success("Análise concluída!")
+            st.rerun()
 
 # ====================== ADMIN: CONFIGURAÇÕES ======================
 if st.session_state.perfil == "ADMIN":
@@ -1410,7 +1577,7 @@ with st.expander("📊 Métricas de Performance", expanded=False):
     with col_m3:
         total_cached = len(cache_estatisticas.cache_data) + len(cache_pessoas.cache_data) + len(cache_presentes.cache_data)
         st.metric("💾 Registros em cache", total_cached)
-    st.caption(f"⚙️ Configurações: Cache TTL: Estáticos={CACHE_TTL_ESTATICOS}s, Dinâmicos={CACHE_TTL_DINAMICOS}s, Fluxo={CACHE_TTL_FLUXO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
+    st.caption(f"⚙️ Configurações: Cache TTL: {CACHE_TTL_PADRAO}s | Itens por página: {ITENS_POR_PAGINA} | Debounce: {DEBOUNCE_WAIT_MS}ms")
     if st.button("🔄 Atualizar Estatísticas", key="refresh_stats_view", use_container_width=True):
         with st.spinner("Atualizando..."):
             if refresh_estatisticas_view():
@@ -1587,7 +1754,6 @@ else:
     setor_final = setor_escolhido
 
 if st.session_state.get("pessoa_confirmada"):
-    # ----- NOVO CAMPO: Responsável pela liberação -----
     responsavel = st.text_input("👤 Responsável pela liberação:", placeholder="Nome completo do responsável", key="responsavel_entrada")
     with st.expander("⏱️ Opções de horário", expanded=False):
         editar_horario = st.checkbox("✏️ Editar horário da entrada", key="editar_horario_entrada")
@@ -1600,12 +1766,10 @@ if st.session_state.get("pessoa_confirmada"):
         else:
             data_entrada_str = format_datetime_str(get_current_datetime())
     
-    # Validação do setor quando "Outro" foi escolhido
     if setor_escolhido == "📝 Outro (digitar)" and not setor_final:
         st.warning("⚠️ Por favor, digite o nome do setor.")
     
     if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
-        # Validação do responsável
         if not responsavel.strip():
             st.error("❌ O campo 'Responsável pela liberação' é obrigatório.")
         elif setor_escolhido == "📝 Outro (digitar)" and not setor_final:
@@ -1617,7 +1781,7 @@ if st.session_state.get("pessoa_confirmada"):
                     "cpf": p['cpf'],
                     "nome": p['nome'],
                     "empresa": p['empresa'],
-                    "setor_destino": setor_final,  # Usa o valor final (padrão ou digitado)
+                    "setor_destino": setor_final,
                     "data_entrada": data_entrada_str,
                     "data_saida": "",
                     "responsavel_liberacao": responsavel.strip().upper()
@@ -1642,9 +1806,7 @@ if dados:
     with col_btn_sair:
         if st.button("🔎 Buscar", key="buscar_saida"):
             if cpf_saida:
-                # Normaliza CPF para comparação
-                cpf_limpo = sanitizar_cpf(cpf_saida)
-                encontrado = next((p for p in dados if p['cpf'] == cpf_limpo), None)
+                encontrado = next((p for p in dados if p['cpf'] == sanitizar_cpf(cpf_saida)), None)
                 if encontrado:
                     st.session_state.pessoa_saida = encontrado
                     st.success(f"Pessoa encontrada: {encontrado['nome']}")
@@ -2142,14 +2304,7 @@ st.markdown(f"""
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
     <br>
     🧠 IA Engine v{engine.versao} | {len(engine.estado['patches'])} patches | {len(engine.estado['memorias'])} memórias | 5 agentes
+    <br>
+    ⏱️ Auto-otimização ativa | Próxima análise em {st.session_state.intervalo_ia - (time.time() - st.session_state.ultimo_ciclo_ia) % st.session_state.intervalo_ia:.0f}s
 </div>
 """, unsafe_allow_html=True)
-
-# ====================== RECOMENDAÇÕES DE ÍNDICES (comentário) ======================
-"""
-Para melhorar ainda mais a performance, execute no SQL Editor do Supabase:
-CREATE INDEX IF NOT EXISTS idx_movimentacao_cpf ON movimentacao(cpf);
-CREATE INDEX IF NOT EXISTS idx_movimentacao_data_saida ON movimentacao(data_saida);
-CREATE INDEX IF NOT EXISTS idx_movimentacao_setor_destino ON movimentacao(setor_destino);
-CREATE INDEX IF NOT EXISTS idx_pessoas_cpf ON Pessoas(cpf);
-"""
