@@ -2514,4 +2514,8 @@ st.markdown(f"""
 <div class="footer">
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
     <br>
-    🧠 IA Engine v{engine.versao} | {len(engine.estado['patches
+    🧠 IA Engine v{engine.versao} | {len(engine.estado['patches'])} patches | {len(engine.estado['memorias'])} memórias | 5 agentes
+    <br>
+    ⏱️ Auto-otimização ativa | Próxima análise em {st.session_state.intervalo_ia - (time.time() - st.session_state.ultimo_ciclo_ia) % st.session_state.intervalo_ia:.0f}s
+</div>
+""", unsafe_allow_html=True)
