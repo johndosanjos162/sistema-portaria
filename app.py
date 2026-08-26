@@ -286,7 +286,7 @@ VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
 def get_fluxo_acesso_por_hora():
     cache_key = "fluxo_acesso_hora"
     cached = cache_fluxo_acesso.get(cache_key)
-    if cached:
+    if cached is not None:          # CORRIGIDO: verifica None, não valor booleano
         return cached
     
     try:
@@ -415,7 +415,7 @@ def buscar_pessoa_por_cpf_debounced(cpf):
 def get_estatisticas_cached():
     cache_key = "estatisticas"
     cached = cache_estatisticas.get(cache_key)
-    if cached:
+    if cached is not None:          # CORRIGIDO: verifica None
         return cached
     inicio = time.time()
     try:
@@ -443,7 +443,7 @@ def refresh_estatisticas_view():
 def get_presentes_cached():
     cache_key = "presentes"
     cached = cache_presentes.get(cache_key)
-    if cached:
+    if cached is not None:          # CORRIGIDO: verifica None (lista vazia é válida)
         return cached
     try:
         dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
@@ -2144,3 +2144,12 @@ st.markdown(f"""
     🧠 IA Engine v{engine.versao} | {len(engine.estado['patches'])} patches | {len(engine.estado['memorias'])} memórias | 5 agentes
 </div>
 """, unsafe_allow_html=True)
+
+# ====================== RECOMENDAÇÕES DE ÍNDICES (comentário) ======================
+"""
+Para melhorar ainda mais a performance, execute no SQL Editor do Supabase:
+CREATE INDEX IF NOT EXISTS idx_movimentacao_cpf ON movimentacao(cpf);
+CREATE INDEX IF NOT EXISTS idx_movimentacao_data_saida ON movimentacao(data_saida);
+CREATE INDEX IF NOT EXISTS idx_movimentacao_setor_destino ON movimentacao(setor_destino);
+CREATE INDEX IF NOT EXISTS idx_pessoas_cpf ON Pessoas(cpf);
+"""
