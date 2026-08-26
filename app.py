@@ -175,7 +175,7 @@ class IAEngine:
         if len(self.estado["memorias"]) < 50:
             # Memória sobre pico de acesso
             fluxo = get_fluxo_acesso_por_hora()
-            if not fluxo.empty:
+            if fluxo is not None and not fluxo.empty:
                 hora_pico = fluxo.loc[fluxo['total_acessos'].idxmax()]['hora']
                 self.registrar_memoria(
                     "padrao",
@@ -406,7 +406,7 @@ VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
 def get_fluxo_acesso_por_hora():
     cache_key = "fluxo_acesso_hora"
     cached = cache_fluxo_acesso.get(cache_key)
-    if cached:
+    if cached is not None:  # CORREÇÃO AQUI
         return cached
     
     try:
@@ -518,7 +518,7 @@ def buscar_pessoa_por_cpf_debounced(cpf):
 def get_estatisticas_cached():
     cache_key = "estatisticas"
     cached = cache_estatisticas.get(cache_key)
-    if cached:
+    if cached is not None:  # CORREÇÃO AQUI
         return cached
     inicio = time.time()
     try:
@@ -546,7 +546,7 @@ def refresh_estatisticas_view():
 def get_presentes_cached():
     cache_key = "presentes"
     cached = cache_presentes.get(cache_key)
-    if cached:
+    if cached is not None:  # CORREÇÃO AQUI
         return cached
     try:
         dados = supabase.table("movimentacao").select("*").eq("data_saida", "").execute()
@@ -1026,7 +1026,7 @@ def pagina_ia_engine():
     
     st.markdown("---")
     
-    # Métricas de TTL em tempo real (NOVO)
+    # Métricas de TTL em tempo real
     st.markdown("### ⚙️ Configurações de Cache (Atuais)")
     cols = st.columns(4)
     with cols[0]:
@@ -1040,7 +1040,7 @@ def pagina_ia_engine():
     
     st.markdown("---")
     
-    # Sugestões de banco de dados (NOVO)
+    # Sugestões de banco de dados
     st.markdown("### 🗄️ Sugestões de Otimização do Banco")
     sugestoes = engine.estado.get("sugestoes_db", ["✅ Nenhuma sugestão pendente."])
     for sug in sugestoes:
@@ -1051,7 +1051,7 @@ def pagina_ia_engine():
     
     st.markdown("---")
     
-    # Anomalias detectadas (NOVO)
+    # Anomalias detectadas
     st.markdown("### 🚨 Anomalias Detectadas")
     anomalies = engine.estado.get("anomalias", [])
     if anomalies:
@@ -1393,8 +1393,6 @@ if agora_timestamp - st.session_state.ultimo_ciclo_ia >= st.session_state.interv
     # Executa a IA em background (sem spinner para não bloquear)
     engine.analisar_agora()
     st.session_state.ultimo_ciclo_ia = agora_timestamp
-    # Se quiser atualizar a interface, descomente a linha abaixo (pode causar loops)
-    # st.rerun()
 
 # ====================== HEADER ======================
 st.markdown(f"""
@@ -1419,7 +1417,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ====================== EXIBIÇÃO DE ANOMALIAS (NOVO) ======================
+# ====================== EXIBIÇÃO DE ANOMALIAS ======================
 anomalias = engine.estado.get("anomalias", [])
 if anomalias:
     st.markdown("### 🚨 Alertas de Segurança")
@@ -1627,7 +1625,7 @@ with col4:
         fluxo_df = get_fluxo_acesso_por_hora()
         total_hoje = get_total_acessos_hoje()
         
-        if not fluxo_df.empty:
+        if fluxo_df is not None and not fluxo_df.empty:
             turno_data = fluxo_df.groupby('turno')['total_acessos'].sum().reset_index()
             cores = {
                 '🌅 Manhã (06h-12h)': '#00ffcc',
