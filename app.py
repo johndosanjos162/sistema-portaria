@@ -259,29 +259,28 @@ except Exception as e:
     engine.registrar_erro("conexao_supabase", e)
     st.stop()
 
+# ====================== CRIAÇÃO AUTOMÁTICA DA COLUNA (se não existir) ======================
+try:
+    # Verifica se a coluna existe (tenta selecionar 1 registro com a coluna)
+    test = supabase_admin.table("movimentacao").select("responsavel_liberacao").limit(1).execute()
+except Exception as e:
+    if "PGRST204" in str(e):  # coluna não encontrada
+        st.warning("🔄 Criando coluna 'responsavel_liberacao' na tabela movimentacao...")
+        try:
+            supabase_admin.rpc('exec_sql', {'sql': 'ALTER TABLE movimentacao ADD COLUMN responsavel_liberacao TEXT;'}).execute()
+            st.success("✅ Coluna criada com sucesso! Recarregue a página.")
+            # Força recarregar após 2 segundos
+            time.sleep(2)
+            st.rerun()
+        except Exception as sql_error:
+            st.error(f"❌ Não foi possível criar a coluna automaticamente. Execute manualmente no SQL Editor:\n\n```sql\nALTER TABLE movimentacao ADD COLUMN responsavel_liberacao TEXT;\n```\n\nErro: {sql_error}")
+            st.stop()
+    else:
+        st.error(f"Erro inesperado: {e}")
+        st.stop()
+
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
 VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
-
-# ====================== VERIFICAÇÃO E CRIAÇÃO DA COLUNA (se necessário) ======================
-try:
-    # Tenta verificar se a coluna existe
-    result = supabase_admin.table("movimentacao").select("responsavel_liberacao").limit(1).execute()
-    # Se não houver erro, a coluna existe
-except Exception as e:
-    # Se o erro for "column does not exist", tenta criar
-    if 'PGRST204' in str(e) or 'column "responsavel_liberacao" does not exist' in str(e):
-        try:
-            # Tenta criar a coluna via SQL (requer permissão de superusuário)
-            # Como o Supabase não permite execução de SQL arbitrário via cliente,
-            # vamos usar uma abordagem alternativa: usar a função RPC se disponível.
-            # Caso contrário, exibir um aviso.
-            supabase_admin.rpc('exec_sql', {'query': 'ALTER TABLE movimentacao ADD COLUMN IF NOT EXISTS responsavel_liberacao TEXT;'}).execute()
-            st.success("✅ Coluna 'responsavel_liberacao' criada com sucesso!")
-        except:
-            st.warning("⚠️ Não foi possível criar a coluna 'responsavel_liberacao' automaticamente. Peça ao administrador para executar: ALTER TABLE movimentacao ADD COLUMN responsavel_liberacao TEXT;")
-    else:
-        # Outro erro
-        st.error(f"Erro ao verificar coluna: {e}")
 
 # ====================== FUNÇÕES DE FLUXO DE ACESSO ======================
 def get_fluxo_acesso_por_hora():
@@ -1547,8 +1546,8 @@ with col_btn:
 
 setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
 if st.session_state.get("pessoa_confirmada"):
-    # ----- CAMPO OPCIONAL: Responsável pela liberação -----
-    responsavel = st.text_input("👤 Responsável pela liberação (opcional):", placeholder="Nome do responsável (rascunho)", key="responsavel_entrada")
+    # ----- NOVO CAMPO: Responsável pela liberação -----
+    responsavel = st.text_input("👤 Responsável pela liberação:", placeholder="Nome completo do responsável", key="responsavel_entrada")
     with st.expander("⏱️ Opções de horário", expanded=False):
         editar_horario = st.checkbox("✏️ Editar horário da entrada", key="editar_horario_entrada")
         if editar_horario:
@@ -1560,24 +1559,27 @@ if st.session_state.get("pessoa_confirmada"):
         else:
             data_entrada_str = format_datetime_str(get_current_datetime())
     if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
-        p = st.session_state.pessoa_confirmada
-        try:
-            dados_insercao = {
-                "cpf": p['cpf'],
-                "nome": p['nome'],
-                "empresa": p['empresa'],
-                "setor_destino": setor_escolhido,
-                "data_entrada": data_entrada_str,
-                "data_saida": "",
-                "responsavel_liberacao": responsavel.strip() if responsavel else ""
-            }
-            supabase.table("movimentacao").insert(dados_insercao).execute()
-            invalidar_cache()
-            st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
-            st.session_state.pessoa_confirmada = None
-            st.rerun()
-        except Exception as e:
-            st.error(f"Erro: {e}")
+        # Validação do responsável
+        if not responsavel.strip():
+            st.error("❌ O campo 'Responsável pela liberação' é obrigatório.")
+        else:
+            p = st.session_state.pessoa_confirmada
+            try:
+                supabase.table("movimentacao").insert({
+                    "cpf": p['cpf'],
+                    "nome": p['nome'],
+                    "empresa": p['empresa'],
+                    "setor_destino": setor_escolhido,
+                    "data_entrada": data_entrada_str,
+                    "data_saida": "",
+                    "responsavel_liberacao": responsavel.strip().upper()  # NOVO CAMPO
+                }).execute()
+                invalidar_cache()
+                st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
+                st.session_state.pessoa_confirmada = None
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro: {e}")
 
 # ====================== PESSOAS PRESENTES ======================
 st.markdown("---")
