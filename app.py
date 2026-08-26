@@ -25,17 +25,17 @@ CACHE_TTL_PADRAO = 43200
 ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
 
-# ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO 5.0) ======================
+# ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO 6.0) ======================
 class IAEngine:
     """
     Motor Autônomo com auto-otimização, detecção de anomalias, aprendizado contínuo,
-    criação dinâmica de ferramentas, previsão de tendências e categorização de memórias.
+    criação dinâmica de ferramentas, previsão de tendências, categorização de memórias
+    e AUTO-DESENVOLVIMENTO (criação de novos agentes).
     """
     def __init__(self):
-        # Inicializa o estado (mantido no session_state)
         if "ia_engine" not in st.session_state:
             st.session_state.ia_engine = {
-                "versao": "5.0.0",
+                "versao": "6.0.0",
                 "inicio": datetime.now().isoformat(),
                 "ultima_atualizacao": datetime.now().isoformat(),
                 "ciclos": 0,
@@ -91,7 +91,6 @@ class IAEngine:
             "relevancia": relevancia,
             "timestamp": datetime.now().isoformat()
         })
-        # Mantém até 500 memórias (aumentado)
         self.estado["memorias"] = sorted(
             self.estado["memorias"],
             key=lambda x: x["relevancia"],
@@ -101,44 +100,35 @@ class IAEngine:
 
     # ------------------- NÚCLEO AUTÔNOMO -------------------
     def analisar_agora(self):
-        """Executa a análise completa e aplica auto-otimizações."""
         self.estado["ciclos"] += 1
 
-        # 1. Coleta métricas atuais
         hit_ratio = cache_estatisticas.get_hit_ratio()
         tempo_medio = get_tempo_medio_query()
-        num_memorias = len(self.estado["memorias"])
         total_cache_hits = cache_estatisticas.hits + cache_pessoas.hits + cache_presentes.hits + cache_fluxo_acesso.hits
         total_cache_misses = cache_estatisticas.misses + cache_pessoas.misses + cache_presentes.misses + cache_fluxo_acesso.misses
         self.estado["metricas"]["cache_hits"] = total_cache_hits
         self.estado["metricas"]["cache_misses"] = total_cache_misses
 
-        # 2. Ajuste dinâmico de TTL (auto-otimização)
         self._ajustar_ttls(hit_ratio, tempo_medio)
-
-        # 3. Geração de novas memórias (aumento do número ativo)
         self._gerar_memorias(tempo_medio, hit_ratio)
-
-        # 4. Detecção de anomalias (comportamento suspeito)
         self._detectar_anomalias()
 
-        # 5. Criação de ferramentas dinâmicas para cada anomalia detectada
         for anom in self.estado.get("anomalias", []):
             if anom.get("severidade") in ("ALTA", "MÉDIA"):
                 self._criar_ferramenta_para_anomalia(anom)
 
-        # 6. Previsão de tendências (a cada 2 ciclos)
         if self.estado["ciclos"] % 2 == 0:
             self._prever_tendencias()
 
-        # 7. Categorização de memórias (a cada 5 ciclos)
         if self.estado["ciclos"] % 5 == 0:
             self._categorizar_memorias()
 
-        # 8. Sugestões de banco de dados (índices)
+        # ========== AUTO-DESENVOLVIMENTO ==========
+        if self.estado["ciclos"] % 10 == 0:
+            self._auto_desenvolvimento()
+
         self._sugerir_indices(tempo_medio, hit_ratio)
 
-        # 9. Auto-patch (simulação de correção)
         if self.estado["ciclos"] % 3 == 0:
             patch = {
                 "id": str(uuid.uuid4())[:8],
@@ -148,15 +138,13 @@ class IAEngine:
                 "aplicado": True
             }
             self.estado["patches"].append(patch)
-            self.estado["versao"] = f"5.0.{len(self.estado['patches'])}"
+            self.estado["versao"] = f"6.0.{len(self.estado['patches'])}"
 
-        # 10. Atualiza timestamp
         self.estado["ultima_atualizacao"] = datetime.now().isoformat()
         self.estado["agentes"]["observability"]["ultima_coleta"] = datetime.now().isoformat()
 
     # ------------------- AUTO-OTIMIZAÇÃO DE CACHE -------------------
     def _ajustar_ttls(self, hit_ratio, tempo_medio):
-        """Modifica os TTLs dos caches globais em tempo real."""
         caches = [
             ("estatisticas", cache_estatisticas, 120, 7200),
             ("presentes", cache_presentes, 60, 1800),
@@ -184,7 +172,6 @@ class IAEngine:
 
     # ------------------- GERAÇÃO DE MEMÓRIAS -------------------
     def _gerar_memorias(self, tempo_medio, hit_ratio):
-        """Cria memórias sintéticas para aumentar o número ativo."""
         if len(self.estado["memorias"]) < 50:
             fluxo = get_fluxo_acesso_por_hora()
             if fluxo is not None and not fluxo.empty:
@@ -216,7 +203,6 @@ class IAEngine:
 
     # ------------------- DETECÇÃO DE ANOMALIAS -------------------
     def _detectar_anomalias(self):
-        """Analisa entradas recentes e identifica comportamentos suspeitos."""
         self.estado["anomalias"] = []
         try:
             dados = supabase.table("movimentacao").select(
@@ -238,7 +224,6 @@ class IAEngine:
                 if (agora - dt).seconds < 3600:
                     cpfs_entradas.setdefault(cpf, []).append(dt)
 
-            # Múltiplas entradas em menos de 10 minutos
             for cpf, tempos in cpfs_entradas.items():
                 if len(tempos) >= 3:
                     tempos.sort()
@@ -252,7 +237,6 @@ class IAEngine:
                             })
                             break
 
-            # Acessos noturnos para prestadores
             if 0 <= agora.hour < 5:
                 for reg in dados[:20]:
                     if "PREST" in reg.get('empresa', '').upper() or "TERCEIRIZADO" in reg.get('empresa', '').upper():
@@ -270,7 +254,6 @@ class IAEngine:
 
     # ---------- AGENTE TOOL: CRIAÇÃO DINÂMICA DE FERRAMENTAS ----------
     def _criar_ferramenta_para_anomalia(self, anomalia):
-        """Gera dinamicamente uma ferramenta (código Python) para investigar a anomalia."""
         tipo = anomalia["tipo"]
         cpf = anomalia.get("cpf", "")
         tool_id = str(uuid.uuid4())[:8]
@@ -278,7 +261,6 @@ class IAEngine:
         if tipo == "MÚLTIPLAS_ENTRADAS_RÁPIDAS":
             codigo = f"""
 def analisar_entradas_rapidas(cpf='{cpf}'):
-    '''Analisa padrões de entrada para um CPF suspeito.'''
     import pandas as pd
     from datetime import datetime, timedelta
     dados = supabase.table("movimentacao") \\
@@ -297,7 +279,6 @@ def analisar_entradas_rapidas(cpf='{cpf}'):
         elif tipo == "ACESSO_NOTURNO_INCOMUM":
             codigo = f"""
 def analisar_acesso_noturno(cpf='{cpf}'):
-    '''Verifica histórico de acessos noturnos para este CPF.'''
     import pandas as pd
     from datetime import datetime
     dados = supabase.table("movimentacao") \\
@@ -317,7 +298,7 @@ def analisar_acesso_noturno(cpf='{cpf}'):
     }}
 """
         else:
-            return  # não mapeado
+            return
 
         nova_ferramenta = {
             "id": tool_id,
@@ -337,13 +318,11 @@ def analisar_acesso_noturno(cpf='{cpf}'):
 
     # ---------- AGENTE OBSERVABILITY: PREVISÃO DE TENDÊNCIAS ----------
     def _prever_tendencias(self):
-        """Calcula tendências de tempo de query e hit ratio usando regressão linear simples."""
         tempos = self.estado["metricas"]["tempo_query"]
         if len(tempos) < 5:
             self.estado["predicao"] = {"status": "dados_insuficientes"}
             return
 
-        # Regressão linear para tempo de query
         x = list(range(len(tempos)))
         n = len(x)
         sx = sum(x)
@@ -385,7 +364,6 @@ def analisar_acesso_noturno(cpf='{cpf}'):
 
     # ---------- AGENTE MEMORY: CATEGORIZAÇÃO POR RELEVÂNCIA ----------
     def _categorizar_memorias(self):
-        """Reavalia todas as memórias, agrupando por similaridade e recalculando relevância."""
         if not self.estado["memorias"]:
             return
 
@@ -412,6 +390,77 @@ def analisar_acesso_noturno(cpf='{cpf}'):
 
         self.estado["memorias"] = sorted(novas_memorias, key=lambda x: x["relevancia"], reverse=True)[:500]
         self.estado["ultima_atualizacao"] = datetime.now().isoformat()
+
+    # =================== AUTO-DESENVOLVIMENTO (NOVO AGENTE) ===================
+    def _auto_desenvolvimento(self):
+        consultas = self.estado["metricas"].get("buscas", 0)
+        erros = self.estado["metricas"].get("erros", [])
+
+        if consultas > 100 and len(self.estado["memorias"]) > 10:
+            setores_mencoes = defaultdict(int)
+            for mem in self.estado["memorias"]:
+                if "setor" in mem["conteudo"].lower():
+                    for palavra in mem["conteudo"].split():
+                        if "SETOR" in palavra.upper():
+                            setores_mencoes[palavra.upper()] += 1
+            if setores_mencoes:
+                setor_mais_citado = max(setores_mencoes, key=setores_mencoes.get)
+                self._criar_agente_setor(setor_mais_citado)
+
+        if len(erros) > 5 and any("conexao" in e["erro"].lower() for e in erros[-5:]):
+            self._criar_agente_rede()
+
+    def _criar_agente_setor(self, setor):
+        nome_agente = f"AgenteSetor_{setor.replace(' ', '_')}"
+        if nome_agente in self.estado["agentes"]:
+            return
+        codigo = f"""
+def monitorar_setor():
+    from datetime import datetime, timedelta
+    dados = supabase.table("movimentacao") \\
+        .select("cpf, nome, data_entrada, data_saida") \\
+        .eq("setor_destino", "{setor}") \\
+        .gte("data_entrada", (datetime.now() - timedelta(hours=1)).isoformat()) \\
+        .execute()
+    return dados.data
+"""
+        self.estado["agentes"][nome_agente] = {
+            "tipo": "setor",
+            "setor": setor,
+            "codigo": codigo,
+            "criado_em": datetime.now().isoformat(),
+            "ativo": False
+        }
+        self.registrar_memoria(
+            "auto_desenvolvimento",
+            f"Novo agente '{nome_agente}' criado para monitorar o setor {setor}.",
+            relevancia=0.8
+        )
+
+    def _criar_agente_rede(self):
+        if "AgenteRede" in self.estado["agentes"]:
+            return
+        codigo = """
+def monitorar_rede():
+    import time
+    inicio = time.time()
+    try:
+        supabase.table("app_config").select("key").limit(1).execute()
+        return {"status": "ok", "tempo": (time.time()-inicio)*1000}
+    except Exception as e:
+        return {"status": "erro", "erro": str(e)}
+"""
+        self.estado["agentes"]["AgenteRede"] = {
+            "tipo": "rede",
+            "codigo": codigo,
+            "criado_em": datetime.now().isoformat(),
+            "ativo": False
+        }
+        self.registrar_memoria(
+            "auto_desenvolvimento",
+            "Novo agente 'AgenteRede' criado para monitorar conectividade.",
+            relevancia=0.8
+        )
 
     # ------------------- SUGESTÕES DE BANCO DE DADOS -------------------
     def _sugerir_indices(self, tempo_medio, hit_ratio):
@@ -497,7 +546,6 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
         return wrapper
     return decorator
 
-# Instâncias de cache
 cache_estatisticas = TimedCache(ttl_seconds=43200)
 cache_pessoas = TimedCache(ttl_seconds=43200)
 cache_presentes = TimedCache(ttl_seconds=43200)
@@ -539,7 +587,6 @@ except Exception as e:
     engine.registrar_erro("conexao_supabase", e)
     st.stop()
 
-# ====================== CRIAÇÃO AUTOMÁTICA DA COLUNA (se não existir) ======================
 try:
     supabase_admin.rpc('exec_sql', {'sql': 'ALTER TABLE movimentacao ADD COLUMN IF NOT EXISTS responsavel_liberacao TEXT;'}).execute()
 except Exception as e:
@@ -1130,9 +1177,8 @@ def sincronizar_novos_cadastros(arquivo_csv):
         engine.registrar_erro("sincronizar_novos_cadastros", e)
         return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
 
-# ====================== PÁGINA DA IA ENGINE (atualizada com novos recursos) ======================
+# ====================== PÁGINA DA IA ENGINE (com nova seção de agentes gerados) ======================
 def pagina_ia_engine():
-    """Painel completo da IA Engine com exibição de ferramentas, previsões e memórias categorizadas."""
     st.markdown("## 🧠 IA Engine - Motor Autônomo do Sistema")
     st.markdown(f"**Versão:** {engine.versao} | **Ativo há:** {str(datetime.now() - engine.inicio).split('.')[0]}")
     st.markdown("---")
@@ -1146,7 +1192,6 @@ def pagina_ia_engine():
     
     relatorio = engine.get_relatorio()
     
-    # Métricas principais
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric("📊 Cache Hit", relatorio["metricas"]["cache_hit_ratio"])
@@ -1160,8 +1205,6 @@ def pagina_ia_engine():
         st.metric("🔄 Patches", relatorio["metricas"]["patches_aplicados"])
     
     st.markdown("---")
-    
-    # Agentes
     st.markdown("### 🤖 Agentes Especializados")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -1178,8 +1221,6 @@ def pagina_ia_engine():
         st.caption(f"{len(engine.estado['ferramentas'])} ferramentas criadas")
     
     st.markdown("---")
-    
-    # Métricas de TTL em tempo real
     st.markdown("### ⚙️ Configurações de Cache (Atuais)")
     cols = st.columns(4)
     with cols[0]:
@@ -1192,8 +1233,6 @@ def pagina_ia_engine():
         st.metric("Fluxo", f"{cache_fluxo_acesso.ttl_seconds}s")
     
     st.markdown("---")
-    
-    # Sugestões de banco de dados
     st.markdown("### 🗄️ Sugestões de Otimização do Banco")
     sugestoes = engine.estado.get("sugestoes_db", ["✅ Nenhuma sugestão pendente."])
     for sug in sugestoes:
@@ -1203,8 +1242,6 @@ def pagina_ia_engine():
             st.code(sug, language='sql')
     
     st.markdown("---")
-    
-    # Anomalias detectadas
     st.markdown("### 🚨 Anomalias Detectadas")
     anomalies = engine.estado.get("anomalias", [])
     if anomalies:
@@ -1217,12 +1254,10 @@ def pagina_ia_engine():
         st.info("✅ Nenhuma anomalia detectada no último ciclo.")
     
     st.markdown("---")
-    
-    # ================= NOVA SEÇÃO: FERRAMENTAS DINÂMICAS =================
     st.markdown("### 🛠️ Ferramentas Dinâmicas (Geradas por Anomalias)")
     tools = engine.estado.get("ferramentas", [])
     if tools:
-        for tool in tools[-5:]:  # últimas 5
+        for tool in tools[-5:]:
             with st.expander(f"🔧 {tool['nome']} (ID: {tool['id']})"):
                 st.caption(f"{tool['descricao']} - Criada em {tool['criada_em'][:16]}")
                 st.code(tool['codigo'], language='python')
@@ -1230,8 +1265,6 @@ def pagina_ia_engine():
         st.info("Nenhuma ferramenta criada ainda. A IA criará ferramentas quando anomalias forem detectadas.")
     
     st.markdown("---")
-    
-    # ================= NOVA SEÇÃO: PREVISÕES DE PERFORMANCE =================
     st.markdown("### 📈 Previsões de Performance")
     pred = engine.estado.get("predicao", {})
     if pred.get("status") == "ok":
@@ -1250,8 +1283,6 @@ def pagina_ia_engine():
         st.info("Aguardando dados suficientes para previsões (mínimo 5 medições).")
     
     st.markdown("---")
-    
-    # ================= NOVA SEÇÃO: MEMÓRIAS CATEGORIZADAS =================
     st.markdown("### 🧠 Memórias Categorizadas (Top 10)")
     if engine.estado["memorias"]:
         for mem in engine.estado["memorias"][:10]:
@@ -1260,11 +1291,24 @@ def pagina_ia_engine():
             )
     else:
         st.info("Nenhuma memória registrada.")
-    
+
     st.markdown("---")
-    
-    # ================= SEÇÕES EXISTENTES =================
-    # Auto-patches
+    st.markdown("### 🤖 Agentes Gerados pela IA (Auto-Desenvolvimento)")
+    agentes_gerados = {k:v for k,v in engine.estado["agentes"].items() if k not in ["observability", "memory", "code", "data", "tool"]}
+    if agentes_gerados:
+        for nome, dados in agentes_gerados.items():
+            with st.expander(f"🧠 {nome} (criado em {dados['criado_em'][:16]})"):
+                st.caption(f"Tipo: {dados.get('tipo', 'desconhecido')} | Ativo: {'✅' if dados.get('ativo') else '❌'}")
+                st.code(dados['codigo'], language='python')
+                if not dados.get('ativo'):
+                    if st.button(f"Ativar {nome}", key=f"ativar_{nome}"):
+                        engine.estado["agentes"][nome]["ativo"] = True
+                        st.success(f"Agente {nome} ativado!")
+                        st.rerun()
+    else:
+        st.info("Nenhum agente gerado automaticamente ainda. A IA criará novos agentes conforme necessário.")
+
+    st.markdown("---")
     st.markdown("### 🔄 Auto-Patches Aplicados")
     if engine.estado["patches"]:
         for patch in engine.estado["patches"][-3:]:
@@ -1273,8 +1317,6 @@ def pagina_ia_engine():
         st.info("Nenhum patch aplicado ainda.")
     
     st.markdown("---")
-    
-    # Botões de controle
     col1, col2, col3 = st.columns(3)
     with col1:
         if st.button("🔄 Analisar Agora", use_container_width=True):
@@ -1326,16 +1368,15 @@ if "pagina_atual" not in st.session_state:
 if "ultimo_ciclo_ia" not in st.session_state:
     st.session_state.ultimo_ciclo_ia = 0
 if "intervalo_ia" not in st.session_state:
-    st.session_state.intervalo_ia = 60  # segundos
+    st.session_state.intervalo_ia = 60
 
 # ====================== CONFIGURAÇÃO DA PÁGINA ======================
 st.set_page_config(page_title="JOHN ACESSOS - CYBER SECURITY 2026", layout="wide", page_icon="🛡️", initial_sidebar_state="expanded")
 
-# Carregar configurações de tema
 st.session_state.theme_config = get_theme_config()
 st.session_state.avatar_url = get_avatar_url()
 
-# ====================== CSS (estilos anteriores, mantidos) ======================
+# ====================== CSS ======================
 st.markdown("""
 <style>
     html, body {
@@ -1640,7 +1681,6 @@ with st.sidebar:
         st.markdown(f"<div class='info-item'>👑 Perfil: {st.session_state.perfil}</div>", unsafe_allow_html=True)
     st.markdown(f'<div class="info-item">📦 Versão: {engine.versao}</div>', unsafe_allow_html=True)
     
-    # ====================== SIDEBAR - CONTROLE DA IA AUTÔNOMA ======================
     st.markdown("---")
     with st.sidebar.expander("🤖 IA Autônoma", expanded=False):
         intervalo = st.selectbox("Intervalo de análise (segundos)", [30, 60, 120, 300, 600], index=1)
@@ -2474,8 +2514,4 @@ st.markdown(f"""
 <div class="footer">
     🛡️ JOHN ACESSOS - CYBER SECURITY 2026 | Monitoramento Inteligente & Proteção de Dados
     <br>
-    🧠 IA Engine v{engine.versao} | {len(engine.estado['patches'])} patches | {len(engine.estado['memorias'])} memórias | 5 agentes
-    <br>
-    ⏱️ Auto-otimização ativa | Próxima análise em {st.session_state.intervalo_ia - (time.time() - st.session_state.ultimo_ciclo_ia) % st.session_state.intervalo_ia:.0f}s
-</div>
-""", unsafe_allow_html=True)
+    🧠 IA Engine v{engine.versao} | {len(engine.estado['patches
