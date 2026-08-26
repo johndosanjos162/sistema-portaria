@@ -656,8 +656,13 @@ def require_any_login():
 def gerar_html_impressao(df, titulo):
     if df.empty:
         return None
-    colunas = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida']
-    colunas_existentes = [c for c in colunas if c in df.columns]
+    # Lista de colunas que queremos exibir (incluindo responsavel_liberacao)
+    colunas_base = ['id', 'nome', 'cpf', 'empresa', 'setor_destino', 'data_entrada', 'data_saida', 'responsavel_liberacao']
+    # Garantir que a coluna 'responsavel_liberacao' exista no DataFrame
+    if 'responsavel_liberacao' not in df.columns:
+        df['responsavel_liberacao'] = ''
+    # Selecionar apenas as colunas que existem (para não quebrar se faltar alguma)
+    colunas_existentes = [c for c in colunas_base if c in df.columns]
     df_rel = df[colunas_existentes].copy().fillna('')
     tabela = df_rel.to_html(escape=True, index=False)
     return f"""
@@ -685,11 +690,15 @@ def gerar_html_consolidado(df):
     if df.empty:
         return None
 
+    # Garantir que a coluna 'responsavel_liberacao' exista
+    if 'responsavel_liberacao' not in df.columns:
+        df['responsavel_liberacao'] = ''
+
     def secao(df_filtro, titulo, icone=""):
         df_filtro = df_filtro.copy().fillna('')
         if df_filtro.empty:
             return f"<div class='section'><h2>{icone} {titulo}</h2><p>Nenhum registro.</p></div>"
-        colunas = ['id','nome','cpf','empresa','setor_destino','data_entrada','data_saida']
+        colunas = ['id','nome','cpf','empresa','setor_destino','data_entrada','data_saida','responsavel_liberacao']
         existentes = [c for c in colunas if c in df_filtro.columns]
         tabela = df_filtro[existentes].to_html(escape=True, index=False)
         return f"<div class='section'><h2>{icone} {titulo} <span class='count-badge'>{len(df_filtro)}</span></h2>{tabela}</div>"
@@ -1517,6 +1526,8 @@ with col_btn:
 
 setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
 if st.session_state.get("pessoa_confirmada"):
+    # ----- NOVO CAMPO: Responsável pela liberação -----
+    responsavel = st.text_input("👤 Responsável pela liberação:", placeholder="Nome completo do responsável", key="responsavel_entrada")
     with st.expander("⏱️ Opções de horário", expanded=False):
         editar_horario = st.checkbox("✏️ Editar horário da entrada", key="editar_horario_entrada")
         if editar_horario:
@@ -1528,20 +1539,27 @@ if st.session_state.get("pessoa_confirmada"):
         else:
             data_entrada_str = format_datetime_str(get_current_datetime())
     if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
-        p = st.session_state.pessoa_confirmada
-        try:
-            supabase.table("movimentacao").insert({
-                "cpf": p['cpf'], "nome": p['nome'], "empresa": p['empresa'],
-                "setor_destino": setor_escolhido,
-                "data_entrada": data_entrada_str,
-                "data_saida": ""
-            }).execute()
-            invalidar_cache()
-            st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
-            st.session_state.pessoa_confirmada = None
-            st.rerun()
-        except Exception as e:
-            st.error(f"Erro: {e}")
+        # Validação do responsável
+        if not responsavel.strip():
+            st.error("❌ O campo 'Responsável pela liberação' é obrigatório.")
+        else:
+            p = st.session_state.pessoa_confirmada
+            try:
+                supabase.table("movimentacao").insert({
+                    "cpf": p['cpf'],
+                    "nome": p['nome'],
+                    "empresa": p['empresa'],
+                    "setor_destino": setor_escolhido,
+                    "data_entrada": data_entrada_str,
+                    "data_saida": "",
+                    "responsavel_liberacao": responsavel.strip().upper()  # NOVO CAMPO
+                }).execute()
+                invalidar_cache()
+                st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
+                st.session_state.pessoa_confirmada = None
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro: {e}")
 
 # ====================== PESSOAS PRESENTES ======================
 st.markdown("---")
