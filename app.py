@@ -21,7 +21,7 @@ import hashlib
 import random
 
 # ====================== CONFIGURAÇÕES ======================
-CACHE_TTL_PADRAO = 30
+CACHE_TTL_PADRAO = 43200
 ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
 
@@ -218,10 +218,10 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
     return decorator
 
 # Instâncias de cache
-cache_estatisticas = TimedCache(ttl_seconds=10)
-cache_pessoas = TimedCache(ttl_seconds=60)
-cache_presentes = TimedCache(ttl_seconds=10)
-cache_fluxo_acesso = TimedCache(ttl_seconds=30)
+cache_estatisticas = TimedCache(ttl_seconds=43200)
+cache_pessoas = TimedCache(ttl_seconds=43200)
+cache_presentes = TimedCache(ttl_seconds=43200)
+cache_fluxo_acesso = TimedCache(ttl_seconds=43200)
 
 # ====================== FUNÇÕES AUXILIARES ======================
 def invalidar_cache():
