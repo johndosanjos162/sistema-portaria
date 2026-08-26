@@ -262,6 +262,27 @@ except Exception as e:
 ADMIN_PASSWORD = st.secrets.get("ADMIN_PASSWORD", "fgxv4VP0/*")
 VIGILANTE_PASSWORD = st.secrets.get("VIGILANTE_PASSWORD", "JOHN123")
 
+# ====================== VERIFICAÇÃO E CRIAÇÃO DA COLUNA (se necessário) ======================
+try:
+    # Tenta verificar se a coluna existe
+    result = supabase_admin.table("movimentacao").select("responsavel_liberacao").limit(1).execute()
+    # Se não houver erro, a coluna existe
+except Exception as e:
+    # Se o erro for "column does not exist", tenta criar
+    if 'PGRST204' in str(e) or 'column "responsavel_liberacao" does not exist' in str(e):
+        try:
+            # Tenta criar a coluna via SQL (requer permissão de superusuário)
+            # Como o Supabase não permite execução de SQL arbitrário via cliente,
+            # vamos usar uma abordagem alternativa: usar a função RPC se disponível.
+            # Caso contrário, exibir um aviso.
+            supabase_admin.rpc('exec_sql', {'query': 'ALTER TABLE movimentacao ADD COLUMN IF NOT EXISTS responsavel_liberacao TEXT;'}).execute()
+            st.success("✅ Coluna 'responsavel_liberacao' criada com sucesso!")
+        except:
+            st.warning("⚠️ Não foi possível criar a coluna 'responsavel_liberacao' automaticamente. Peça ao administrador para executar: ALTER TABLE movimentacao ADD COLUMN responsavel_liberacao TEXT;")
+    else:
+        # Outro erro
+        st.error(f"Erro ao verificar coluna: {e}")
+
 # ====================== FUNÇÕES DE FLUXO DE ACESSO ======================
 def get_fluxo_acesso_por_hora():
     cache_key = "fluxo_acesso_hora"
@@ -1526,8 +1547,8 @@ with col_btn:
 
 setor_escolhido = st.selectbox("📍 Destino:", destinos, key="destino")
 if st.session_state.get("pessoa_confirmada"):
-    # ----- NOVO CAMPO: Responsável pela liberação -----
-    responsavel = st.text_input("👤 Responsável pela liberação:", placeholder="Nome completo do responsável", key="responsavel_entrada")
+    # ----- CAMPO OPCIONAL: Responsável pela liberação -----
+    responsavel = st.text_input("👤 Responsável pela liberação (opcional):", placeholder="Nome do responsável (rascunho)", key="responsavel_entrada")
     with st.expander("⏱️ Opções de horário", expanded=False):
         editar_horario = st.checkbox("✏️ Editar horário da entrada", key="editar_horario_entrada")
         if editar_horario:
@@ -1539,27 +1560,24 @@ if st.session_state.get("pessoa_confirmada"):
         else:
             data_entrada_str = format_datetime_str(get_current_datetime())
     if st.button("✅ Registrar Entrada", key="btn_entrada", type="primary"):
-        # Validação do responsável
-        if not responsavel.strip():
-            st.error("❌ O campo 'Responsável pela liberação' é obrigatório.")
-        else:
-            p = st.session_state.pessoa_confirmada
-            try:
-                supabase.table("movimentacao").insert({
-                    "cpf": p['cpf'],
-                    "nome": p['nome'],
-                    "empresa": p['empresa'],
-                    "setor_destino": setor_escolhido,
-                    "data_entrada": data_entrada_str,
-                    "data_saida": "",
-                    "responsavel_liberacao": responsavel.strip().upper()  # NOVO CAMPO
-                }).execute()
-                invalidar_cache()
-                st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
-                st.session_state.pessoa_confirmada = None
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro: {e}")
+        p = st.session_state.pessoa_confirmada
+        try:
+            dados_insercao = {
+                "cpf": p['cpf'],
+                "nome": p['nome'],
+                "empresa": p['empresa'],
+                "setor_destino": setor_escolhido,
+                "data_entrada": data_entrada_str,
+                "data_saida": "",
+                "responsavel_liberacao": responsavel.strip() if responsavel else ""
+            }
+            supabase.table("movimentacao").insert(dados_insercao).execute()
+            invalidar_cache()
+            st.success(f"Entrada registrada para {setor_escolhido} às {data_entrada_str}!")
+            st.session_state.pessoa_confirmada = None
+            st.rerun()
+        except Exception as e:
+            st.error(f"Erro: {e}")
 
 # ====================== PESSOAS PRESENTES ======================
 st.markdown("---")
