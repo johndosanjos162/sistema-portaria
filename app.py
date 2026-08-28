@@ -25,17 +25,17 @@ CACHE_TTL_PADRAO = 43200
 ITENS_POR_PAGINA = 50
 DEBOUNCE_WAIT_MS = 500
 
-# ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO 6.0) ======================
+# ====================== IA ENGINE - NÚCLEO AUTÔNOMO (VERSÃO 7.0.0) ======================
 class IAEngine:
     """
     Motor Autônomo com auto-otimização, detecção de anomalias, aprendizado contínuo,
-    criação dinâmica de ferramentas, previsão de tendências, categorização de memórias
-    e AUTO-DESENVOLVIMENTO (criação de novos agentes).
+    criação dinâmica de ferramentas, previsão de tendências, categorização de memórias,
+    AUTO-DESENVOLVIMENTO (criação de novos agentes) e OTIMIZAÇÕES AVANÇADAS.
     """
     def __init__(self):
         if "ia_engine" not in st.session_state:
             st.session_state.ia_engine = {
-                "versao": "6.0.0",
+                "versao": "7.0.0",
                 "inicio": datetime.now().isoformat(),
                 "ultima_atualizacao": datetime.now().isoformat(),
                 "ciclos": 0,
@@ -91,6 +91,7 @@ class IAEngine:
             "relevancia": relevancia,
             "timestamp": datetime.now().isoformat()
         })
+        # Mantém até 500 memórias (aumentado conforme recomendação)
         self.estado["memorias"] = sorted(
             self.estado["memorias"],
             key=lambda x: x["relevancia"],
@@ -109,6 +110,7 @@ class IAEngine:
         self.estado["metricas"]["cache_hits"] = total_cache_hits
         self.estado["metricas"]["cache_misses"] = total_cache_misses
 
+        # Ajuste de TTL granular (substitui a antiga _ajustar_ttls)
         self._ajustar_ttls(hit_ratio, tempo_medio)
         self._gerar_memorias(tempo_medio, hit_ratio)
         self._detectar_anomalias()
@@ -127,6 +129,10 @@ class IAEngine:
         if self.estado["ciclos"] % 10 == 0:
             self._auto_desenvolvimento()
 
+        # ========== OTIMIZAÇÕES AVANÇADAS ==========
+        if self.estado["ciclos"] % 3 == 0:
+            self._aplicar_otimizacoes_avancadas()
+
         self._sugerir_indices(tempo_medio, hit_ratio)
 
         if self.estado["ciclos"] % 3 == 0:
@@ -138,23 +144,34 @@ class IAEngine:
                 "aplicado": True
             }
             self.estado["patches"].append(patch)
-            self.estado["versao"] = f"6.0.{len(self.estado['patches'])}"
+            self.estado["versao"] = f"7.0.{len(self.estado['patches'])}"
 
         self.estado["ultima_atualizacao"] = datetime.now().isoformat()
         self.estado["agentes"]["observability"]["ultima_coleta"] = datetime.now().isoformat()
 
-    # ------------------- AUTO-OTIMIZAÇÃO DE CACHE -------------------
+    # ------------------- AUTO-OTIMIZAÇÃO DE CACHE (GRANULAR) -------------------
     def _ajustar_ttls(self, hit_ratio, tempo_medio):
-        caches = [
-            ("estatisticas", cache_estatisticas, 120, 7200),
-            ("presentes", cache_presentes, 60, 1800),
-            ("pessoas", cache_pessoas, 1800, 86400),
-            ("fluxo", cache_fluxo_acesso, 3600, 43200)
-        ]
-        for nome, cache_obj, ttl_min, ttl_max in caches:
+        """
+        Aplica TTLs específicos por tipo de dado (versão granular).
+        """
+        limites = {
+            "estatisticas": (120, 7200),   # 2min a 2h
+            "presentes": (60, 1800),       # 1min a 30min
+            "pessoas": (3600, 86400),      # 1h a 24h
+            "fluxo": (3600, 43200)         # 1h a 12h
+        }
+
+        for nome, cache_obj in [
+            ("estatisticas", cache_estatisticas),
+            ("presentes", cache_presentes),
+            ("pessoas", cache_pessoas),
+            ("fluxo", cache_fluxo_acesso)
+        ]:
             ttl_atual = cache_obj.ttl_seconds
+            ttl_min, ttl_max = limites[nome]
+            
             if hit_ratio > 85 and tempo_medio < 200:
-                novo_ttl = min(int(ttl_atual * 1.2), ttl_max)
+                novo_ttl = min(int(ttl_atual * 1.15), ttl_max)
             elif hit_ratio < 60 or tempo_medio > 500:
                 novo_ttl = max(int(ttl_atual * 0.6), ttl_min)
             elif hit_ratio < 75:
@@ -249,8 +266,6 @@ class IAEngine:
 
         except Exception as e:
             self.registrar_erro("_detectar_anomalias", e)
-
-    # =================== NOVAS FUNÇÕES EXPANDIDAS ===================
 
     # ---------- AGENTE TOOL: CRIAÇÃO DINÂMICA DE FERRAMENTAS ----------
     def _criar_ferramenta_para_anomalia(self, anomalia):
@@ -462,6 +477,52 @@ def monitorar_rede():
             relevancia=0.8
         )
 
+    # =================== OTIMIZAÇÕES AVANÇADAS ===================
+    def _cachear_contagem_total(self):
+        """
+        Cacheia a contagem total do histórico para evitar consultas repetidas.
+        Utiliza um cache separado com TTL de 5 minutos.
+        """
+        if "cache_total_historico" not in st.session_state:
+            st.session_state.cache_total_historico = {}
+        
+        cache_total = st.session_state.cache_total_historico
+        agora = time.time()
+        
+        if "total" in cache_total and "timestamp" in cache_total:
+            if (agora - cache_total["timestamp"]) < 300:
+                return cache_total["total"]
+        
+        try:
+            total = supabase.table("movimentacao").select("id", count="exact").execute().count
+            st.session_state.cache_total_historico = {
+                "total": total,
+                "timestamp": agora
+            }
+            return total
+        except Exception as e:
+            self.registrar_erro("_cachear_contagem_total", e)
+            return 0
+
+    def _aplicar_otimizacoes_avancadas(self):
+        """
+        Executa todas as otimizações avançadas em um único bloco.
+        Chamado a cada 3 ciclos para não sobrecarregar.
+        """
+        hit_ratio = cache_estatisticas.get_hit_ratio()
+        tempo_medio = get_tempo_medio_query()
+        
+        # O ajuste de TTL já é feito em _ajustar_ttls, mas aqui garantimos a aplicação
+        # (já que _ajustar_ttls é chamado em todo ciclo, este bloco é redundante,
+        # mas mantido para futuras expansões)
+        self._cachear_contagem_total()
+        
+        self.registrar_memoria(
+            "otimizacao_avancada",
+            f"Otimização avançada aplicada: Hit Ratio {hit_ratio:.0f}%, Tempo Médio {tempo_medio:.0f}ms",
+            relevancia=0.6
+        )
+
     # ------------------- SUGESTÕES DE BANCO DE DADOS -------------------
     def _sugerir_indices(self, tempo_medio, hit_ratio):
         sugestoes = []
@@ -546,6 +607,7 @@ def debounce(wait_time=DEBOUNCE_WAIT_MS):
         return wrapper
     return decorator
 
+# Instâncias de cache
 cache_estatisticas = TimedCache(ttl_seconds=43200)
 cache_pessoas = TimedCache(ttl_seconds=43200)
 cache_presentes = TimedCache(ttl_seconds=43200)
@@ -587,6 +649,7 @@ except Exception as e:
     engine.registrar_erro("conexao_supabase", e)
     st.stop()
 
+# ====================== CRIAÇÃO AUTOMÁTICA DA COLUNA ======================
 try:
     supabase_admin.rpc('exec_sql', {'sql': 'ALTER TABLE movimentacao ADD COLUMN IF NOT EXISTS responsavel_liberacao TEXT;'}).execute()
 except Exception as e:
@@ -1177,7 +1240,7 @@ def sincronizar_novos_cadastros(arquivo_csv):
         engine.registrar_erro("sincronizar_novos_cadastros", e)
         return {"sucesso": False, "mensagem": f"Erro ao processar arquivo: {str(e)}"}
 
-# ====================== PÁGINA DA IA ENGINE (com nova seção de agentes gerados) ======================
+# ====================== PÁGINA DA IA ENGINE ======================
 def pagina_ia_engine():
     st.markdown("## 🧠 IA Engine - Motor Autônomo do Sistema")
     st.markdown(f"**Versão:** {engine.versao} | **Ativo há:** {str(datetime.now() - engine.inicio).split('.')[0]}")
@@ -1221,6 +1284,33 @@ def pagina_ia_engine():
         st.caption(f"{len(engine.estado['ferramentas'])} ferramentas criadas")
     
     st.markdown("---")
+    
+    # ================= NOVA SEÇÃO: OTIMIZAÇÕES AVANÇADAS =================
+    st.markdown("### 🚀 Otimizações Avançadas Ativas")
+    col_adv1, col_adv2 = st.columns(2)
+    with col_adv1:
+        st.markdown("**📊 TTLs Granulares**")
+        st.caption("Cada tipo de cache tem seu próprio TTL inteligente:")
+        st.write(f"- Estatísticas: {cache_estatisticas.ttl_seconds}s")
+        st.write(f"- Presentes: {cache_presentes.ttl_seconds}s")
+        st.write(f"- Pessoas: {cache_pessoas.ttl_seconds}s")
+        st.write(f"- Fluxo: {cache_fluxo_acesso.ttl_seconds}s")
+
+    with col_adv2:
+        st.markdown("**💾 Cache de Contagem Total**")
+        if "cache_total_historico" in st.session_state:
+            cache_total = st.session_state.cache_total_historico
+            if cache_total:
+                total = cache_total.get("total", 0)
+                timestamp = cache_total.get("timestamp", 0)
+                if timestamp > 0:
+                    idade = int(time.time() - timestamp)
+                    st.metric("Total de registros", total)
+                    st.caption(f"Cache atualizado há {idade}s (TTL: 300s)")
+        else:
+            st.info("Cache de contagem aguardando primeira execução.")
+    st.markdown("---")
+    
     st.markdown("### ⚙️ Configurações de Cache (Atuais)")
     cols = st.columns(4)
     with cols[0]:
